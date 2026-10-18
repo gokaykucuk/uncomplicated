@@ -22,7 +22,10 @@ impl JsRule for Rule {
             | SymbolFlags::CatchVariable
             | SymbolFlags::Class
             | SymbolFlags::Function
-            | SymbolFlags::Import;
+            | SymbolFlags::Import
+            | SymbolFlags::Interface
+            | SymbolFlags::TypeAlias
+            | SymbolFlags::Enum;
         for sym in scoping.symbol_ids() {
             let name = scoping.symbol_name(sym);
             if !is_builtin_global(name) {
@@ -84,8 +87,9 @@ var System = 2;
             "a.ts",
             r#"
 enum Result { Error, Success }
-interface Map<T> { x: T }
-type Set = number;
+interface Map<T> { x: T } // Noncompliant
+type Set = number; // Noncompliant
+enum Error { A } // Noncompliant
 let Symbol = 1; // Noncompliant
 "#,
         );

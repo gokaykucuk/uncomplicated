@@ -2,7 +2,7 @@
 use oxc_ast_visit::Visit;
 use oxc_syntax::scope::ScopeFlags;
 
-use crate::helpers::batch_bug1::parent_skip_parens_only;
+use crate::helpers::batch_bug1::{is_html, parent_skip_parens_only};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -196,6 +196,16 @@ impl JsRule for Rule {
             Expression::StaticMemberExpression(m) => (&m.object, m.property.name.as_str()),
             _ => return,
         };
+        static ALL: std::sync::OnceLock<FxHashSet<&'static str>> = std::sync::OnceLock::new();
+        let all = ALL.get_or_init(|| {
+            [ARRAY, DATE, MATH, NUMBER, REGEXP, STRING]
+                .concat()
+                .into_iter()
+                .collect()
+        });
+        if !all.contains(name) || is_html(ctx) {
+            return;
+        }
         let Some(methods) = pure_methods(ctx, object) else {
             return;
         };

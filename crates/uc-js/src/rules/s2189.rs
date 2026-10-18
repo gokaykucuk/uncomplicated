@@ -336,6 +336,40 @@ fn should_report(ctx: &Ctx<'_, '_>, sym: SymbolId, lp: &Loop<'_, '_>) -> bool {
         .any(|r| r.is_write() && ctx.enclosing_function(r.node_id()).is_some())
 }
 
+/// Lines where ESLint directives disable the decorated `no-unmodified-loop-condition` rule
+/// (the engine only matches the Sonar key and `no-infinite-loop`).
+struct Suppressed {
+    lines: Vec<u32>,
+    from: u32,
+}
+
+impl Suppressed {
+    fn is_suppressed(&self, line: u32) -> bool {
+        line >= self.from || self.lines.contains(&line)
+    }
+}
+
+fn suppressed_lines(ctx: &Ctx<'_, '_>) -> Suppressed {
+    let mut s = Suppressed {
+        lines: Vec::new(),
+        from: u32::MAX,
+    };
+    for c in ctx.comments() {
+        let text = ctx.comment_text(c).trim_start();
+        if !text.contains("no-unmodified-loop-condition") {
+            continue;
+        }
+        if text.starts_with("eslint-disable-next-line") {
+            s.lines.push(ctx.line(c.span.end) + 1);
+        } else if text.starts_with("eslint-disable-line") {
+            s.lines.push(ctx.line(c.span.start));
+        } else if text.starts_with("eslint-disable ") && c.is_block() {
+            s.from = s.from.min(ctx.line(c.span.start));
+        }
+    }
+    s
+}
+
 fn is_true_literal(e: Option<&Expression<'_>>) -> bool {
     matches!(e, Some(Expression::BooleanLiteral(b)) if b.value)
 }
@@ -417,10 +451,14 @@ impl JsRule for Rule {
                 }
             }
         }
+        if issues.is_empty() {
+            return;
+        }
         issues.sort_unstable_by_key(|(s, _, _)| s.start);
+        let suppressed = suppressed_lines(ctx);
         let mut seen: FxHashSet<SymbolId> = FxHashSet::default();
         for (span, sym, name) in issues {
-            if seen.insert(sym) {
+            if seen.insert(sym) && !suppressed.is_suppressed(ctx.line(span.start)) {
                 ctx.report(span, format!("'{name}' is not modified in this loop."));
             }
         }
@@ -476,6 +514,9 @@ function f(node) {
   let m = 0;
   while (m) { console.log(m); } // Noncompliant
   while (m) { console.log(m); }
+  let q = 0;
+  // eslint-disable-next-line no-unmodified-loop-condition
+  while (q) { console.log(q); }
 }
 "#,
         );

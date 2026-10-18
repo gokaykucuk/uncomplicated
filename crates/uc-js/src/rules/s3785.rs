@@ -1,4 +1,5 @@
 //! "in" should not be used with primitive types
+use crate::helpers::batch_bug1::is_html;
 use crate::prelude::*;
 
 pub struct Rule;
@@ -29,7 +30,7 @@ impl JsRule for Rule {
         let AstKind::BinaryExpression(b) = node.kind() else {
             return;
         };
-        if b.operator != BinaryOperator::In || !is_primitive(ctx, &b.right) {
+        if b.operator != BinaryOperator::In || is_html(ctx) || !is_primitive(ctx, &b.right) {
             return;
         }
         let between = Span::new(b.left.span().end, b.right.span().start);

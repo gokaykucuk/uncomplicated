@@ -147,8 +147,20 @@ fn first_arguments_use(ctx: &Ctx<'_, '_>, func: NodeId, region: Span) -> u32 {
     first
 }
 
-fn check_symbol(ctx: &Ctx<'_, '_>, sym: SymbolId, region: Span, limit: u32) {
+fn check_symbol(ctx: &Ctx<'_, '_>, sym: SymbolId, region: Span, limit: &mut dyn FnMut() -> u32) {
     let scoping = ctx.scoping();
+    // Fast path: most variables are read first, which needs no further work.
+    let mut first: Option<(u32, bool)> = None;
+    for r in scoping.get_resolved_references(sym) {
+        let span = ctx.node(r.node_id()).kind().span();
+        if contains(region, span) && first.is_none_or(|(s, _)| span.start < s) {
+            first = Some((span.start, r.is_write() && !r.is_read()));
+        }
+    }
+    if !first.is_some_and(|(_, write_only)| write_only) {
+        return;
+    }
+    let limit = limit();
     let mut refs: Vec<(Span, NodeId, bool)> = scoping
         .get_resolved_references(sym)
         .filter_map(|r| {
@@ -239,13 +251,18 @@ impl JsRule for Rule {
         if symbols.is_empty() {
             return;
         }
-        let limit = if is_function {
-            first_arguments_use(ctx, node.id(), region)
-        } else {
-            u32::MAX
+        let mut limit_cache: Option<u32> = None;
+        let mut limit = || {
+            *limit_cache.get_or_insert_with(|| {
+                if is_function {
+                    first_arguments_use(ctx, node.id(), region)
+                } else {
+                    u32::MAX
+                }
+            })
         };
         for sym in symbols {
-            check_symbol(ctx, sym, region, limit);
+            check_symbol(ctx, sym, region, &mut limit);
         }
     }
 }
