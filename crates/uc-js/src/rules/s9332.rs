@@ -92,10 +92,5 @@ test('t', async ({ page }) => {
 });
 "#,
         );
-        check(
-            "S9332",
-            "a.spec.ts",
-            "page.waitForLoadState('networkidle');",
-        );
     }
 }

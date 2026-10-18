@@ -31,8 +31,9 @@ pub struct ProjectInfo {
 }
 
 impl ProjectInfo {
+    /// Declared dependency; `@types/x` counts as a dependency on `x` (like SonarJS).
     pub fn has_dependency(&self, name: &str) -> bool {
-        self.deps.contains_key(name)
+        self.deps.contains_key(name) || (!name.starts_with("@types/") && self.deps.contains_key(&types_name(name)))
     }
 
     /// True if any dependency name starts with `prefix` (e.g. `@testing-library/`).
@@ -108,6 +109,14 @@ impl ProjectInfo {
         }
         let detected = if is_ts { self.es_year_ts } else { self.es_year_js };
         detected.is_none_or(|d| year <= d)
+    }
+}
+
+/// `@types` package name for a package: `react` → `@types/react`, `@scope/x` → `@types/scope__x`.
+fn types_name(name: &str) -> String {
+    match name.strip_prefix('@') {
+        Some(scoped) => format!("@types/{}", scoped.replacen('/', "__", 1)),
+        None => format!("@types/{name}"),
     }
 }
 
