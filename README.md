@@ -90,6 +90,27 @@ libraries...) and the ECMAScript version detected from `tsconfig.json` and the N
 bundles, minified files and generated Go code, and also analyzes the scripts embedded in `.vue` and
 `.html` files.
 
+## Results
+
+Measured on a 12-core laptop with the release build, cold cache, and every rule of the default
+profile enabled:
+
+| Corpus | Files | Lines of code | Wall time | Peak memory |
+|---|---|---|---|---|
+| SonarJS ruling corpus (JS/TS, 53 projects) | 20,417 | 2.35M | 1.4–1.7 s | 0.9 GB |
+| Kubernetes (Go) | 9,724 | 2.23M | 3.2 s | 0.55 GB |
+| Prometheus (Go) | 998 | 345k | 0.5 s | 0.2 GB |
+
+With a warm cache (nothing changed), the JS/TS corpus takes 0.4 s.
+
+Parity with SonarJS on its own ruling corpus, comparing issues per rule at file/line granularity:
+471 rules compared, **99.9% precision, 97.5% recall**, 352 rules matching exactly. Most remaining
+misses are rules where Sonar uses the full TypeScript type checker or cross-file types. Our
+local inference stays silent there rather than guess.
+
+Rule coverage: 554 of the 555 active SonarJS rules (S7742 is missing because it needs the
+core-js-compat dataset), all 37 sonar-go rules, and 55 extra Go rules (`UG1001`–`UG1055`).
+
 ## How it's fast
 
 - Native parsers: [oxc](https://oxc.rs) for JS/TS (parser, semantic model, control-flow graph) and
