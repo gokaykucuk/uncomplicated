@@ -6,7 +6,7 @@ use oxc_semantic::SemanticBuilder;
 use oxc_span::SourceType;
 use uc_core::{FileIssue, FileResult, Lang, LineIndex, issue::SecondaryLoc};
 
-use crate::{Ctx, FileInfo, JsRules, cpd, lang_of, metrics};
+use crate::{Ctx, FileInfo, JsRules, ProjectInfo, cpd, lang_of, metrics};
 
 #[derive(Debug, Clone)]
 pub struct FileOptions {
@@ -42,8 +42,22 @@ fn parse<'a>(alloc: &'a Allocator, src: &'a str, st: SourceType) -> ParserReturn
     Parser::new(alloc, src, st).with_options(options).with_config(TokensParserConfig).parse()
 }
 
+static NO_PROJECT: std::sync::LazyLock<ProjectInfo> = std::sync::LazyLock::new(ProjectInfo::default);
+
 /// Analyzes one JS/TS file (or the `<script>` blocks of a `.vue` / `.html` file).
 pub fn analyze(path: &str, src: &str, is_test: bool, rules: &JsRules, opts: &FileOptions) -> FileResult {
+    analyze_in_project(path, src, is_test, rules, opts, &NO_PROJECT)
+}
+
+/// Like [`analyze`], with project context (dependencies, tsconfig).
+pub fn analyze_in_project(
+    path: &str,
+    src: &str,
+    is_test: bool,
+    rules: &JsRules,
+    opts: &FileOptions,
+    project: &ProjectInfo,
+) -> FileResult {
     let embedded = embedded_scripts(path, src);
     let (src, lang) = match &embedded {
         Some((s, l)) => (s.as_str(), *l),
@@ -51,7 +65,7 @@ pub fn analyze(path: &str, src: &str, is_test: bool, rules: &JsRules, opts: &Fil
     };
     ALLOC.with_borrow_mut(|alloc| {
         alloc.reset();
-        analyze_in(alloc, path, src, lang, embedded.is_some(), is_test, rules, opts)
+        analyze_in(alloc, path, src, lang, embedded.is_some(), is_test, rules, opts, project)
     })
 }
 
@@ -112,6 +126,7 @@ fn analyze_in(
     is_test: bool,
     rules: &JsRules,
     opts: &FileOptions,
+    project: &ProjectInfo,
 ) -> FileResult {
     let mut result = FileResult { path: path.to_string(), lang: Some(lang), is_test, ..FileResult::default() };
     let mut st = if embedded {
@@ -148,7 +163,7 @@ fn analyze_in(
     let program = alloc.alloc(ret.program);
     let semantic = SemanticBuilder::new().with_cfg(true).with_build_nodes(true).with_class_table(true).build(program).semantic;
     let tokens: &[oxc_parser::Token] = &ret.tokens;
-    let file = FileInfo { path, lang, is_test, jsx: st.is_jsx(), is_module: st.is_module() };
+    let file = FileInfo { path, lang, is_test, jsx: st.is_jsx(), is_module: st.is_module(), project };
     let ctx = Ctx {
         semantic: &semantic,
         src,

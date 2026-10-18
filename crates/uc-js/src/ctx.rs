@@ -14,6 +14,8 @@ pub struct FileInfo<'s> {
     pub is_test: bool,
     pub jsx: bool,
     pub is_module: bool,
+    /// Enclosing `package.json` / `tsconfig.json` information.
+    pub project: &'s crate::project::ProjectInfo,
 }
 
 /// Everything a rule can look at while analyzing one file.

@@ -9,6 +9,7 @@ pub mod discover;
 pub mod filter;
 pub mod gate;
 pub mod measures;
+pub mod project;
 pub mod report;
 pub mod scm;
 
@@ -124,11 +125,14 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
     let go_opts = uc_go::FileOptions { nosonar: cfg.analysis.nosonar, cpd: cfg.cpd.enabled, metrics: true };
 
     let t1 = Instant::now();
+    let projects =
+        project::Projects::new(&root, files.iter().filter(|f| f.lang == FileLang::Js).map(|f| f.abs.clone()));
+    let no_project = uc_js::ProjectInfo::default();
     let analyzed: Vec<Option<AnalyzedFile>> = files
         .par_iter()
         .map(|f| {
             let bytes = std::fs::read(&f.abs).ok()?;
-            let hash = xxhash_rust::xxh3::xxh3_64(&bytes) ^ (f.is_test as u64);
+            let hash = xxhash_rust::xxh3::xxh3_64(&bytes) ^ (f.is_test as u64) ^ projects.hash_for(&f.abs).rotate_left(1);
             if let Some(c) = &cache
                 && let Some(r) = c.get(&f.rel, hash)
             {
@@ -148,7 +152,14 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
                 return None;
             }
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| match f.lang {
-                FileLang::Js => uc_js::analyze(&f.rel, &src, f.is_test, &js_rules, &js_opts),
+                FileLang::Js => uc_js::analyze_in_project(
+                    &f.rel,
+                    &src,
+                    f.is_test,
+                    &js_rules,
+                    &js_opts,
+                    projects.for_file(&f.abs).unwrap_or(&no_project),
+                ),
                 FileLang::Go => uc_go::analyze(&f.rel, &src, f.is_test, &go_rules, &go_opts),
             }))
             .unwrap_or_else(|_| FileResult {
