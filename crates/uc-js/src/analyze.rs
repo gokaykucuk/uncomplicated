@@ -427,7 +427,8 @@ impl Suppressions {
     }
 
     fn suppressed(&self, key: &str, eslint: Option<&uc_core::RuleMeta>, offset: u32, line: u32) -> bool {
-        self.nosonar.binary_search(&line).is_ok()
+        // S1291 reports NOSONAR comments themselves.
+        (key != "S1291" && self.nosonar.binary_search(&line).is_ok())
             || self.lines.iter().any(|(l, r)| *l == line && Self::matches(r, key, eslint))
             || self.ranges.iter().any(|(s, e, r)| offset >= *s && offset < *e && Self::matches(r, key, eslint))
     }

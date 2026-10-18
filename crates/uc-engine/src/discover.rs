@@ -28,11 +28,8 @@ pub fn globset(patterns: &[String]) -> Result<GlobSet, String> {
     let mut b = GlobSetBuilder::new();
     for p in patterns {
         let p = p.trim_start_matches("./");
-        b.add(Glob::new(p).map_err(|e| format!("bad glob {p:?}: {e}"))?);
-        // `dir/**` should also match `dir` itself relative to root: also accept a leading `**/`.
-        if !p.starts_with("**/") && !p.starts_with('/') {
-            b.add(Glob::new(&format!("**/{p}")).map_err(|e| format!("bad glob {p:?}: {e}"))?);
-        }
+        // Patterns are relative to the project root, like Sonar's; use `**/` to match anywhere.
+        b.add(Glob::new(p.trim_start_matches('/')).map_err(|e| format!("bad glob {p:?}: {e}"))?);
     }
     b.build().map_err(|e| e.to_string())
 }
@@ -92,7 +89,8 @@ pub fn discover(root: &Path, paths: &[PathBuf], cfg: &Config) -> Result<Vec<Sour
             if size > max {
                 return WalkState::Continue;
             }
-            let is_test = tests.is_match(&rel_s);
+            // HTML pages are always main code (SonarJS analyzes their scripts as such).
+            let is_test = tests.is_match(&rel_s) && !(rel_s.ends_with(".html") || rel_s.ends_with(".htm"));
             sink.push(SourceFile { abs: path.to_path_buf(), rel: rel_s, lang, is_test, size });
             WalkState::Continue
         })
