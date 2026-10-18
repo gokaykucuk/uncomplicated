@@ -1,1 +1,1028 @@
-[]
+[
+  {
+    "key": "UG1001",
+    "title": "Weak hash functions MD5 and SHA-1 should not be used",
+    "type": "VULNERABILITY",
+    "severity": "Critical",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": false,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "owasp-a2",
+      "crypto"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 10
+    }
+  },
+  {
+    "key": "UG1002",
+    "title": "Broken ciphers DES, 3DES and RC4 should not be used",
+    "type": "VULNERABILITY",
+    "severity": "Critical",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "owasp-a2",
+      "crypto"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 30
+    }
+  },
+  {
+    "key": "UG1003",
+    "title": "TLS certificate verification should not be disabled",
+    "type": "VULNERABILITY",
+    "severity": "Critical",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "owasp-a2",
+      "ssl"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1004",
+    "title": "TLS versions older than 1.2 should not be allowed",
+    "type": "VULNERABILITY",
+    "severity": "Critical",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "owasp-a2",
+      "ssl"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1005",
+    "title": "RSA keys should be at least 2048 bits long",
+    "type": "VULNERABILITY",
+    "severity": "Critical",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "owasp-a2",
+      "crypto"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1006",
+    "title": "\"math/rand\" should not be used to generate secrets",
+    "type": "VULNERABILITY",
+    "severity": "Critical",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": false,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "owasp-a2",
+      "crypto"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 10
+    }
+  },
+  {
+    "key": "UG1007",
+    "title": "Credentials should not be hard-coded",
+    "type": "VULNERABILITY",
+    "severity": "Blocker",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": false,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "owasp-a7"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 30
+    }
+  },
+  {
+    "key": "UG1008",
+    "title": "SQL queries should not be built by string formatting or concatenation",
+    "type": "VULNERABILITY",
+    "severity": "Blocker",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "owasp-a1",
+      "sql"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 30
+    }
+  },
+  {
+    "key": "UG1009",
+    "title": "Shell commands should not be built from dynamic strings",
+    "type": "VULNERABILITY",
+    "severity": "Critical",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": false,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "owasp-a1"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 30
+    }
+  },
+  {
+    "key": "UG1010",
+    "title": "Permissions should not be set to world-writable",
+    "type": "VULNERABILITY",
+    "severity": "Critical",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "owasp-a5"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1011",
+    "title": "File permissions should not be overly permissive",
+    "type": "VULNERABILITY",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": false,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "owasp-a5"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1012",
+    "title": "HTTP servers should be started with timeouts",
+    "type": "VULNERABILITY",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": false,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "dos"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 15
+    }
+  },
+  {
+    "key": "UG1013",
+    "title": "\"http.Server\" should set a \"ReadHeaderTimeout\"",
+    "type": "VULNERABILITY",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": false,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "dos"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1014",
+    "title": "Dynamic content should not bypass \"html/template\" escaping",
+    "type": "VULNERABILITY",
+    "severity": "Critical",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": false,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "owasp-a7",
+      "xss"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 15
+    }
+  },
+  {
+    "key": "UG1015",
+    "title": "\"Replace\" and \"SplitN\" should not be called with a count of 0",
+    "type": "BUG",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "suspicious"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 2
+    }
+  },
+  {
+    "key": "UG1016",
+    "title": "\"time.Sleep\" should not be called with a small untyped number",
+    "type": "BUG",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "suspicious",
+      "pitfall"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 2
+    }
+  },
+  {
+    "key": "UG1017",
+    "title": "\"WaitGroup.Add\" should be called before starting the goroutine",
+    "type": "BUG",
+    "severity": "Critical",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "concurrency",
+      "pitfall"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1018",
+    "title": "Locks and other \"sync\" values should not be passed by value",
+    "type": "BUG",
+    "severity": "Critical",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "concurrency",
+      "pitfall"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1019",
+    "title": "Printf-style format strings should match their arguments",
+    "type": "BUG",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "suspicious"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1020",
+    "title": "Print and Println calls should not contain formatting directives",
+    "type": "BUG",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "suspicious"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 2
+    }
+  },
+  {
+    "key": "UG1021",
+    "title": "\"recover\" should be called directly by a deferred function",
+    "type": "BUG",
+    "severity": "Critical",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "pitfall"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1022",
+    "title": "Empty infinite loops should not be used",
+    "type": "BUG",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "suspicious",
+      "performance"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 10
+    }
+  },
+  {
+    "key": "UG1023",
+    "title": "Errors should be checked before deferring a call on the result",
+    "type": "BUG",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "pitfall"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1024",
+    "title": "Struct tags should be well formed",
+    "type": "BUG",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "suspicious"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 2
+    }
+  },
+  {
+    "key": "UG1025",
+    "title": "Channels passed to \"signal.Notify\" should be buffered",
+    "type": "BUG",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "pitfall"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 2
+    }
+  },
+  {
+    "key": "UG1026",
+    "title": "Results of pure standard-library functions should not be ignored",
+    "type": "BUG",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "suspicious",
+      "unused"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1027",
+    "title": "The cancel function returned by \"context.With*\" should not be discarded",
+    "type": "BUG",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "pitfall",
+      "leak"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1028",
+    "title": "\"t.Fatal\" and \"t.FailNow\" should not be called from a goroutine",
+    "type": "BUG",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "tests",
+      "pitfall"
+    ],
+    "scope": "Tests",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1029",
+    "title": "Trim cutsets should not contain duplicate characters",
+    "type": "BUG",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "suspicious"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 2
+    }
+  },
+  {
+    "key": "UG1030",
+    "title": "\"defer\" should not be used inside loops",
+    "type": "CODE_SMELL",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": false,
+    "deprecated": false,
+    "tags": [
+      "performance",
+      "leak"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 10
+    }
+  },
+  {
+    "key": "UG1031",
+    "title": "Programs should not exit after a \"defer\" has been registered",
+    "type": "BUG",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": false,
+    "deprecated": false,
+    "tags": [
+      "pitfall"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 10
+    }
+  },
+  {
+    "key": "UG1032",
+    "title": "An available \"context.Context\" should be propagated",
+    "type": "CODE_SMELL",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": false,
+    "deprecated": false,
+    "tags": [
+      "design"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1033",
+    "title": "\"fmt.Errorf\" should be used instead of \"errors.New(fmt.Sprintf(...))\"",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "clumsy"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 1
+    }
+  },
+  {
+    "key": "UG1034",
+    "title": "Formatting functions should not be used without formatting",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "clumsy",
+      "performance"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 1
+    }
+  },
+  {
+    "key": "UG1035",
+    "title": "\"strings.Contains\" should be used to test for a substring",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "clumsy"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 1
+    }
+  },
+  {
+    "key": "UG1036",
+    "title": "Boolean conditions should be returned directly",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "clumsy"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 2
+    }
+  },
+  {
+    "key": "UG1037",
+    "title": "\"select\" statements with a single case should be simplified",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "clumsy"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 2
+    }
+  },
+  {
+    "key": "UG1038",
+    "title": "Redundant \"return\" statements should be removed",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "redundant",
+      "clumsy"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 1
+    }
+  },
+  {
+    "key": "UG1039",
+    "title": "\"else\" blocks after \"return\" should be outdented",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "clumsy",
+      "convention"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 2
+    }
+  },
+  {
+    "key": "UG1040",
+    "title": "\"context.Context\" should be the first parameter",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "convention"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1041",
+    "title": "Receiver names should be consistent across methods",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": false,
+    "deprecated": false,
+    "tags": [
+      "convention"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 2
+    }
+  },
+  {
+    "key": "UG1042",
+    "title": "Receivers should not be named \"this\" or \"self\"",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "convention"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 2
+    }
+  },
+  {
+    "key": "UG1043",
+    "title": "Exported functions should not return unexported types",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "design",
+      "api"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 10
+    }
+  },
+  {
+    "key": "UG1044",
+    "title": "Error strings should not be capitalized or end with punctuation",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": false,
+    "deprecated": false,
+    "tags": [
+      "convention"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 2
+    }
+  },
+  {
+    "key": "UG1045",
+    "title": "\"time.Since\" should be used instead of \"time.Now().Sub\"",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "clumsy"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 1
+    }
+  },
+  {
+    "key": "UG1046",
+    "title": "Blank identifiers should not be used needlessly in \"range\" clauses",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "clumsy"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 1
+    }
+  },
+  {
+    "key": "UG1047",
+    "title": "Loops appending every element should use a single \"append\"",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "clumsy",
+      "performance"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 2
+    }
+  },
+  {
+    "key": "UG1048",
+    "title": "\"bytes.Equal\" should be used to test byte slices for equality",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "clumsy"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 1
+    }
+  },
+  {
+    "key": "UG1049",
+    "title": "Regular expressions should not be compiled inside loops",
+    "type": "CODE_SMELL",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "performance"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1050",
+    "title": "\"strings.EqualFold\" should be used for case-insensitive comparison",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "performance"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 2
+    }
+  },
+  {
+    "key": "UG1051",
+    "title": "Deprecated \"io/ioutil\" package should not be used",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "obsolete"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1052",
+    "title": "Packages should not be imported more than once",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": false,
+    "deprecated": false,
+    "tags": [
+      "redundant"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 1
+    }
+  },
+  {
+    "key": "UG1053",
+    "title": "\"fmt.Printf\" should be used instead of printing \"fmt.Sprintf\"",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "clumsy"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 1
+    }
+  },
+  {
+    "key": "UG1054",
+    "title": "Naked returns should not be used in long functions",
+    "type": "CODE_SMELL",
+    "severity": "Minor",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": false,
+    "deprecated": false,
+    "tags": [
+      "brain-overload"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1055",
+    "title": "Non-nil errors should not be swallowed by returning nil",
+    "type": "BUG",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": false,
+    "deprecated": false,
+    "tags": [
+      "error-handling",
+      "suspicious"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 5
+    }
+  }
+]
