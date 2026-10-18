@@ -49,18 +49,65 @@ const OBJECT_SIGNATURES: [(&str, usize, &str); 7] = [
     ("mysql2.createPool", 0, "password"),
 ];
 
-const NEEDLES: [&str; 10] = [
-    "cookie-",
+/// Modules (first FQN segment) of all signatures.
+const MODULES: [&str; 12] = [
+    "cookie-parser",
+    "cookie-session",
     "crypto",
+    "express-session",
     "jose",
     "jsonwebtoken",
     "ldapjs",
-    "superagent",
-    "express-session",
-    "typeorm",
     "mysql",
+    "mysql2",
     "node-jose",
+    "superagent",
+    "typeorm",
 ];
+
+/// Last FQN segment of every signature reached through a method call (`x.<name>(...)`).
+const METHOD_NAMES: [&str; 18] = [
+    "JSONCookie",
+    "signedCookies",
+    "signedCookie",
+    "checkPrivateKey",
+    "setPrivateKey",
+    "createHmac",
+    "createSecretKey",
+    "sign",
+    "verify",
+    "privateDecrypt",
+    "privateEncrypt",
+    "SignJWT",
+    "jwtVerify",
+    "bind",
+    "asKey",
+    "auth",
+    "createConnection",
+    "createPool",
+];
+
+/// Cheap syntactic filter, true when the call can't match any signature: the FQN of a method
+/// call ends with the method name, and a secret argument must be a string, template,
+/// identifier (resolving to one) or object literal among the first three arguments.
+fn cannot_match(call: &CallExpression<'_>) -> bool {
+    if let Some(name) = member_prop(&call.callee)
+        && !METHOD_NAMES.contains(&name)
+    {
+        return true;
+    }
+    !call.arguments.iter().take(3).any(|a| {
+        a.as_expression().is_some_and(|e| {
+            matches!(
+                strip_ts(e),
+                Expression::StringLiteral(_)
+                    | Expression::TemplateLiteral(_)
+                    | Expression::Identifier(_)
+                    | Expression::ObjectExpression(_)
+            )
+        })
+    })
+}
 
 fn report_secret<'a>(ctx: &Ctx<'a, '_>, call: &'a CallExpression<'a>, secret: &'a Expression<'a>) {
     let resolved = resolve(ctx, secret);
@@ -83,7 +130,10 @@ fn report_secret<'a>(ctx: &Ctx<'a, '_>, call: &'a CallExpression<'a>, secret: &'
 
 impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
-        for_each_call(ctx, &NEEDLES, |call| {
+        for_each_call_of_modules(ctx, &MODULES, |call| {
+            if cannot_match(call) {
+                return;
+            }
             let Some(f) = fqn_call(ctx, call) else { return };
             if !call.arguments.is_empty()
                 && let Some((_, idx)) = SIGNATURES.iter().find(|(k, _)| *k == f)

@@ -1284,3 +1284,59 @@ pub fn is_excluded_secret_value(v: &str) -> bool {
     let first = chars.next();
     chars.all(|c| Some(c) == first)
 }
+
+fn names_module(source: &str, modules: &[&str]) -> bool {
+    let source = source.strip_prefix("node:").unwrap_or(source);
+    let first = source.split('/').next().unwrap_or(source);
+    modules.contains(&first) || modules.contains(&source)
+}
+
+/// True if the file may import one of `modules` (optionally with a `node:` prefix or a
+/// `/sub/path`): a top-level `import` / `import x = require()` names it, or the file calls
+/// `require` and some string literal token names it. Every module source the FQN resolution
+/// can reach is covered, so this is a safe prefilter for FQN-based rules.
+pub fn mentions_module(ctx: &Ctx<'_, '_>, modules: &[&str]) -> bool {
+    for stmt in &ctx.nodes().program().body {
+        let source = match stmt {
+            Statement::ImportDeclaration(d) => d.source.value.as_str(),
+            Statement::TSImportEqualsDeclaration(t) => match &t.module_reference {
+                TSModuleReference::ExternalModuleReference(m) => m.expression.value.as_str(),
+                _ => continue,
+            },
+            _ => continue,
+        };
+        if names_module(source, modules) {
+            return true;
+        }
+    }
+    if !src_contains(ctx, "require") {
+        return false;
+    }
+    ctx.tokens.iter().any(|t| {
+        if t.kind() != oxc_parser::Kind::Str {
+            return false;
+        }
+        let text = ctx.text(t.span());
+        let Some(inner) = text.get(1..text.len().saturating_sub(1)) else {
+            return false;
+        };
+        // Escapes could spell a module name: be conservative.
+        inner.contains('\\') || names_module(inner, modules)
+    })
+}
+
+/// Visits every call expression of a file that mentions one of `modules` (see [`mentions_module`]).
+pub fn for_each_call_of_modules<'a>(
+    ctx: &Ctx<'a, '_>,
+    modules: &[&str],
+    mut f: impl FnMut(&'a CallExpression<'a>),
+) {
+    if !mentions_module(ctx, modules) {
+        return;
+    }
+    for node in ctx.nodes().iter() {
+        if let AstKind::CallExpression(c) = node.kind() {
+            f(c);
+        }
+    }
+}

@@ -67,7 +67,14 @@ fn check<'a>(ctx: &Ctx<'a, '_>, call: &'a CallExpression<'a>, index: usize) {
 
 impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
-        for_each_call(ctx, &["https", "request", "tls"], |call| {
+        for_each_call_of_modules(ctx, &["https", "request", "tls"], |call| {
+            // The FQN of a method call ends with the method name; options must be passed.
+            if call.arguments.is_empty()
+                || member_prop(&call.callee)
+                    .is_some_and(|m| !matches!(m, "request" | "get" | "connect"))
+            {
+                return;
+            }
             match fqn_call(ctx, call).as_deref() {
                 Some("https.request" | "request.get") => check(ctx, call, 0),
                 Some("tls.connect") => check(ctx, call, 2),
