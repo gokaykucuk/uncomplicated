@@ -83,9 +83,10 @@ mod tests {
 
     #[test]
     fn duplicates() {
-        check(
+        crate::helpers::batch_tests::check_deps(
             "S8754",
             "a.test.js",
+            &["jest"],
             r#"
 describe('suite', () => {
   it('does a thing', () => {});

@@ -18,9 +18,7 @@ const INLINE_SNAPSHOT_MATCHERS: &[&str] = &[
 impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
         let env = TestEnv::new(ctx);
-        let jest_like = env.jest
-            || env.vitest
-            || (env.global_expect && !env.jasmine && !env.cypress && !env.playwright && !env.mocha);
+        let jest_like = env.jest || env.vitest;
         if !jest_like {
             return;
         }
@@ -75,13 +73,14 @@ impl JsRule for Rule {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_util::*;
+    use crate::helpers::batch_tests::check_deps;
 
     #[test]
     fn interpolations() {
-        check(
+        check_deps(
             "S8967",
             "a.test.js",
+            &["jest"],
             r#"
 jest.mock('x');
 it('snap', () => {

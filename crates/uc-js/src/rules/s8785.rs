@@ -50,7 +50,6 @@ impl JsRule for Rule {
         if !(env.imports_any(&["jest", "@jest/globals", "mocha", "cypress"])
             || env.jest
             || env.cypress)
-            || env.vitest
         {
             return;
         }
@@ -126,9 +125,10 @@ mod tests {
 
     #[test]
     fn async_suites() {
-        check(
+        crate::helpers::batch_tests::check_deps(
             "S8785",
             "a.test.js",
+            &["jest"],
             r#"
 jest.setTimeout(1000);
 describe('no await', async () => { // Noncompliant {{Remove the "async" keyword from this test suite callback; a test suite callback must be synchronous.}}

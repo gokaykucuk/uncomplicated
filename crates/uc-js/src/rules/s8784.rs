@@ -135,9 +135,10 @@ mod tests {
 
     #[test]
     fn misplaced() {
-        check(
+        crate::helpers::batch_tests::check_deps(
             "S8784",
             "a.test.js",
+            &["jest"],
             r#"
 describe('suite', () => {
   expect(config.enabled).toBe(true); // Noncompliant {{Move this assertion into a test case or a lifecycle hook.}}

@@ -1,5 +1,7 @@
 //! Forced browser interactions should not bypass actionability checks
-use crate::helpers::batch_tests::{TestEnv, chain_starts_with_cy, resolve_value, unique_init};
+use crate::helpers::batch_tests::{
+    TestEnv, chain_starts_with_cy, is_playwright_locator, resolve_value,
+};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -24,41 +26,6 @@ fn playwright_min_options_index(method: &str) -> Option<usize> {
         "dragTo" | "fill" | "selectOption" | "setChecked" => 1,
         _ => return None,
     })
-}
-
-const LOCATOR_FACTORIES: &[&str] = &[
-    "getByRole",
-    "getByText",
-    "getByLabel",
-    "getByPlaceholder",
-    "getByAltText",
-    "getByTitle",
-    "getByTestId",
-    "locator",
-    "frameLocator",
-];
-
-/// `page.getByRole(...)`, `page.locator('x').getByText(...)`, or a variable initialized with one.
-fn is_locator<'a>(ctx: &Ctx<'a, '_>, e: &Expression<'a>, depth: u8) -> bool {
-    if depth > 6 {
-        return false;
-    }
-    match e {
-        Expression::Identifier(id) => {
-            unique_init(ctx, id).is_some_and(|init| is_locator(ctx, init, depth + 1))
-        }
-        Expression::CallExpression(c) => {
-            let Expression::StaticMemberExpression(m) = &c.callee else {
-                return false;
-            };
-            LOCATOR_FACTORIES.contains(&m.property.name.as_str())
-                && match &m.object {
-                    Expression::Identifier(id) if id.name == "page" => true,
-                    obj => is_locator(ctx, obj, depth + 1),
-                }
-        }
-        _ => false,
-    }
 }
 
 fn report_if_forced<'a>(ctx: &Ctx<'a, '_>, call: &CallExpression<'a>, min_index: usize) {
@@ -109,7 +76,7 @@ impl JsRule for Rule {
             }
             if env.playwright
                 && let Some(i) = playwright_min_options_index(method)
-                && is_locator(ctx, &m.object, 0)
+                && is_playwright_locator(ctx, &m.object, 0)
             {
                 report_if_forced(ctx, call, i);
             }
@@ -123,9 +90,10 @@ mod tests {
 
     #[test]
     fn forced() {
-        check(
+        crate::helpers::batch_tests::check_deps(
             "S8783",
             "a.cy.js",
+            &["cypress"],
             r#"
 cy.get('button').click({ force: true }); // Noncompliant {{Remove this forced interaction and wait for the element to be actionable instead.}}
 cy.get('input').type('text', { force: true }); // Noncompliant

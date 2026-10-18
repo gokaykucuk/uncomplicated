@@ -89,14 +89,9 @@ impl JsRule for Rule {
                 .strip_prefix("get")
                 .or_else(|| name.strip_prefix("query"))
                 .unwrap_or(name);
-            let wait_name = match &call.callee {
-                Expression::Identifier(id) => id.name.as_str(),
-                Expression::StaticMemberExpression(m) => m.property.name.as_str(),
-                _ => "waitFor",
-            };
             ctx.report(
                 call.span,
-                format!("Prefer `find{replacement}` query over using `{wait_name}` + `{name}`"),
+                format!("Prefer `find{replacement}` query over using `waitFor` + `{name}`"),
             );
         }
     }

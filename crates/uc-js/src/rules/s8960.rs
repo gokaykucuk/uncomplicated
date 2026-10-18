@@ -73,7 +73,7 @@ impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
         let env = TestEnv::new(ctx);
         let unsupported = env.vitest || env.playwright || env.cypress || env.node_test;
-        let active = env.jest || env.mocha || env.jasmine || (env.global_structure && !unsupported);
+        let active = env.jest || env.mocha || env.jasmine;
         if !active {
             return;
         }
@@ -118,9 +118,10 @@ mod tests {
 
     #[test]
     fn completion_style() {
-        check(
+        crate::helpers::batch_tests::check_deps(
             "S8960",
             "a.test.js",
+            &["jest"],
             r#"
 jest.setTimeout(1000);
 it('mixes', async (done) => { // Noncompliant {{Use a single completion style for this test callback: remove the completion callback or stop declaring the callback `async`.}}

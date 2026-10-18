@@ -1,5 +1,5 @@
 //! Tests should be stable
-use crate::helpers::batch_tests::{fqn, inside_named_construct, is_global_named};
+use crate::helpers::batch_tests::{fqn, inside_named_construct};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -27,7 +27,8 @@ impl JsRule for Rule {
         };
         match m.property.name.as_str() {
             "retryTimes" => {
-                let jest_retry = (is_global_named(ctx, &m.object, "jest")
+                let jest_retry = (helpers::batch_tests::has_dep(ctx.file.project, "jest")
+                    && matches!(&m.object, Expression::Identifier(id) if id.name == "jest")
                     && !call.arguments.is_empty())
                     || fqn(ctx, &call.callee).as_deref() == Some("jest.retryTimes");
                 if jest_retry {
@@ -47,13 +48,14 @@ impl JsRule for Rule {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_util::*;
+    use crate::helpers::batch_tests::check_deps;
 
     #[test]
     fn retries() {
-        check(
+        check_deps(
             "S5973",
             "a.test.js",
+            &["jest"],
             r#"
 jest.retryTimes(3); // Noncompliant {{Make your tests stable so that they pass on the first try, or remove the flaky ones.}}
 describe('flaky', function () {

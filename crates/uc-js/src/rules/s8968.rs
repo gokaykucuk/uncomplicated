@@ -35,7 +35,8 @@ impl Framework {
 }
 
 /// Only explicit imports tell us the framework; Jest and Jasmine have no in-body skip.
-fn detect(env: &TestEnv<'_>) -> Option<Framework> {
+fn detect(env: &TestEnv<'_>, project: &crate::ProjectInfo) -> Option<Framework> {
+    let dep = |ds: &[&str]| ds.iter().any(|d| helpers::batch_tests::has_dep(project, d));
     if env.imports("@playwright/test") {
         Some(Framework::Playwright)
     } else if env.imports("node:test") {
@@ -45,6 +46,18 @@ fn detect(env: &TestEnv<'_>) -> Option<Framework> {
     } else if env.imports("vitest") {
         Some(Framework::Vitest)
     } else if env.imports("mocha") {
+        Some(Framework::Mocha)
+    } else if env.jest
+        || env.jasmine
+        || env.imports_any(&["ava", "qunit"])
+        || dep(&["ava", "qunit"])
+    {
+        None
+    } else if dep(&["@playwright/test"]) {
+        Some(Framework::Playwright)
+    } else if dep(&["vitest"]) {
+        Some(Framework::Vitest)
+    } else if dep(&["mocha"]) {
         Some(Framework::Mocha)
     } else {
         None
@@ -78,7 +91,9 @@ fn sole_return(s: &Statement<'_>) -> Option<Span> {
 impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
         let env = TestEnv::new(ctx);
-        let Some(fw) = detect(&env) else { return };
+        let Some(fw) = detect(&env, ctx.file.project) else {
+            return;
+        };
         for node in ctx.nodes().iter() {
             let AstKind::CallExpression(call) = node.kind() else {
                 continue;

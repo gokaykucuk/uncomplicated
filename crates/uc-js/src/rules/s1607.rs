@@ -1,5 +1,5 @@
 //! Tests should not be skipped without providing a reason
-use crate::helpers::batch_tests::{TestEnv, fqn, is_playwright_describe_member};
+use crate::helpers::batch_tests::{fqn, is_playwright_describe_member};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -20,26 +20,26 @@ enum Framework {
     Mocha,
     Playwright,
     NodeTest,
-    /// No framework signal: only the forms that mean "skip" everywhere.
-    Generic,
 }
 
-fn framework(env: &TestEnv<'_>) -> Framework {
-    if env.jasmine {
+/// Sonar picks the framework from package.json dependencies only.
+fn framework(project: &crate::ProjectInfo) -> Option<Framework> {
+    let dep = |d: &str| helpers::batch_tests::has_dep(project, d);
+    Some(if dep("jasmine") {
         Framework::Jasmine
-    } else if env.jest {
+    } else if dep("jest") {
         Framework::Jest
-    } else if env.vitest {
+    } else if dep("vitest") {
         Framework::Vitest
-    } else if env.mocha || env.cypress {
+    } else if dep("mocha") || dep("cypress") {
         Framework::Mocha
-    } else if env.playwright {
+    } else if dep("@playwright/test") {
         Framework::Playwright
-    } else if env.node_test {
+    } else if !project.deps.is_empty() {
         Framework::NodeTest
     } else {
-        Framework::Generic
-    }
+        return None;
+    })
 }
 
 fn skip_member<'a>(call: &CallExpression<'a>) -> Option<&'a str> {
@@ -83,16 +83,6 @@ fn is_ignored(fw: Framework, call: &CallExpression<'_>) -> bool {
                     || matches!(&call.callee, Expression::StaticMemberExpression(m)
                         if m.property.name == "skip" && is_playwright_describe_member(&m.object)))
         }
-        Framework::Generic => {
-            (matches!(
-                skip,
-                Some("it" | "test" | "describe" | "context" | "specify")
-            ) && !call.arguments.is_empty())
-                || matches!(
-                    ident,
-                    Some("xit" | "xtest" | "xdescribe" | "xcontext" | "xspecify")
-                )
-        }
         Framework::NodeTest => false,
     }
 }
@@ -107,8 +97,9 @@ fn has_explanation_comment(ctx: &Ctx<'_, '_>, call: &CallExpression<'_>) -> bool
 
 impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
-        let env = TestEnv::new(ctx);
-        let fw = framework(&env);
+        let Some(fw) = framework(ctx.file.project) else {
+            return;
+        };
         for node in ctx.nodes().iter() {
             let AstKind::CallExpression(call) = node.kind() else {
                 continue;
@@ -194,13 +185,14 @@ fn check_node_test<'a>(ctx: &Ctx<'a, '_>, call: &CallExpression<'a>) {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_util::*;
+    use crate::helpers::batch_tests::check_deps;
 
     #[test]
     fn jest() {
-        check(
+        check_deps(
             "S1607",
             "a.test.js",
+            &["jest"],
             r#"
 jest.mock('x');
 // Noncompliant@+2 {{Remove this unit test or explain why it is ignored.}}
@@ -229,9 +221,10 @@ it('runs', () => {});
 
     #[test]
     fn generic_and_playwright() {
-        check(
+        check_deps(
             "S1607",
             "a.test.js",
+            &["mocha"],
             r#"
 // Noncompliant@+2
 
@@ -241,13 +234,17 @@ describe.skip('my suite', () => {});
 
 xdescribe('my suite', () => {});
 
+// Noncompliant@+2
+
 it.skip();
+
 it('runs', () => {});
 "#,
         );
-        check(
+        check_deps(
             "S1607",
             "a.spec.ts",
+            &["@playwright/test"],
             r#"
 import { test } from '@playwright/test';
 // Noncompliant@+2
@@ -271,9 +268,10 @@ test('conditional', async ({ browserName }) => {
 
     #[test]
     fn node_test() {
-        check(
+        check_deps(
             "S1607",
             "a.test.js",
+            &["typescript"],
             r#"
 import test from 'node:test';
 // Noncompliant@+2

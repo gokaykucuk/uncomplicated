@@ -90,6 +90,15 @@ pub struct TestEnv<'a> {
     pub global_structure: bool,
     /// Unresolved global `expect` is referenced.
     pub global_expect: bool,
+    /// package.json declares a framework exposing global assertions (jasmine, jest, cypress,
+    /// Playwright).
+    pub assertion_deps: bool,
+}
+
+/// Sonar's dependency lookup: `@types/x` counts as a dependency on `x`.
+pub fn has_dep(project: &crate::ProjectInfo, name: &str) -> bool {
+    project.has_dependency(name)
+        || (!name.starts_with('@') && project.deps.contains_key(&format!("@types/{name}")))
 }
 
 /// True if the file references an undeclared global with this name.
@@ -121,18 +130,23 @@ impl<'a> TestEnv<'a> {
             }
         }
         let has = |m: &[&str]| imports.iter().any(|i| m.contains(i));
-        let jest = has(&["jest", "@jest/globals"]) || has_global(ctx, "jest");
-        let vitest = has(&["vitest"]) || has_global(ctx, "vi");
-        let jasmine = has(&["jasmine"]) || has_global(ctx, "jasmine");
-        let mocha = has(&["mocha"]);
-        let cypress = has(&["cypress"]) || has_global(ctx, "cy") || has_global(ctx, "Cypress");
-        let playwright = has(&["@playwright/test"]);
+        let project = ctx.file.project;
+        let dep = |m: &[&str]| m.iter().any(|d| has_dep(project, d));
+        // Sonar's `importsOrDependsOnModule`: an import in the file or a package.json dependency.
+        let jest = has(&["jest", "@jest/globals"]) || dep(&["jest"]);
+        let vitest = has(&["vitest"]) || dep(&["vitest"]);
+        let jasmine =
+            has(&["jasmine"]) || dep(&["jasmine", "jasmine-core", "jasmine-node", "karma-jasmine"]);
+        let mocha = has(&["mocha"]) || dep(&["mocha"]);
+        let cypress = has(&["cypress"]) || dep(&["cypress"]);
+        let playwright = has(&["@playwright/test"]) || dep(&["@playwright/test"]);
         let bun = has(&["bun:test"]);
         let node_test = has(&["node:test"]);
         let global_structure = ["describe", "it", "test", "context", "suite", "specify"]
             .iter()
             .any(|n| has_global(ctx, n));
         let global_expect = has_global(ctx, "expect");
+        let assertion_deps = dep(&["jasmine", "jest", "cypress", "@playwright/test"]);
         Self {
             imports,
             jest,
@@ -145,6 +159,7 @@ impl<'a> TestEnv<'a> {
             node_test,
             global_structure,
             global_expect,
+            assertion_deps,
         }
     }
 
@@ -172,7 +187,8 @@ impl<'a> TestEnv<'a> {
         self.imports_any(SUPPORTED_TEST_FRAMEWORKS)
             || self.jest
             || self.vitest
-            || self.global_structure
+            || self.mocha
+            || self.playwright
     }
 
     /// Some test framework or assertion library is in play.
@@ -191,10 +207,7 @@ impl<'a> TestEnv<'a> {
             "bun:test",
             "@playwright/test",
             "aws-cdk-lib/assertions",
-        ]) || self.jest
-            || self.jasmine
-            || self.cypress
-            || self.global_expect
+        ]) || self.assertion_deps
     }
 }
 
@@ -509,12 +522,37 @@ pub fn local_function<'a, 's>(
     match decl.kind() {
         AstKind::Function(f) => Some(Func::Fn(f)),
         AstKind::VariableDeclarator(d) => {
-            if ctx.scoping().symbol_is_mutated(sym)
-                || !matches!(d.id, BindingPattern::BindingIdentifier(_))
-            {
+            if !matches!(d.id, BindingPattern::BindingIdentifier(_)) {
                 return None;
             }
-            Func::of(strip_parens(d.init.as_ref()?))
+            if !ctx.scoping().symbol_is_mutated(sym) {
+                return Func::of(strip_parens(d.init.as_ref()?));
+            }
+            // `let f; beforeEach(() => { f = function () {...} })`: a single assignment
+            if d.init.is_some() {
+                return None;
+            }
+            let mut writes = ctx
+                .scoping()
+                .get_resolved_references(sym)
+                .filter(|r| r.is_write());
+            let w = writes.next()?;
+            if writes.next().is_some() {
+                return None;
+            }
+            let parent = ctx.parent(w.node_id());
+            let assignment = match parent.kind() {
+                AstKind::AssignmentExpression(a) => a,
+                _ => match ctx.parent(parent.id()).kind() {
+                    AstKind::AssignmentExpression(a) => a,
+                    _ => return None,
+                },
+            };
+            let a = assignment;
+            if a.operator != AssignmentOperator::Assign {
+                return None;
+            }
+            Func::of(strip_parens(&a.right))
         }
         _ => None,
     }
@@ -1161,6 +1199,21 @@ fn call_assertion_exec<'a>(
     {
         return Some(Exec::RunnerBound);
     }
+    // node:test context assertions: `t.assert.equal(...)`
+    if env.node_test
+        && let Expression::StaticMemberExpression(m) = &c.callee
+        && let Expression::StaticMemberExpression(a) = &m.object
+        && a.property.name == "assert"
+        && let Expression::Identifier(t) = &a.object
+        && ctx.symbol_of(t).is_some_and(|s| {
+            matches!(
+                ctx.symbol_decl(s).kind(),
+                AstKind::FormalParameter(_) | AstKind::FormalParameters(_)
+            )
+        })
+    {
+        return Some(Exec::ScriptCapable);
+    }
     // global expect chain
     if is_global_expect_assertion(ctx, c) {
         return Some(Exec::RunnerBound);
@@ -1348,10 +1401,7 @@ impl AssertionStyles {
             "chai/register-should",
             "cypress",
         ]) || env.cypress;
-        let jest_like = env.jest
-            || env.vitest
-            || env.bun
-            || (env.global_expect && !env.jasmine && !chai && !env.playwright && !env.mocha);
+        let jest_like = env.jest || env.vitest || env.bun;
         Self {
             jest_like,
             jasmine: env.jasmine,
@@ -1641,7 +1691,150 @@ fn extract_node_assert<'b, 'a>(
     })
 }
 
+// ---- tests with project dependencies -------------------------------------------------------
+
+/// Like `test_util::check`, but analyzes `code` in a project whose package.json declares `deps`
+/// (`name` or `name@range`). Supports `// Noncompliant`, `@+N` / `@-N` and one `{{message}}`.
+#[cfg(test)]
+pub fn check_deps(key: &str, file: &str, deps: &[&str], code: &str) {
+    use uc_core::{Catalog, Params, Scope};
+    let meta = Catalog::get().rule(key, false).unwrap();
+    let rules = crate::JsRules::new(|m| (m.key == key).then(Params::default));
+    let mut project = crate::ProjectInfo::default();
+    for d in deps {
+        let (name, range) = match d.rsplit_once('@').filter(|(n, _)| !n.is_empty()) {
+            Some((n, r)) => (n, r),
+            None => (*d, "*"),
+        };
+        project.deps.insert(name.to_string(), range.to_string());
+    }
+    let opts = crate::FileOptions {
+        nosonar: false,
+        cpd: false,
+        metrics: false,
+    };
+    let res = crate::analyze_in_project(
+        file,
+        code,
+        meta.scope == Scope::Tests,
+        &rules,
+        &opts,
+        &project,
+    );
+    let mut expected: Vec<(u32, Option<String>)> = Vec::new();
+    for (i, text) in code.lines().enumerate() {
+        let Some(pos) = text.find("Noncompliant") else {
+            continue;
+        };
+        let rest = &text[pos + "Noncompliant".len()..];
+        let mut line = i as i64 + 1;
+        if let Some(r) = rest.strip_prefix('@') {
+            let n: String = r
+                .chars()
+                .take_while(|c| c.is_ascii_digit() || *c == '+' || *c == '-')
+                .collect();
+            line += n.parse::<i64>().unwrap();
+        }
+        let msg = rest
+            .find("{{")
+            .map(|s| rest[s + 2..rest.find("}}").unwrap()].to_string());
+        expected.push((line as u32, msg));
+    }
+    let mut actual: Vec<(u32, String)> = res
+        .issues
+        .iter()
+        .map(|i| (i.loc.line, i.message.clone()))
+        .collect();
+    actual.sort();
+    let mut lines: Vec<u32> = expected.iter().map(|e| e.0).collect();
+    lines.sort_unstable();
+    let got: Vec<u32> = actual.iter().map(|a| a.0).collect();
+    assert_eq!(got, lines, "{key} on {file}: issues {actual:?}");
+    for (line, msg) in expected {
+        if let Some(m) = msg {
+            assert!(
+                actual.iter().any(|(l, a)| *l == line && *a == m),
+                "{key}: line {line} expected {m:?}, got {actual:?}"
+            );
+        }
+    }
+}
+
+// ---- Playwright ------------------------------------------------------------------------------
+
+const LOCATOR_FACTORIES: &[&str] = &[
+    "getByRole",
+    "getByText",
+    "getByLabel",
+    "getByPlaceholder",
+    "getByAltText",
+    "getByTitle",
+    "getByTestId",
+    "locator",
+    "frameLocator",
+];
+
+/// `page.getByRole(...)`, `page.locator('x').getByText(...)`, or a variable initialized with one.
+pub fn is_playwright_locator<'a>(ctx: &Ctx<'a, '_>, e: &Expression<'a>, depth: u8) -> bool {
+    if depth > 6 {
+        return false;
+    }
+    match e {
+        Expression::Identifier(id) => {
+            unique_init(ctx, id).is_some_and(|init| is_playwright_locator(ctx, init, depth + 1))
+        }
+        Expression::CallExpression(c) => {
+            let Expression::StaticMemberExpression(m) = &c.callee else {
+                return false;
+            };
+            LOCATOR_FACTORIES.contains(&m.property.name.as_str())
+                && match &m.object {
+                    Expression::Identifier(id) if id.name == "page" => true,
+                    obj => is_playwright_locator(ctx, obj, depth + 1),
+                }
+        }
+        _ => false,
+    }
+}
+
 // ---- Testing Library -----------------------------------------------------------------------
+
+/// Whether the promise-valued expression at `id` is awaited, returned, chained or aggregated.
+pub fn is_promise_handled(ctx: &Ctx<'_, '_>, mut id: NodeId) -> bool {
+    loop {
+        let span = ctx.node(id).kind().span();
+        let parent = ctx.parent(id);
+        match parent.kind() {
+            AstKind::ParenthesizedExpression(_)
+            | AstKind::TSAsExpression(_)
+            | AstKind::TSNonNullExpression(_)
+            | AstKind::TSSatisfiesExpression(_) => id = parent.id(),
+            AstKind::AwaitExpression(_) | AstKind::ReturnStatement(_) => return true,
+            AstKind::ArrowFunctionExpression(a) => return !a.body.is_function_body(),
+            AstKind::StaticMemberExpression(m) => {
+                return m.object.span() == span
+                    && matches!(m.property.name.as_str(), "then" | "catch" | "finally");
+            }
+            AstKind::ArrayExpression(_) => {
+                let AstKind::CallExpression(c) = ctx.parent(parent.id()).kind() else {
+                    return false;
+                };
+                return matches!(&c.callee, Expression::StaticMemberExpression(m)
+                    if matches!(&m.object, Expression::Identifier(p) if p.name == "Promise")
+                        && matches!(m.property.name.as_str(), "all" | "allSettled" | "race" | "any"));
+            }
+            AstKind::CallExpression(c) => {
+                // expect(promise).resolves / .rejects
+                if !matches!(&c.callee, Expression::Identifier(e) if e.name == "expect") {
+                    return false;
+                }
+                return matches!(ctx.parent(parent.id()).kind(),
+                    AstKind::StaticMemberExpression(m) if matches!(m.property.name.as_str(), "resolves" | "rejects"));
+            }
+            _ => return false,
+        }
+    }
+}
 
 /// Name imported from a Testing Library module that `e` refers to (`waitFor`, `screen`, ...),
 /// through named, namespace or `require` bindings.
