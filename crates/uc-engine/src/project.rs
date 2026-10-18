@@ -50,7 +50,13 @@ impl Projects {
             let mut info = (*inherited).clone();
             info.has_package_json |= has_pkg;
             if has_pkg && let Some(p) = read_package_json(&pkg) {
-                info.deps.extend(p.deps);
+                info.catalog.extend(p.catalog);
+                // `catalog:` ranges refer to versions declared by a workspace root.
+                let deps = p.deps.into_iter().map(|(k, v)| {
+                    let resolved = if v.starts_with("catalog:") { info.catalog.get(&k).cloned() } else { None };
+                    (k, resolved.unwrap_or(v))
+                });
+                info.deps.extend(deps);
                 info.module_type = p.module_type;
                 info.engines_node = p.engines_node;
                 if let Some(n) = p.name {

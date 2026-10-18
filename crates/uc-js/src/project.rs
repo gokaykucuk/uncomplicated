@@ -40,6 +40,8 @@ pub struct ProjectInfo {
     pub module_aliases: Vec<String>,
     /// `workspaces` globs of enclosing `package.json` files.
     pub workspaces: Vec<String>,
+    /// Catalog versions (pnpm/bun `catalog:` ranges) declared by enclosing `package.json` files.
+    pub catalog: FxHashMap<String, String>,
 }
 
 impl ProjectInfo {
@@ -151,6 +153,8 @@ pub fn min_major(range: &str) -> Option<u64> {
 #[derive(Debug, Default)]
 pub struct PackageJson {
     pub deps: FxHashMap<String, String>,
+    /// pnpm/bun `catalog` versions (`workspaces.catalog` or top-level `catalog`).
+    pub catalog: FxHashMap<String, String>,
     pub module_type: Option<String>,
     pub engines_node: Option<String>,
     pub name: Option<String>,
@@ -165,6 +169,13 @@ pub fn read_package_json(path: &Path) -> Option<PackageJson> {
         if let Some(Value::Object(m)) = v.get(key) {
             for (k, ver) in m {
                 p.deps.insert(k.clone(), ver.as_str().unwrap_or("").to_string());
+            }
+        }
+    }
+    for cat in [v.get("catalog"), v.get("workspaces").and_then(|w| w.get("catalog"))].into_iter().flatten() {
+        if let Value::Object(m) = cat {
+            for (k, ver) in m {
+                p.catalog.insert(k.clone(), ver.as_str().unwrap_or("").to_string());
             }
         }
     }
