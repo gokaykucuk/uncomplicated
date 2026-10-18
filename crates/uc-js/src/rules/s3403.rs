@@ -1,4 +1,5 @@
 //! Strict equality operators should not be used with dissimilar types
+use crate::helpers::batch_bug1::{is_html, ty};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -28,7 +29,8 @@ fn family(t: &Ty) -> Option<Family> {
         Ty::BigInt => Family::BigInt,
         Ty::Boolean => Family::Boolean,
         Ty::Symbol => Family::Symbol,
-        Ty::Array
+        Ty::Object
+        | Ty::Array
         | Ty::Function
         | Ty::RegExp
         | Ty::Date
@@ -48,6 +50,35 @@ fn families(t: &Ty) -> Option<Vec<Family>> {
     }
 }
 
+/// `null`, `undefined` or `void x`.
+fn is_nullish_literal(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> bool {
+    is_null(e) || is_undefined(ctx, e)
+}
+
+/// The two operands can never be strictly equal.
+fn dissimilar(ctx: &Ctx<'_, '_>, left: &Expression<'_>, right: &Expression<'_>) -> bool {
+    let (l, r) = (strip_parens(left), strip_parens(right));
+    // `x === undefined` where `x` can't be nullish (Sonar analyzes with strict null checks).
+    // Member accesses may be missing properties or defensive checks: allowed.
+    for (lit, other) in [(l, r), (r, l)] {
+        if is_nullish_literal(ctx, lit) {
+            // Call results depend on library typings (which shims may override): not trusted.
+            if is_nullish_literal(ctx, other)
+                || other.is_member_expression()
+                || matches!(other, Expression::ChainExpression(_) | Expression::CallExpression(_))
+            {
+                return false;
+            }
+            return families(&ty(ctx, other)).is_some();
+        }
+    }
+    let Some(lf) = families(&ty(ctx, l)) else { return false };
+    let Some(rf) = families(&ty(ctx, r)) else { return false };
+    let comparable = lf.iter().any(|f| rf.contains(f));
+    // Object instances are only "dissimilar" to primitives.
+    !(comparable || (lf.contains(&Family::Object) && rf.contains(&Family::Object)))
+}
+
 impl JsRule for Rule {
     fn interests(&self) -> &'static [AstType] {
         &[AstType::BinaryExpression]
@@ -62,15 +93,7 @@ impl JsRule for Rule {
             BinaryOperator::StrictInequality => ("!==", "!=", "true"),
             _ => return,
         };
-        let Some(lf) = families(&type_of(ctx, &b.left)) else {
-            return;
-        };
-        let Some(rf) = families(&type_of(ctx, &b.right)) else {
-            return;
-        };
-        // Object instances are only "dissimilar" to primitives.
-        let comparable = lf.iter().any(|l| rf.contains(l));
-        if comparable || (lf.contains(&Family::Object) && rf.contains(&Family::Object)) {
+        if is_html(ctx) || !dissimilar(ctx, &b.left, &b.right) {
             return;
         }
         let between = Span::new(b.left.span().end, b.right.span().start);
@@ -106,9 +129,20 @@ if (true === 1) {} // Noncompliant
 if (str === "2") {}
 if (num === 2) {}
 if (x === 1) {}
-if (str === null) {}
-if (str === undefined) {}
+if (str === null) {} // Noncompliant
+if (str === undefined) {} // Noncompliant
 if ([] === {}) {}
+if (!hasOwnProperty.call(a, b) === undefined) {} // Noncompliant
+const keys = Object.keys(o);
+if (keys[0] !== 1) {} // Noncompliant
+if (keys[0] !== "a") {}
+if (o.p === undefined) {}
+if (o[0] === undefined) {}
+let maybe = cond ? 1 : undefined;
+if (maybe === undefined) {}
+if (null === undefined) {}
+if (unknownThing === undefined) {}
+if (new Date(NaN).toJSON() === null) {}
 if (str == num) {}
 "#,
         );

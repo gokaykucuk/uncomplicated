@@ -1,5 +1,5 @@
 //! "new" should only be used with functions and classes
-use crate::helpers::batch_bug1::const_init;
+use crate::helpers::batch_bug1::{const_init, is_html};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -24,12 +24,40 @@ fn is_not_instantiable(ctx: &Ctx<'_, '_>, callee: &Expression<'_>) -> bool {
     {
         return true;
     }
+    if is_static_method(ctx, e) {
+        return true;
+    }
     type_of(ctx, e).all(|t| {
         matches!(
             t,
             Ty::String | Ty::Number | Ty::BigInt | Ty::Boolean | Ty::Symbol
         )
     })
+}
+
+/// `C.m` where `C` is a local class and `m` one of its static methods (methods aren't
+/// constructible).
+fn is_static_method(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> bool {
+    let Expression::StaticMemberExpression(m) = e else { return false };
+    let Expression::Identifier(obj) = strip_parens(&m.object) else { return false };
+    let Some(sym) = ctx.symbol_of(obj) else { return false };
+    if ctx.scoping().symbol_is_mutated(sym) {
+        return false;
+    }
+    let AstKind::Class(class) = ctx.symbol_decl(sym).kind() else { return false };
+    let name = m.property.name.as_str();
+    let mut found = false;
+    for el in &class.body.body {
+        // Any other member with that name (property, accessor) could hold a constructor.
+        if el.property_key().and_then(property_key_name) != Some(name) {
+            continue;
+        }
+        match el {
+            ClassElement::MethodDefinition(md) if md.r#static && md.kind == MethodDefinitionKind::Method => found = true,
+            _ => return false,
+        }
+    }
+    found
 }
 
 impl JsRule for Rule {
@@ -41,7 +69,9 @@ impl JsRule for Rule {
         let AstKind::NewExpression(n) = node.kind() else {
             return;
         };
-        if matches!(n.callee, Expression::ThisExpression(_)) || !is_not_instantiable(ctx, &n.callee)
+        if matches!(n.callee, Expression::ThisExpression(_))
+            || is_html(ctx)
+            || !is_not_instantiable(ctx, &n.callee)
         {
             return;
         }
@@ -82,6 +112,9 @@ new g();
 new Foo();
 declare const any: any;
 new any();
+class K { static make() { return new K(); } static Inner = class {}; }
+new K.make(); // Noncompliant {{Replace K.make with a constructor function.}}
+new K.Inner();
 interface I { new (): I }
 declare const i: I;
 new i();

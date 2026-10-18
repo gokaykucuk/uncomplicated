@@ -2,7 +2,7 @@
 use oxc_ast_visit::Visit;
 use oxc_syntax::scope::ScopeFlags;
 
-use crate::helpers::batch_bug1::parent_skip_parens_only;
+use crate::helpers::batch_bug1::{is_html, parent_skip_parens_only};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -186,6 +186,9 @@ impl JsRule for Rule {
         let AstKind::CallExpression(call) = node.kind() else {
             return;
         };
+        if is_html(ctx) {
+            return;
+        }
         if !matches!(
             parent_skip_parens_only(ctx, node.id()).kind(),
             AstKind::ExpressionStatement(_)
