@@ -72,20 +72,62 @@ pub fn analyze_file(
     project: &ProjectInfo,
 ) -> FileResult {
     let raw = src;
-    let embedded = embedded_scripts(path, src);
-    let (src, lang) = match &embedded {
-        Some((s, l)) => (s.as_str(), *l),
-        None => (src, lang_of(path)),
+    let Some(blocks) = embedded_scripts(path, src) else {
+        return ALLOC.with_borrow_mut(|alloc| {
+            alloc.reset();
+            analyze_in(alloc, path, abs_path, src, raw, lang_of(path), false, is_test, rules, opts, project)
+        });
     };
-    ALLOC.with_borrow_mut(|alloc| {
-        alloc.reset();
-        analyze_in(alloc, path, abs_path, src, raw, lang, embedded.is_some(), is_test, rules, opts, project)
+    // Each script block of an HTML page is its own program (like SonarJS); a Vue SFC is one.
+    let mut merged: Option<FileResult> = None;
+    for (block, lang) in &blocks {
+        let r = ALLOC.with_borrow_mut(|alloc| {
+            alloc.reset();
+            analyze_in(alloc, path, abs_path, block, raw, *lang, true, is_test, rules, opts, project)
+        });
+        merged = Some(match merged {
+            None => r,
+            Some(m) => merge_results(m, r),
+        });
+    }
+    merged.unwrap_or_else(|| {
+        let mut r = FileResult { path: path.to_string(), lang: Some(Lang::Js), is_test, ..FileResult::default() };
+        r.metrics.lines = LineIndex::new(src).line_count();
+        r
     })
 }
 
-/// For `.vue` and `.html` files: the source with everything outside `<script>` blocks blanked
-/// (newlines kept, so positions map 1:1), and the script language.
-fn embedded_scripts(path: &str, src: &str) -> Option<(String, Lang)> {
+/// Combines the results of separately analyzed script blocks of one file.
+fn merge_results(mut a: FileResult, b: FileResult) -> FileResult {
+    a.issues.extend(b.issues);
+    a.issues.sort_by(|x, y| (x.loc.line, x.loc.col).cmp(&(y.loc.line, y.loc.col)));
+    let (m, n) = (&mut a.metrics, b.metrics);
+    m.ncloc += n.ncloc;
+    m.comment_lines += n.comment_lines;
+    m.functions += n.functions;
+    m.classes += n.classes;
+    m.statements += n.statements;
+    m.complexity += n.complexity;
+    m.cognitive_complexity += n.cognitive_complexity;
+    m.code_lines.extend(n.code_lines);
+    m.code_lines.sort_unstable();
+    m.code_lines.dedup();
+    m.executable_lines.extend(n.executable_lines);
+    m.executable_lines.sort_unstable();
+    m.executable_lines.dedup();
+    m.lines = m.lines.max(n.lines);
+    let mut cpd = a.cpd;
+    cpd.extend(b.cpd);
+    cpd.sort_by_key(|t| t.line);
+    a.cpd = cpd;
+    a.parse_error = a.parse_error.or(b.parse_error);
+    a
+}
+
+/// For `.vue` and `.html` files: sources with everything outside `<script>` blocks blanked
+/// (newlines kept, so positions map 1:1), with their language. HTML yields one source per block,
+/// Vue one source for all blocks.
+fn embedded_scripts(path: &str, src: &str) -> Option<Vec<(String, Lang)>> {
     let lower_path = path.to_ascii_lowercase();
     let vue = lower_path.ends_with(".vue");
     if !vue && !lower_path.ends_with(".html") && !lower_path.ends_with(".htm") {
@@ -93,7 +135,9 @@ fn embedded_scripts(path: &str, src: &str) -> Option<(String, Lang)> {
     }
     let bytes = src.as_bytes();
     let lower = src.to_ascii_lowercase();
-    let mut out: Vec<u8> = bytes.iter().map(|&b| if b == b'\n' || b == b'\r' { b } else { b' ' }).collect();
+    let blank: Vec<u8> = bytes.iter().map(|&b| if b == b'\n' || b == b'\r' { b } else { b' ' }).collect();
+    let mut out = blank.clone();
+    let mut blocks: Vec<(String, Lang)> = Vec::new();
     let mut lang = Lang::Js;
     let mut from = 0;
     while let Some(i) = lower[from..].find("<script") {
@@ -114,10 +158,18 @@ fn embedded_scripts(path: &str, src: &str) -> Option<(String, Lang)> {
         if matches!(attr_value(attrs, "lang").as_deref(), Some("ts" | "tsx")) {
             lang = Lang::Ts;
         }
-        out[content_start..content_end].copy_from_slice(&bytes[content_start..content_end]);
+        if vue {
+            out[content_start..content_end].copy_from_slice(&bytes[content_start..content_end]);
+        } else {
+            let mut one = blank.clone();
+            one[content_start..content_end].copy_from_slice(&bytes[content_start..content_end]);
+            blocks.push((String::from_utf8(one).unwrap_or_default(), Lang::Js));
+        }
     }
-    let _ = vue;
-    Some((String::from_utf8(out).unwrap_or_default(), lang))
+    if vue {
+        blocks.push((String::from_utf8(out).unwrap_or_default(), lang));
+    }
+    Some(blocks)
 }
 
 fn attr_value(attrs: &str, name: &str) -> Option<String> {
