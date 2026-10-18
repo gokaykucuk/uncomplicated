@@ -209,6 +209,12 @@ fn analyze(a: AnalyzeArgs) -> Result<ExitCode, String> {
     }
 
     if std::env::var_os("UNC_PROFILE").is_some() {
+        let ph: Vec<String> = ["parse", "index", "rules", "metrics", "cpd"]
+            .iter()
+            .zip(uc_engine::go_phases())
+            .map(|(n, ns)| format!("{n} {:.0} ms", ns as f64 / 1e6))
+            .collect();
+        eprintln!("go phases (summed): {}", ph.join(", "));
         let prof = uc_engine::profile_report();
         let total: u64 = prof.iter().map(|p| p.1).sum();
         eprintln!("rule time (summed across threads): {:.0} ms", total as f64 / 1e6);

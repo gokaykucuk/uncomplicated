@@ -7,6 +7,7 @@ pub mod cognitive;
 pub mod helpers;
 pub mod helpers_sonar;
 pub mod helpers_extra;
+pub mod kinds;
 pub mod metrics;
 pub mod prelude;
 pub mod scope;
@@ -23,7 +24,7 @@ use rustc_hash::FxHashMap;
 use tree_sitter::Language;
 use uc_core::{Catalog, Params, RuleMeta};
 
-pub use analyze::{FileOptions, analyze};
+pub use analyze::{FileOptions, PHASES, analyze, profile_report};
 pub use ctx::{Ctx, FileInfo, Nd};
 
 pub static LANGUAGE: LazyLock<Language> = LazyLock::new(|| tree_sitter_go::LANGUAGE.into());

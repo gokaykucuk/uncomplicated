@@ -49,17 +49,47 @@ fn parse(src: &str) -> Option<tree_sitter::Tree> {
     Some(if retry.root_node().has_error() { tree } else { retry })
 }
 
+/// `UNC_PROFILE=1`: nanoseconds spent in parse, index, rules, metrics, cpd (summed over threads).
+pub static PHASES: [std::sync::atomic::AtomicU64; 5] = [const { std::sync::atomic::AtomicU64::new(0) }; 5];
+static PROFILING: std::sync::LazyLock<bool> = std::sync::LazyLock::new(|| std::env::var_os("UNC_PROFILE").is_some());
+
+fn phase(i: usize, t: std::time::Instant) -> std::time::Instant {
+    if *PROFILING {
+        PHASES[i].fetch_add(t.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed);
+    }
+    std::time::Instant::now()
+}
+
+static RULE_TIMES: std::sync::LazyLock<Option<Vec<std::sync::atomic::AtomicU64>>> = std::sync::LazyLock::new(|| {
+    std::env::var_os("UNC_PROFILE").map(|_| (0..crate::rules::REGISTRY.len()).map(|_| Default::default()).collect())
+});
+
+/// Per-rule profile: (key, nanoseconds), slowest first.
+pub fn profile_report() -> Vec<(&'static str, u64)> {
+    let Some(p) = RULE_TIMES.as_ref() else { return Vec::new() };
+    let mut v: Vec<_> = crate::rules::REGISTRY
+        .iter()
+        .zip(p)
+        .map(|((k, _), t)| (*k, t.load(std::sync::atomic::Ordering::Relaxed)))
+        .collect();
+    v.sort_by(|a, b| b.1.cmp(&a.1));
+    v
+}
+
 /// Analyzes one Go file.
 pub fn analyze(path: &str, src: &str, is_test: bool, rules: &GoRules, opts: &FileOptions) -> FileResult {
     let mut result = FileResult { path: path.to_string(), lang: Some(Lang::Go), is_test, ..FileResult::default() };
     let lines = LineIndex::new(src);
+    let t = std::time::Instant::now();
     let Some(tree) = parse(src) else {
         result.parse_error = Some("parse failed".into());
         result.metrics.lines = lines.line_count();
         return result;
     };
+    let t = phase(0, t);
     let root = tree.root_node();
     let ctx = Ctx::new(src, root, FileInfo { path, is_test }, &lines);
+    let t = phase(1, t);
 
     if root.has_error() {
         // Like sonar-go: a file that doesn't parse only gets a parsing-failure issue (S2260).
@@ -83,10 +113,16 @@ pub fn analyze(path: &str, src: &str, is_test: bool, rules: &GoRules, opts: &Fil
     }
 
     let active: Vec<bool> = rules.rules.iter().map(|r| r.meta.applies_to_scope(is_test)).collect();
+    let prof = RULE_TIMES.as_ref();
+    let mut local = prof.map(|_| vec![0u64; rules.rules.len()]);
     for (i, r) in rules.rules.iter().enumerate() {
         if active[i] {
             ctx.rule.set(r.key);
+            let t0 = local.as_ref().map(|_| std::time::Instant::now());
             r.rule.run_once(&ctx);
+            if let (Some(l), Some(t0)) = (local.as_mut(), t0) {
+                l[i] += t0.elapsed().as_nanos() as u64;
+            }
         }
     }
     for node in &ctx.nodes {
@@ -98,19 +134,32 @@ pub fn analyze(path: &str, src: &str, is_test: bool, rules: &GoRules, opts: &Fil
             if active[ri] {
                 let r = &rules.rules[ri];
                 ctx.rule.set(r.key);
+                let t0 = local.as_ref().map(|_| std::time::Instant::now());
                 r.rule.run(*node, &ctx);
+                if let (Some(l), Some(t0)) = (local.as_mut(), t0) {
+                    l[ri] += t0.elapsed().as_nanos() as u64;
+                }
             }
         }
     }
+    if let (Some(p), Some(l)) = (prof, local) {
+        for (i, ns) in l.into_iter().enumerate() {
+            let slot = crate::rules::REGISTRY.iter().position(|(k, _)| *k == rules.rules[i].key).unwrap();
+            p[slot].fetch_add(ns, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
 
+    let t = phase(2, t);
     if opts.metrics {
         result.metrics = metrics::compute(&ctx);
     } else {
         result.metrics.lines = lines.line_count();
     }
+    let t = phase(3, t);
     if opts.cpd && !is_test {
         result.cpd = metrics::cpd_tokens(&ctx);
     }
+    phase(4, t);
 
     let mut nosonar: Vec<u32> = if opts.nosonar {
         ctx.comments.iter().filter(|c| ctx.text(**c).contains("NOSONAR")).map(|c| ctx.line(*c)).collect()

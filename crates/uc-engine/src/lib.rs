@@ -68,7 +68,15 @@ pub struct Analysis {
 
 /// Per-rule time when `UNC_PROFILE` is set.
 pub fn profile_report() -> Vec<(&'static str, u64)> {
-    uc_js::profile_report()
+    let mut v = uc_js::profile_report();
+    v.extend(uc_go::profile_report().into_iter().map(|(k, t)| (k, t)));
+    v.sort_by(|a, b| b.1.cmp(&a.1));
+    v
+}
+
+/// Go analyzer phase times when `UNC_PROFILE` is set.
+pub fn go_phases() -> Vec<u64> {
+    uc_go::PHASES.iter().map(|p| p.load(std::sync::atomic::Ordering::Relaxed)).collect()
 }
 
 /// Keys of implemented JS/TS rules.
