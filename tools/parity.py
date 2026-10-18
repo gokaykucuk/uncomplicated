@@ -40,21 +40,46 @@ PROJECTS = [
 ]
 
 
+# Rule parameters of the ruling's quality profiles (RulingTest.setUp). The JS profile applies to
+# JS files, the TS profile to TS files; rules whose parameters differ get a second, TS-only run.
+RULE_PARAMS_JS = {
+    "S1192": {"threshold": 4},
+    "S1451": {
+        "headerFormat": "// Copyright 20\\d\\d The Closure Library Authors. All Rights Reserved.",
+        "isRegularExpression": True,
+    },
+}
+RULE_PARAMS_TS = {"S1451": {"headerFormat": "//.*", "isRegularExpression": True}}
+TS_GLOBS = ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"]
+
+
+def toml_value(v):
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    return json.dumps(v)
+
+
+def toml_table(params):
+    return "{ " + ", ".join(f"{k} = {toml_value(v)}" for k, v in params.items()) + " }"
+
+
 def toml_list(items):
     return "[" + ", ".join(json.dumps(i) for i in items) + "]"
 
 
-def run_project(unc, src_dir, exclusions, test_dir, rules):
+def run_project(unc, src_dir, exclusions, test_dir, rules, params=None, inclusions=None):
     excl = ["**/.*", "**/.*/**", "**/*.d.ts", "**/.git/**", "**/node_modules/**", "**/bower_components/**",
             "**/dist/**", "**/vendor/**", "**/external/**", "**/contrib/**"]
     excl += [e.strip() for e in exclusions.split(",") if e.strip()]
     # With no test dir, Sonar classifies tests by file-name heuristic (our defaults).
     tests_line = f"tests = {toml_list([f'{test_dir}/**'])}\n" if test_dir else ""
+    incl_line = f"inclusions = {toml_list(inclusions)}\n" if inclusions else ""
+    params = RULE_PARAMS_JS if params is None else params
     cfg = f"""[analysis]
 profile = "all"
 replace_default_exclusions = true
 exclusions = {toml_list(excl)}
-{tests_line}max_file_size = {4000 * 1000}
+{tests_line}{incl_line}max_file_size = {4000 * 1000}
 respect_gitignore = false
 nosonar = true
 
@@ -64,7 +89,11 @@ enabled = false
     if rules:
         # Only the requested rules: disable everything else via profile + explicit enable.
         cfg = cfg.replace('profile = "all"', 'profile = "none"')
-        cfg += "\n[rules]\n" + "".join(f'{r} = "on"\n' for r in rules)
+        cfg += "\n[rules]\n" + "".join(
+            f"{r} = {toml_table(params[r])}\n" if r in params else f'{r} = "on"\n' for r in rules
+        )
+    else:
+        cfg += "\n[rules]\n" + "".join(f"{r} = {toml_table(p)}\n" for r, p in params.items())
     with tempfile.NamedTemporaryFile("w", suffix=".toml", delete=False) as f:
         f.write(cfg)
         cfg_path = f.name
@@ -129,6 +158,16 @@ def main():
         if not os.path.isdir(src):
             continue
         actual, elapsed, loc = run_project(args.unc, src, exclusions, test_dir, rules)
+        ts_rules = [r for r in set(RULE_PARAMS_JS) | set(RULE_PARAMS_TS) if not rules or r in rules]
+        if ts_rules:
+            ts_only, el2, _ = run_project(args.unc, src, exclusions, test_dir, ts_rules, RULE_PARAMS_TS, TS_GLOBS)
+            total_time += el2
+            for r in ts_rules:
+                merged = collections.Counter(
+                    {k: v for k, v in actual.get(r, {}).items() if not k[0].endswith((".ts", ".tsx", ".mts", ".cts"))}
+                )
+                merged.update(ts_only.get(r, collections.Counter()))
+                actual[r] = merged
         total_time += elapsed
         total_loc += loc
         expected = load_expected(expected_dir, project)

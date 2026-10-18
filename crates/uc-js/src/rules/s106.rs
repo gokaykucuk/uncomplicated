@@ -1,5 +1,4 @@
 //! Standard outputs should not be used directly to log anything
-use crate::helpers::batch_smell1::eslint_disabled;
 use crate::prelude::*;
 
 const DEFAULT_ALLOW: &[&str] = &[
@@ -64,9 +63,7 @@ impl JsRule for Rule {
         if prop.is_some_and(|p| self.allow.iter().any(|a| a == p)) {
             return;
         }
-        if !eslint_disabled(ctx, span.start, "no-console") {
-            ctx.report(span, "Unexpected console statement.");
-        }
+        ctx.report(span, "Unexpected console statement.");
     }
 }
 
@@ -87,11 +84,6 @@ console.info("x");
 console.table([]);
 function f(console) { console.log(1); }
 "#,
-        );
-        check(
-            "S106",
-            "c.js",
-            "/* eslint no-console: 0 */\nconsole.log(1);\n",
         );
         check_with(
             "S106",

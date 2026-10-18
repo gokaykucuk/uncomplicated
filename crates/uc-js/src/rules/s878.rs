@@ -1,5 +1,4 @@
 //! Comma operator should not be used
-use crate::helpers::batch_smell1::eslint_disabled;
 use crate::prelude::*;
 
 pub struct Rule;
@@ -58,9 +57,7 @@ impl JsRule for Rule {
             .find(|t| t.kind() == Kind::Comma)
             .map(|t| t.span())
             .unwrap_or(seq.span);
-        if !eslint_disabled(ctx, comma.start, "no-sequences") {
-            ctx.report(comma, "Unexpected use of comma operator.");
-        }
+        ctx.report(comma, "Unexpected use of comma operator.");
     }
 }
 

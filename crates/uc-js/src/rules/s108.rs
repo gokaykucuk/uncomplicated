@@ -1,5 +1,4 @@
 //! Nested blocks of code should not be left empty
-use crate::helpers::batch_smell1::eslint_disabled;
 use crate::prelude::*;
 
 pub struct Rule {
@@ -33,13 +32,9 @@ impl JsRule for Rule {
                 if ctx.has_comments_in(b.span) {
                     return;
                 }
-                if !eslint_disabled(ctx, b.span.start, "no-empty") {
-                    ctx.report(b.span, "Empty block statement.");
-                }
+                ctx.report(b.span, "Empty block statement.");
             }
-            AstKind::SwitchStatement(s)
-                if s.cases.is_empty() && !eslint_disabled(ctx, s.span.start, "no-empty") =>
-            {
+            AstKind::SwitchStatement(s) if s.cases.is_empty() => {
                 ctx.report(s.span, "Empty switch statement.");
             }
             _ => {}

@@ -23,13 +23,10 @@ impl JsRule for Rule {
         let count = code_lines(ctx, 1, n);
         if count > self.maximum {
             // File-level issue: Sonar reports it without a line.
-            ctx.report(
-                Span::new(0, 0),
-                format!(
+            ctx.report_file(format!(
                     "This file has {count} lines, which is greater than {} authorized. Split it into smaller files.",
-                    self.maximum
-                ),
-            );
+                self.maximum
+            ));
         }
     }
 }
@@ -44,7 +41,7 @@ mod tests {
             "S104",
             "a.js",
             serde_json::json!({"maximum": 3}),
-            r#"// Noncompliant {{This file has 4 lines, which is greater than 3 authorized. Split it into smaller files.}}
+            r#"// Noncompliant@0 {{This file has 4 lines, which is greater than 3 authorized. Split it into smaller files.}}
 let a = 1;
 
 // comment

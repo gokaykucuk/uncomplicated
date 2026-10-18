@@ -1,5 +1,4 @@
 //! "===" and "!==" should be used instead of "==" and "!="
-use crate::helpers::batch_smell1::eslint_disabled;
 use crate::prelude::*;
 
 pub struct Rule;
@@ -55,9 +54,6 @@ impl JsRule for Rule {
             .find(|t| matches!(t.kind(), Kind::Eq2 | Kind::Neq))
             .map(|t| t.span())
             .unwrap_or(b.span);
-        if eslint_disabled(ctx, op.start, "eqeqeq") {
-            return;
-        }
         ctx.report(
             op,
             format!("Expected '{expected}' and instead saw '{actual}'."),
@@ -82,13 +78,7 @@ if (a == null) {}
 if (typeof a == 'string') {}
 if ('a' == 'b') {}
 if (1 == '1') {}            // Noncompliant
-// eslint-disable-next-line eqeqeq
-if (a == b) {}
-if (a == b) {} // eslint-disable-line no-console, eqeqeq
 if (a == b) {} // eslint-disable-line no-console -- Noncompliant
-/* eslint-disable eqeqeq */
-if (a == b) {}
-/* eslint-enable */
 if (a == b) {} // Noncompliant
 "#,
         );

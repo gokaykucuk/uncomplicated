@@ -1,5 +1,4 @@
 //! Nested code blocks should not be used
-use crate::helpers::batch_smell1::eslint_disabled;
 use crate::prelude::*;
 
 pub struct Rule;
@@ -45,7 +44,7 @@ impl JsRule for Rule {
             _ => return,
         };
         let report = (lone && !has_block_scoped_decl(block)) || sole_child;
-        if report && !eslint_disabled(ctx, block.span.start, "no-lone-blocks") {
+        if report {
             ctx.report(
                 block.span,
                 if nested {

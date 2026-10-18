@@ -173,8 +173,15 @@ impl JsRule for Rule {
                 }
             }
         }
+        let vue = ctx.file.path.to_ascii_lowercase().ends_with(".vue");
+        let template: FxHashSet<String> = if vue {
+            vue_template_names(ctx)
+        } else {
+            FxHashSet::default()
+        };
         for (name, span) in unused {
             if (name == "jsx" && jsx_pragma)
+                || (vue && template.contains(name) && in_setup_script(ctx.file.raw, span.start))
                 || jsx.contains(name)
                 || type_names.contains(name)
                 || jsdoc.iter().any(|c| c.contains(name))
@@ -186,9 +193,101 @@ impl JsRule for Rule {
     }
 }
 
+/// Vue only capitalizes the character after `-`.
+fn camel(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut up = false;
+    for c in s.chars() {
+        if c == '-' {
+            up = true;
+        } else if up {
+            out.extend(c.to_uppercase());
+            up = false;
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
+fn pascal(s: &str) -> String {
+    let c = camel(s);
+    let mut it = c.chars();
+    match it.next() {
+        Some(f) => f.to_uppercase().collect::<String>() + it.as_str(),
+        None => c,
+    }
+}
+
+/// Names a Vue template may refer to: element names, directive names (`v-foo` -> `vFoo`) and
+/// identifiers in expressions, approximated by every word of the template text (camel- and
+/// Pascal-cased like Vue's component/directive resolution).
+fn vue_template_names(ctx: &Ctx<'_, '_>) -> FxHashSet<String> {
+    let raw = ctx.file.raw.as_bytes();
+    let src = ctx.src.as_bytes();
+    let mut text = String::new();
+    for (i, &b) in raw.iter().enumerate() {
+        // Template text is what was blanked out of the script source.
+        let blanked = src.get(i).is_none_or(|&s| s != b);
+        text.push(if blanked && b.is_ascii() {
+            b as char
+        } else {
+            ' '
+        });
+    }
+    let mut out = FxHashSet::default();
+    for word in
+        text.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '$' || c == '-'))
+    {
+        let word = word.trim_matches('-');
+        if word.is_empty() {
+            continue;
+        }
+        let c = camel(word);
+        let p = pascal(word);
+        if let Some(d) = word.strip_prefix("v-") {
+            out.insert(format!("v{}", camel(d)));
+            out.insert(format!("v{}", pascal(d)));
+        }
+        out.insert(c.clone());
+        out.insert(format!("v{}", pascal(&c)));
+        out.insert(p);
+        out.insert(word.to_string());
+    }
+    out
+}
+
+/// True if `pos` lies in a `<script setup>` block.
+fn in_setup_script(raw: &str, pos: u32) -> bool {
+    let head = &raw[..(pos as usize).min(raw.len())];
+    head.rfind("<script").is_some_and(|i| {
+        head[i..]
+            .find('>')
+            .is_some_and(|e| head[i..i + e].contains("setup"))
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use crate::test_util::*;
+
+    #[test]
+    fn vue_setup() {
+        check(
+            "S1128",
+            "a.vue",
+            r#"<template>
+  <my-comp :value="helper(x)" v-focus />
+</template>
+<script setup>
+import MyComp from './MyComp.vue';
+import { helper } from './h';
+import vFocus from './focus';
+import unused from './u'; // Noncompliant
+</script>
+"#,
+        );
+    }
 
     #[test]
     fn unused_imports() {

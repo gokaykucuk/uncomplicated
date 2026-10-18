@@ -1,5 +1,4 @@
 //! Octal values should not be used
-use crate::helpers::batch_smell1::eslint_disabled;
 use crate::prelude::*;
 
 pub struct Rule;
@@ -23,7 +22,6 @@ impl JsRule for Rule {
         if raw.len() > 1
             && raw[0] == b'0'
             && raw[1].is_ascii_digit()
-            && !eslint_disabled(ctx, n.span.start, "no-octal")
         {
             ctx.report(n.span, "Octal literals should not be used.");
         }

@@ -1,5 +1,4 @@
 //! "continue" should not be used
-use crate::helpers::batch_smell1::eslint_disabled;
 use crate::prelude::*;
 
 pub struct Rule;
@@ -17,7 +16,6 @@ impl JsRule for Rule {
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
         if let AstKind::ContinueStatement(c) = node.kind()
-            && !eslint_disabled(ctx, c.span.start, "no-continue")
         {
             ctx.report(c.span, "Unexpected use of continue statement.");
         }

@@ -1,5 +1,4 @@
 //! Control structures should use curly braces
-use crate::helpers::batch_smell1::eslint_disabled;
 use crate::prelude::*;
 
 pub struct Rule;
@@ -19,9 +18,7 @@ fn check(ctx: &Ctx<'_, '_>, body: &Statement<'_>, name: &str, condition: bool) {
     } else {
         format!("Expected {{ after '{name}'.")
     };
-    if !eslint_disabled(ctx, body.span().start, "curly") {
-        ctx.report(body.span(), msg);
-    }
+    ctx.report(body.span(), msg);
 }
 
 impl JsRule for Rule {
