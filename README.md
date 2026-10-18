@@ -1,0 +1,121 @@
+# uncomplicated (`unc`)
+
+Fast static analysis for **JavaScript, TypeScript and Go**, built for CI. It implements
+SonarQube's rule set, metrics, duplication detection, coverage import, new-code detection and
+quality gate, as a single native binary with no server, no JVM and no Node.js.
+
+- **Rules:** SonarJS's JS/TS rules and sonar-go's Go rules (same keys, defaults, messages and
+  locations), plus extra Go rules (`UG*`) modeled on go vet, staticcheck and gosec.
+- **Metrics:** lines, ncloc, comment lines, functions, classes, statements, cyclomatic and
+  cognitive complexity, technical debt, and A–E reliability, security and maintainability ratings.
+- **Duplication:** token-based, cross-file, with SonarQube's defaults (100 tokens, 10 lines).
+- **Coverage:** LCOV, Go cover profiles and Cobertura XML.
+- **New code:** lines changed since the merge-base with a git ref, including uncommitted and
+  untracked files.
+- **Quality gate:** SonarQube's "Sonar way" gate by default, configurable.
+- **Reports:** text, JSON, SARIF 2.1.0, GitLab Code Quality, GitHub annotations, and SonarQube's
+  generic issue format (so results can still be imported into a SonarQube server).
+
+## Usage
+
+```bash
+unc                                # analyze the current directory
+unc path/to/project --new-code origin/main --lcov coverage/lcov.info
+unc -f sarif -o unc.sarif          # machine-readable report
+unc --report gitlab=gl-code-quality.json --report sarif=unc.sarif
+unc rules                          # list implemented rules
+unc rules --missing                # catalog rules not implemented yet
+unc init                           # write a starter uncomplicated.toml
+```
+
+Exit status: `0` gate passed, `1` gate failed (or `--fail-on <severity>` matched), `2` error.
+
+### GitHub Actions
+
+```yaml
+- run: unc --new-code origin/${{ github.base_ref }} --lcov coverage/lcov.info -f github
+```
+
+### GitLab CI
+
+```yaml
+code_quality:
+  script: unc --new-code origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME --report gitlab=gl-code-quality.json
+  artifacts:
+    reports:
+      codequality: gl-code-quality.json
+```
+
+Results are cached by content hash in `.uncomplicated/cache.bin`. Cache that directory between CI
+runs and unchanged files are not re-analyzed.
+
+## Configuration
+
+`uncomplicated.toml` at the project root. Every key is optional:
+
+```toml
+[analysis]
+profile = "sonar-way"          # "sonar-way" (default), "all", or "none"
+exclusions = ["generated/**"]  # in addition to the SonarJS / sonar-go defaults
+tests = ["test/**"]            # test code globs (default: Sonar's file-name heuristics + *_test.go)
+
+[new_code]
+reference = "origin/main"
+
+[coverage]
+lcov = ["coverage/lcov.info"]
+go = ["coverage.out"]
+
+[cpd]
+min_tokens = 100
+min_lines = 10
+
+[rules]                        # JS/TS rules
+S3776 = { threshold = 20 }
+S1135 = "off"
+
+[go_rules]
+S1192 = "off"
+
+[[gate.conditions]]
+metric = "new_coverage"
+op = "lt"
+threshold = 80
+```
+
+Like SonarQube, `unc` honors `// NOSONAR`, and for JS/TS also `eslint-disable` directives. It skips
+bundles, minified files and generated Go code, and also analyzes the scripts embedded in `.vue` and
+`.html` files.
+
+## How it's fast
+
+- Native parsers: [oxc](https://oxc.rs) for JS/TS (parser, semantic model, control-flow graph) and
+  tree-sitter for Go. Sonar runs the TypeScript compiler in Node.js to get type information. We
+  use local type inference instead (literals, annotations, declarations, known APIs). It's precise
+  but stays silent when it can't tell.
+- Each file is parsed once into a reusable per-thread arena. Each rule subscribes to the node types
+  it cares about, and every file's node list is walked once.
+- Files are analyzed in parallel on all cores. Duplication detection is a parallel rolling hash
+  plus sort. Everything is cached by content hash.
+
+## Parity
+
+`tools/parity.py` runs `unc` over SonarJS's ruling corpus (~60 real-world projects) and compares
+issues with SonarJS's recorded expectations, per rule, at file/line granularity:
+
+```bash
+python3 tools/parity.py --unc target/release/unc --sonarjs <SonarJS checkout> --sources <jsts-test-sources>
+```
+
+## Layout
+
+```
+crates/uc-core     rule catalog, issue/metric types, line index
+crates/uc-js       JS/TS frontend (oxc) and rules (src/rules/sNNNN.rs)
+crates/uc-go       Go frontend (tree-sitter) and rules (src/rules/sNNNN.rs, ugNNNN.rs)
+crates/uc-engine   discovery, cache, CPD, coverage, new code, measures, gate, reports
+crates/uc-cli      the `unc` binary
+catalog/           rule metadata (keys, types, severities, default profile, remediation)
+docs/              rule authoring guides
+tools/parity.py    parity harness against SonarJS's ruling expectations
+```
