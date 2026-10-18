@@ -6,6 +6,7 @@
 pub mod ast;
 pub mod cognitive;
 pub mod types;
+pub mod vue;
 
 pub mod batch_a11y;
 pub mod batch_bug1;

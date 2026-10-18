@@ -78,6 +78,9 @@ impl<'s> LineIndex<'s> {
     }
 
     pub fn location(&self, span: Span) -> Location {
+        if span == Span::FILE {
+            return Location { line: 0, col: 0, end_line: 0, end_col: 0 };
+        }
         Location {
             line: self.line(span.start),
             col: self.col(span.start),

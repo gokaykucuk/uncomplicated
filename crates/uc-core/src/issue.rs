@@ -8,6 +8,9 @@ pub struct Span {
 }
 
 impl Span {
+    /// Marks a file-level issue (reported without a line, like Sonar's line 0).
+    pub const FILE: Span = Span { start: u32::MAX, end: u32::MAX };
+
     #[inline]
     pub const fn new(start: u32, end: u32) -> Self {
         Self { start, end }

@@ -6,7 +6,7 @@ use oxc_semantic::SemanticBuilder;
 use oxc_span::SourceType;
 use uc_core::{FileIssue, FileResult, Lang, LineIndex, issue::SecondaryLoc};
 
-use crate::{Ctx, FileInfo, JsRules, cpd, lang_of, metrics};
+use crate::{Ctx, FileInfo, JsRules, ProjectInfo, cpd, lang_of, metrics};
 
 #[derive(Debug, Clone)]
 pub struct FileOptions {
@@ -42,8 +42,23 @@ fn parse<'a>(alloc: &'a Allocator, src: &'a str, st: SourceType) -> ParserReturn
     Parser::new(alloc, src, st).with_options(options).with_config(TokensParserConfig).parse()
 }
 
+static NO_PROJECT: std::sync::LazyLock<ProjectInfo> = std::sync::LazyLock::new(ProjectInfo::default);
+
 /// Analyzes one JS/TS file (or the `<script>` blocks of a `.vue` / `.html` file).
 pub fn analyze(path: &str, src: &str, is_test: bool, rules: &JsRules, opts: &FileOptions) -> FileResult {
+    analyze_in_project(path, src, is_test, rules, opts, &NO_PROJECT)
+}
+
+/// Like [`analyze`], with project context (dependencies, tsconfig).
+pub fn analyze_in_project(
+    path: &str,
+    src: &str,
+    is_test: bool,
+    rules: &JsRules,
+    opts: &FileOptions,
+    project: &ProjectInfo,
+) -> FileResult {
+    let raw = src;
     let embedded = embedded_scripts(path, src);
     let (src, lang) = match &embedded {
         Some((s, l)) => (s.as_str(), *l),
@@ -51,7 +66,7 @@ pub fn analyze(path: &str, src: &str, is_test: bool, rules: &JsRules, opts: &Fil
     };
     ALLOC.with_borrow_mut(|alloc| {
         alloc.reset();
-        analyze_in(alloc, path, src, lang, embedded.is_some(), is_test, rules, opts)
+        analyze_in(alloc, path, src, raw, lang, embedded.is_some(), is_test, rules, opts, project)
     })
 }
 
@@ -107,11 +122,13 @@ fn analyze_in(
     alloc: &Allocator,
     path: &str,
     src: &str,
+    raw: &str,
     lang: Lang,
     embedded: bool,
     is_test: bool,
     rules: &JsRules,
     opts: &FileOptions,
+    project: &ProjectInfo,
 ) -> FileResult {
     let mut result = FileResult { path: path.to_string(), lang: Some(lang), is_test, ..FileResult::default() };
     let mut st = if embedded {
@@ -130,20 +147,25 @@ fn analyze_in(
         }
     }
     let lines = LineIndex::new(src);
-    if ret.fatal_error {
-        let msg = ret.diagnostics.first().map(|d| d.to_string()).unwrap_or_else(|| "parse error".into());
-        result.parse_error = Some(msg);
+    if ret.fatal_error && let Some(d) = ret.diagnostics.first() {
+        // Like SonarJS: a file that doesn't parse only gets a parsing-failure issue (S2260).
+        // Recoverable diagnostics (often TypeScript semantic errors that Sonar's parser accepts)
+        // don't stop the analysis.
+        let msg = d.message.to_string();
+        result.parse_error = Some(msg.clone());
         result.metrics.lines = lines.line_count();
+        let off = d.labels.first().map_or(0, |l| l.offset() as u32);
+        if rules.rules.iter().any(|r| r.key == "S2260") {
+            let loc = lines.location(uc_core::Span::new(off, off));
+            result.issues.push(FileIssue { rule: "S2260".into(), message: format!("Parse error: {msg}"), loc, secondary: Vec::new(), gap: None });
+        }
         return result;
-    }
-    if let Some(d) = ret.diagnostics.first() {
-        result.parse_error = Some(format!("recovered: {d}"));
     }
 
     let program = alloc.alloc(ret.program);
     let semantic = SemanticBuilder::new().with_cfg(true).with_build_nodes(true).with_class_table(true).build(program).semantic;
     let tokens: &[oxc_parser::Token] = &ret.tokens;
-    let file = FileInfo { path, lang, is_test, jsx: st.is_jsx(), is_module: st.is_module() };
+    let file = FileInfo { path, lang, is_test, jsx: st.is_jsx(), is_module: st.is_module(), raw, project };
     let ctx = Ctx {
         semantic: &semantic,
         src,
@@ -189,9 +211,29 @@ fn analyze_in(
     result
 }
 
+/// `UNC_PROFILE=1` accumulates per-rule time (nanoseconds) and prints it at exit.
+pub static PROFILE: std::sync::LazyLock<Option<Vec<std::sync::atomic::AtomicU64>>> = std::sync::LazyLock::new(|| {
+    std::env::var_os("UNC_PROFILE").map(|_| (0..crate::rules::REGISTRY.len()).map(|_| Default::default()).collect())
+});
+
+/// Per-rule profile: (key, nanoseconds), slowest first.
+pub fn profile_report() -> Vec<(&'static str, u64)> {
+    let Some(p) = PROFILE.as_ref() else { return Vec::new() };
+    let mut v: Vec<_> = crate::rules::REGISTRY
+        .iter()
+        .zip(p)
+        .map(|((k, _), t)| (*k, t.load(std::sync::atomic::Ordering::Relaxed)))
+        .collect();
+    v.sort_by(|a, b| b.1.cmp(&a.1));
+    v
+}
+
 fn run_rules(ctx: &Ctx<'_, '_>, rules: &JsRules, lang: Lang, is_test: bool) {
     let active: Vec<bool> =
         rules.rules.iter().map(|r| r.meta.applies_to(lang) && r.meta.applies_to_scope(is_test)).collect();
+    if let Some(prof) = PROFILE.as_ref() {
+        return run_rules_profiled(ctx, rules, &active, prof);
+    }
     for (i, r) in rules.rules.iter().enumerate() {
         if active[i] {
             ctx.rule.set(r.key);
@@ -209,6 +251,36 @@ fn run_rules(ctx: &Ctx<'_, '_>, rules: &JsRules, lang: Lang, is_test: bool) {
                 r.rule.run(node, ctx);
             }
         }
+    }
+}
+
+fn run_rules_profiled(ctx: &Ctx<'_, '_>, rules: &JsRules, active: &[bool], prof: &[std::sync::atomic::AtomicU64]) {
+    use std::sync::atomic::Ordering::Relaxed;
+    let slot = |key: &str| crate::rules::REGISTRY.iter().position(|(k, _)| *k == key).unwrap();
+    let slots: Vec<usize> = rules.rules.iter().map(|r| slot(r.key)).collect();
+    let mut local = vec![0u64; rules.rules.len()];
+    for (i, r) in rules.rules.iter().enumerate() {
+        if active[i] {
+            ctx.rule.set(r.key);
+            let t = std::time::Instant::now();
+            r.rule.run_once(ctx);
+            local[i] += t.elapsed().as_nanos() as u64;
+        }
+    }
+    for node in ctx.semantic.nodes().iter() {
+        for &ri in &rules.dispatch[node.kind().ty() as usize] {
+            let ri = ri as usize;
+            if active[ri] {
+                let r = &rules.rules[ri];
+                ctx.rule.set(r.key);
+                let t = std::time::Instant::now();
+                r.rule.run(node, ctx);
+                local[ri] += t.elapsed().as_nanos() as u64;
+            }
+        }
+    }
+    for (i, t) in local.into_iter().enumerate() {
+        prof[slots[i]].fetch_add(t, Relaxed);
     }
 }
 
@@ -233,6 +305,38 @@ fn directive(text: &str) -> Option<(&str, Option<Vec<String>>)> {
     Some((word, (!rules.is_empty()).then_some(rules)))
 }
 
+/// Rules turned off by an inline config comment: `/* eslint no-console: "off", eqeqeq: 0 */`.
+fn inline_config_off(text: &str) -> Option<Vec<String>> {
+    let rest = text.trim().strip_prefix("eslint ")?;
+    let mut off = Vec::new();
+    // Split on commas outside brackets.
+    let mut depth = 0i32;
+    let mut start = 0;
+    let bytes = rest.as_bytes();
+    let mut parts = Vec::new();
+    for (i, &b) in bytes.iter().enumerate() {
+        match b {
+            b'[' | b'{' => depth += 1,
+            b']' | b'}' => depth -= 1,
+            b',' if depth == 0 => {
+                parts.push(&rest[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    parts.push(&rest[start..]);
+    for p in parts {
+        let Some((name, value)) = p.split_once(':') else { continue };
+        let v = value.trim().trim_start_matches('[').trim().trim_matches('"').trim_matches('\'');
+        let v = v.split([',', ']']).next().unwrap_or("").trim().trim_matches('"').trim_matches('\'');
+        if v == "off" || v == "0" {
+            off.push(name.trim().trim_matches('"').to_string());
+        }
+    }
+    (!off.is_empty()).then_some(off)
+}
+
 impl Suppressions {
     fn new(ctx: &Ctx<'_, '_>) -> Self {
         let mut s = Self::default();
@@ -241,6 +345,10 @@ impl Suppressions {
             let text = ctx.comment_text(c);
             if text.contains("NOSONAR") {
                 s.nosonar.push(ctx.line(c.span.start));
+            }
+            if c.is_block() && let Some(off) = inline_config_off(text) {
+                s.ranges.push((c.span.end, u32::MAX, Some(off)));
+                continue;
             }
             let Some((word, rules)) = directive(text) else { continue };
             let line = ctx.line(c.span.start);

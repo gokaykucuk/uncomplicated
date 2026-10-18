@@ -100,6 +100,11 @@ impl<'t> Ctx<'t> {
         self.report_span(span(node), message);
     }
 
+    /// Reports a file-level issue (no line; Sonar shows these at line 0).
+    pub fn report_file(&self, message: impl Into<String>) {
+        self.report_span(Span::FILE, message);
+    }
+
     pub fn report_span(&self, s: Span, message: impl Into<String>) {
         self.issues.borrow_mut().push(Issue::new(self.rule.get(), s, message));
     }
