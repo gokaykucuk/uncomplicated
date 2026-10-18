@@ -1,4 +1,5 @@
 //! Promises should not be misused
+use crate::helpers::batch_bug2::{has_type_info, is_promise_expr};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -142,7 +143,7 @@ fn check_conditional(ctx: &Ctx<'_, '_>, e: &Expression<'_>, is_test: bool) {
         }
         return;
     }
-    if !type_of(ctx, e).is_promise() {
+    if !is_promise_expr(ctx, e) {
         return;
     }
     if let Some(id) = expr_node_id(e)
@@ -258,6 +259,10 @@ impl JsRule for Rule {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
+        // Sonar has no type information for Vue single-file components.
+        if !has_type_info(ctx) && !matches!(node.kind(), AstKind::NewExpression(_)) {
+            return;
+        }
         match node.kind() {
             AstKind::IfStatement(s) => check_conditional(ctx, &s.test, true),
             AstKind::WhileStatement(s) => check_conditional(ctx, &s.test, true),
@@ -279,7 +284,7 @@ impl JsRule for Rule {
             }
             AstKind::SpreadElement(s) => {
                 if matches!(ctx.parent_kind(node.id()), AstKind::ObjectExpression(_))
-                    && type_of(ctx, &s.argument).is_promise()
+                    && is_promise_expr(ctx, &s.argument)
                 {
                     ctx.report(s.argument.span(), SPREAD);
                 }

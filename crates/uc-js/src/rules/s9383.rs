@@ -1,4 +1,5 @@
 //! Promises should not be left unhandled
+use crate::helpers::batch_bug2::{has_type_info, is_promise_expr};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -45,15 +46,15 @@ fn handler_is_function(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> Option<bool> {
     }
 }
 
+/// Branches of conditionals / logicals must all be promises for the whole to be promise-typed.
 fn is_promise(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> bool {
-    if let Expression::CallExpression(c) = e {
-        match strip_parens(&c.callee) {
-            Expression::ArrowFunctionExpression(a) => return a.r#async,
-            Expression::FunctionExpression(f) => return f.r#async && !f.generator,
-            _ => {}
+    match strip_parens(e) {
+        Expression::ConditionalExpression(c) => {
+            is_promise(ctx, &c.consequent) && is_promise(ctx, &c.alternate)
         }
+        Expression::LogicalExpression(l) => is_promise(ctx, &l.left) && is_promise(ctx, &l.right),
+        e => is_promise_expr(ctx, e),
     }
-    type_of(ctx, e).is_promise()
 }
 
 fn state(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> State {
@@ -74,6 +75,9 @@ fn state(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> State {
             return State::Handled;
         }
         Expression::ConditionalExpression(c) => {
+            if !is_promise(ctx, e) {
+                return State::Handled;
+            }
             let alt = state(ctx, &c.alternate);
             return if alt != State::Handled {
                 alt
@@ -82,6 +86,9 @@ fn state(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> State {
             };
         }
         Expression::LogicalExpression(l) => {
+            if !is_promise(ctx, e) {
+                return State::Handled;
+            }
             let left = state(ctx, &l.left);
             return if left != State::Handled {
                 left
@@ -129,6 +136,10 @@ impl JsRule for Rule {
         let AstKind::ExpressionStatement(stmt) = node.kind() else {
             return;
         };
+        // Sonar has no type information for Vue single-file components.
+        if !has_type_info(ctx) {
+            return;
+        }
         match state(ctx, &stmt.expression) {
             State::Handled => {}
             State::Unhandled => ctx.report(stmt.span, MSG),
@@ -155,7 +166,10 @@ async function f() {
   load().finally(() => {}); // Noncompliant
   Promise.resolve(1); // Noncompliant
   fetch("/x"); // Noncompliant
-  cond ? load() : null; // Noncompliant
+  cond ? load() : null;
+  cond ? load() : load(); // Noncompliant
+  a && load();
+  import('x').then(m => m); // Noncompliant
   (async () => {})(); // Noncompliant
   await load();
   void load();
@@ -166,6 +180,38 @@ async function f() {
   const p = load();
   foo();
   unknown();
+}
+"#,
+        );
+    }
+
+    #[test]
+    fn class_members_and_modules() {
+        check(
+            "S9383",
+            "a.ts",
+            r#"
+import { readFile } from "fs/promises";
+import * as fsp from "node:fs/promises";
+import fs from "fs";
+class Store {
+  private refresh = async () => {};
+  async load(): Promise<void> {}
+  save(): Promise<void> { return Promise.resolve(); }
+  sync() {}
+  static async boot() {}
+  run() {
+    this.load(); // Noncompliant
+    this.save(); // Noncompliant
+    this.refresh(); // Noncompliant
+    this.sync();
+    this.boot();
+    const f = () => { this.load(); }; // Noncompliant
+    function inner() { this.load(); }
+    // Node typings are not assumed to be available.
+    readFile("x");
+    fs.readFileSync("x");
+  }
 }
 "#,
         );

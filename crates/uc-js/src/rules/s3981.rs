@@ -23,6 +23,9 @@ impl JsRule for Rule {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
+        if !crate::helpers::batch_bug2::has_type_info(ctx) {
+            return;
+        }
         let AstKind::BinaryExpression(b) = node.kind() else {
             return;
         };

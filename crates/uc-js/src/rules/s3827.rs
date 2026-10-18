@@ -10,6 +10,27 @@ impl Rule {
     }
 }
 
+/// The global object inherits these from `Object.prototype` (the browser environment lists them).
+const OBJECT_PROTOTYPE: [&str; 7] = [
+    "constructor",
+    "hasOwnProperty",
+    "isPrototypeOf",
+    "propertyIsEnumerable",
+    "toLocaleString",
+    "toString",
+    "valueOf",
+];
+
+/// `<script setup>` compiler macros.
+const VUE_MACROS: [&str; 6] = [
+    "defineProps",
+    "defineEmits",
+    "defineExpose",
+    "defineOptions",
+    "defineSlots",
+    "withDefaults",
+];
+
 /// Names declared with `/* global a, b:writable */` comments.
 fn comment_globals<'a>(ctx: &Ctx<'a, '_>) -> FxHashSet<&'a str> {
     let mut out = FxHashSet::default();
@@ -46,10 +67,13 @@ impl JsRule for Rule {
             return;
         }
         let declared = comment_globals(ctx);
+        let vue = ctx.file.path.ends_with(".vue");
         for (name, refs) in unresolved.iter() {
             let name: &str = name.as_str();
             if name == "arguments"
                 || KNOWN_GLOBALS.binary_search(&name).is_ok()
+                || OBJECT_PROTOTYPE.contains(&name)
+                || (vue && VUE_MACROS.contains(&name))
                 || declared.contains(name)
             {
                 continue;
