@@ -5,6 +5,7 @@ mod analyze;
 mod ctx;
 pub mod cognitive;
 pub mod helpers;
+pub mod helpers_extra;
 pub mod metrics;
 pub mod prelude;
 pub mod scope;
