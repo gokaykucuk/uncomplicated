@@ -56,16 +56,14 @@ impl JsRule for Rule {
         for d in defaults {
             match declared.iter().find(|p| p.name == d.name) {
                 Some(p) if !p.required => {}
-                Some(_) => report_react(
-                    ctx,
+                Some(_) => ctx.report(
                     d.span,
                     format!(
                         "defaultProp \"{}\" defined for isRequired propType.",
                         d.name
                     ),
                 ),
-                None => report_react(
-                    ctx,
+                None => ctx.report(
                     d.span,
                     format!(
                         "defaultProp \"{}\" has no corresponding propTypes declaration.",

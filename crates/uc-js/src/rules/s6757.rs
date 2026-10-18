@@ -71,8 +71,7 @@ impl JsRule for Rule {
         if bound_to_class_member(ctx, node.id()) {
             return;
         }
-        report_react(
-            ctx,
+        ctx.report(
             node.kind().span(),
             "Stateless functional components should not use `this`",
         );

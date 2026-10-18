@@ -108,8 +108,7 @@ impl JsRule for Rule {
         if in_if {
             return;
         }
-        report_react(
-            ctx,
+        ctx.report(
             callee.span,
             "Remove this state setter call, perhaps move it to an event handler or JSX attribute",
         );

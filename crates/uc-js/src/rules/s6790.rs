@@ -35,8 +35,7 @@ impl JsRule for Rule {
             _ => false,
         };
         if is_string {
-            report_react(
-                ctx,
+            ctx.report(
                 a.span,
                 "Using string literals in ref attributes is deprecated.",
             );

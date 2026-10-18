@@ -806,7 +806,9 @@ pub fn component_info<'a>(ctx: &Ctx<'a, '_>, node: &AstNode<'a>) -> Option<Compo
             })
         }
         AstKind::Function(_) | AstKind::ArrowFunctionExpression(_) => {
-            let comp = stateless_component(ctx, node)?;
+            // `memo(...)` / `forwardRef(...)` calls are components whatever their callback returns.
+            let comp =
+                stateless_component(ctx, node).or_else(|| wrapper_call_of(ctx, node.id()))?;
             let own = match node.kind() {
                 AstKind::Function(f) if f.is_declaration() => {
                     f.id.as_ref().and_then(|i| i.symbol_id.get())
@@ -826,6 +828,25 @@ pub fn component_info<'a>(ctx: &Ctx<'a, '_>, node: &AstNode<'a>) -> Option<Compo
         }
         _ => None,
     }
+}
+
+/// Outermost `memo` / `forwardRef` call whose first argument is the function `id`.
+fn wrapper_call_of(ctx: &Ctx<'_, '_>, id: NodeId) -> Option<NodeId> {
+    let mut cur = id;
+    let mut found = None;
+    loop {
+        let parent = estree_parent(ctx, cur);
+        let AstKind::CallExpression(c) = parent.kind() else {
+            break;
+        };
+        let first = c.arguments.first().map(GetSpan::span);
+        if !is_pragma_component_wrapper(ctx, c) || first != Some(ctx.node(cur).kind().span()) {
+            break;
+        }
+        found = Some(parent.id());
+        cur = parent.id();
+    }
+    found
 }
 
 /// A static member of a component: `static propTypes = {}`, `static get propTypes()`,
@@ -1151,6 +1172,29 @@ impl PropUsages {
         }
     }
 
+    /// References of a variable holding the whole props object (class components).
+    fn track_props_object(&mut self, ctx: &Ctx<'_, '_>, sym: SymbolId) {
+        for r in ctx.scoping().get_resolved_references(sym) {
+            let id = r.node_id();
+            let parent = ctx.parent(id);
+            let my = ctx.node(id).kind().span();
+            match parent.kind() {
+                AstKind::StaticMemberExpression(m) if m.object.span() == my => {
+                    self.member_chain(ctx, parent.id(), &[])
+                }
+                AstKind::VariableDeclarator(v)
+                    if v.init.as_ref().is_some_and(|i| strip_ts(i).span() == my) =>
+                {
+                    match &v.id {
+                        BindingPattern::ObjectPattern(o) => self.destructure(ctx, o, &[]),
+                        _ => self.escaped = true,
+                    }
+                }
+                _ => self.escaped = true,
+            }
+        }
+    }
+
     /// Usages through references of `sym` (a variable holding the props object).
     fn track_symbol(&mut self, ctx: &Ctx<'_, '_>, sym: SymbolId, comp: NodeId) {
         for r in ctx.scoping().get_resolved_references(sym) {
@@ -1249,6 +1293,11 @@ pub fn prop_usages(ctx: &Ctx<'_, '_>, comp: &ComponentInfo<'_>) -> PropUsages {
                     }
                     AstKind::VariableDeclarator(v) => match &v.id {
                         BindingPattern::ObjectPattern(o) => u.destructure(ctx, o, &[]),
+                        // let props = this.props
+                        BindingPattern::BindingIdentifier(id) => match id.symbol_id.get() {
+                            Some(sym) => u.track_props_object(ctx, sym),
+                            None => u.escaped = true,
+                        },
                         _ => u.escaped = true,
                     },
                     _ => u.escaped = true,
@@ -1259,8 +1308,32 @@ pub fn prop_usages(ctx: &Ctx<'_, '_>, comp: &ComponentInfo<'_>) -> PropUsages {
             {
                 u.escaped = true;
             }
+            // const { props } = this;  const { props: { a } } = this;
+            AstKind::VariableDeclarator(v)
+                if v.init
+                    .as_ref()
+                    .is_some_and(|i| matches!(strip_ts(i), Expression::ThisExpression(_)))
+                    && parent_es6_component(ctx, n.id()).map(|c| c.id()) == Some(comp.node) =>
+            {
+                if let BindingPattern::ObjectPattern(o) = &v.id
+                    && let Some(bp) = o
+                        .properties
+                        .iter()
+                        .find(|bp| property_key_name(&bp.key) == Some("props"))
+                {
+                    match &bp.value {
+                        BindingPattern::ObjectPattern(inner) => u.destructure(ctx, inner, &[]),
+                        BindingPattern::BindingIdentifier(id) => match id.symbol_id.get() {
+                            Some(sym) => u.track_props_object(ctx, sym),
+                            None => u.escaped = true,
+                        },
+                        _ => u.escaped = true,
+                    }
+                }
+            }
             AstKind::IdentifierReference(id)
                 if matches!(id.name.as_str(), "props" | "nextProps" | "prevProps")
+                    && !is_local_props_alias(ctx, id)
                     && parent_es6_component(ctx, n.id()).map(|c| c.id()) == Some(comp.node) =>
             {
                 let parent = ctx.parent(n.id());
@@ -1278,6 +1351,9 @@ pub fn prop_usages(ctx: &Ctx<'_, '_>, comp: &ComponentInfo<'_>) -> PropUsages {
                         }
                     }
                     AstKind::CallExpression(c) if matches!(c.callee, Expression::Super(_)) => {}
+                    // A parameter of a local callback (`props => props.active` in styled
+                    // components): not the component's props.
+                    _ if !tracked && is_callback_param(ctx, id) => {}
                     _ => u.escaped = true,
                 }
             }
@@ -1285,6 +1361,43 @@ pub fn prop_usages(ctx: &Ctx<'_, '_>, comp: &ComponentInfo<'_>) -> PropUsages {
         }
     }
     u
+}
+
+/// The identifier is a parameter of a function that isn't a class member.
+fn is_callback_param(ctx: &Ctx<'_, '_>, id: &IdentifierReference<'_>) -> bool {
+    let Some(sym) = ctx.symbol_of(id) else {
+        return false;
+    };
+    let decl = ctx.symbol_decl(sym);
+    if !matches!(decl.kind(), AstKind::FormalParameter(_)) {
+        return false;
+    }
+    let Some(func) = enclosing_function(ctx, decl.id()) else {
+        return false;
+    };
+    !matches!(
+        estree_parent(ctx, func.id()).kind(),
+        AstKind::MethodDefinition(_) | AstKind::PropertyDefinition(_)
+    )
+}
+
+/// `props` bound by `const { props } = this` / `let props = this.props` (tracked separately).
+fn is_local_props_alias(ctx: &Ctx<'_, '_>, id: &IdentifierReference<'_>) -> bool {
+    let Some(sym) = ctx.symbol_of(id) else {
+        return false;
+    };
+    let decl = ctx.symbol_decl(sym);
+    match decl.kind() {
+        AstKind::VariableDeclarator(v) => v.init.as_ref().is_some_and(|i| match strip_ts(i) {
+            Expression::ThisExpression(_) => true,
+            Expression::StaticMemberExpression(m) => {
+                m.property.name == "props"
+                    && matches!(strip_ts(&m.object), Expression::ThisExpression(_))
+            }
+            _ => false,
+        }),
+        _ => false,
+    }
 }
 
 const PROPS_LIFECYCLE: &[&str] = &[
@@ -1501,100 +1614,41 @@ pub fn is_react_api(ctx: &Ctx<'_, '_>, e: &Expression<'_>, name: &str) -> bool {
     fqn(ctx, e).is_some_and(|f| f.strip_prefix("react.") == Some(name))
 }
 
-/// True if the file looks like React code: it contains JSX or imports / requires a module named
-/// `react*` (react, react-dom, react-native, ...) or `preact*` at top level.
-pub fn file_uses_react(ctx: &Ctx<'_, '_>) -> bool {
-    let reactish = |m: &str| {
-        m.starts_with("react") || m.starts_with("preact") || m.starts_with("@testing-library/react")
-    };
-    if ctx.nodes().contains(AstType::JSXElement) || ctx.nodes().contains(AstType::JSXFragment) {
-        return true;
+/// `semver.minVersion` of a dependency range (`^16.8.0` -> 16.8.0); `None` when the range can't
+/// be parsed (`latest`, `workspace:*`, ...) or doesn't pin anything (`*`).
+pub fn min_version(range: &str) -> Option<(u64, u64, u64)> {
+    if matches!(range.trim(), "" | "*" | "x" | "X") {
+        return None;
     }
-    ctx.nodes().program().body.iter().any(|s| match s {
-        Statement::ImportDeclaration(d) => reactish(&d.source.value),
-        Statement::VariableDeclaration(v) => v.declarations.iter().any(|d| {
-            d.init
-                .as_ref()
-                .and_then(require_module)
-                .is_some_and(reactish)
-        }),
-        _ => false,
-    })
-}
-
-/// True if the file belongs to another JSX framework (Vue, Preact, Solid, Stencil, ...): Sonar only
-/// runs React rules on projects depending on React.
-pub fn non_react_jsx_framework(ctx: &Ctx<'_, '_>) -> bool {
-    let other = |m: &str| {
-        matches!(
-            m,
-            "vue"
-                | "preact"
-                | "solid-js"
-                | "@stencil/core"
-                | "inferno"
-                | "@builder.io/qwik"
-                | "mithril"
-                | "hyperapp"
-        ) || [
-            "@vue/",
-            "preact/",
-            "solid-js/",
-            "hono/jsx",
-            "@builder.io/qwik/",
-        ]
-        .iter()
-        .any(|p| m.starts_with(p))
-    };
-    let imports_other = ctx.nodes().program().body.iter().any(|s| match s {
-        Statement::ImportDeclaration(d) => other(&d.source.value),
-        Statement::VariableDeclaration(v) => v
-            .declarations
-            .iter()
-            .any(|d| d.init.as_ref().and_then(require_module).is_some_and(other)),
-        _ => false,
-    });
-    imports_other
-        || (ctx.src.contains("@jsx")
-            && ctx.comments().iter().any(|c| {
-                let t = ctx.comment_text(c);
-                (t.contains("@jsxImportSource") && !t.contains("react")) || t.contains("@jsx h")
-            }))
-}
-
-/// Reports unless the file belongs to another JSX framework (rules requiring the React dependency).
-pub fn report_react(ctx: &Ctx<'_, '_>, span: Span, msg: impl Into<String>) {
-    if likely_react(ctx) {
-        ctx.report(span, msg);
+    let mut best: Option<(u64, u64, u64)> = None;
+    for alt in range.split("||") {
+        let first = alt.split_whitespace().next().unwrap_or("*");
+        let t = first.trim_start_matches(['^', '~', '>', '<', '=', 'v']);
+        let v = if t.is_empty() || t == "*" || t.starts_with(['x', 'X']) || first.starts_with('<') {
+            (0, 0, 0)
+        } else {
+            let mut parts = t.split('.');
+            let mut num = |required: bool| -> Option<u64> {
+                match parts.next() {
+                    None => (!required).then_some(0),
+                    Some(p) if p == "x" || p == "X" || p == "*" => Some(0),
+                    Some(p) => {
+                        let d: String = p.chars().take_while(char::is_ascii_digit).collect();
+                        d.parse().ok()
+                    }
+                }
+            };
+            (num(true)?, num(false)?, num(false)?)
+        };
+        best = Some(best.map_or(v, |b| b.min(v)));
     }
+    best
 }
 
-/// The file imports React (or mentions `React.`) and does not use another JSX framework.
-pub fn likely_react(ctx: &Ctx<'_, '_>) -> bool {
-    (imports_react(ctx) || ctx.src.contains("React.")) && !non_react_jsx_framework(ctx)
-}
-
-/// Strict evidence that the file is React code: an import or require of `react*`, `next*` or
-/// `@testing-library/react*`.
-pub fn imports_react(ctx: &Ctx<'_, '_>) -> bool {
-    let reactish = |m: &str| {
-        m == "react"
-            || m.starts_with("react-")
-            || m.starts_with("react/")
-            || m == "next"
-            || m.starts_with("next/")
-            || m.starts_with("@testing-library/react")
-    };
-    ctx.nodes().program().body.iter().any(|s| match s {
-        Statement::ImportDeclaration(d) => reactish(&d.source.value),
-        Statement::VariableDeclaration(v) => v.declarations.iter().any(|d| {
-            d.init
-                .as_ref()
-                .and_then(require_module)
-                .is_some_and(reactish)
-        }),
-        _ => false,
-    })
+/// React version of the project (minimal version of its declared range), as Sonar computes it.
+pub fn project_react_version(ctx: &Ctx<'_, '_>) -> Option<(u64, u64, u64)> {
+    let deps = &ctx.file.project.deps;
+    min_version(deps.get("react").or_else(|| deps.get("@types/react"))?)
 }
 
 #[cfg(test)]
@@ -1612,5 +1666,10 @@ mod tests {
         assert!(is_hook_name("use1"));
         assert!(!is_hook_name("user"));
         assert!(!is_hook_name("useless"));
+        assert_eq!(min_version("^16.8.0"), Some((16, 8, 0)));
+        assert_eq!(min_version("16.x"), Some((16, 0, 0)));
+        assert_eq!(min_version("*"), None);
+        assert_eq!(min_version("^17.0.0 || ^16.4"), Some((16, 4, 0)));
+        assert_eq!(min_version("latest"), None);
     }
 }

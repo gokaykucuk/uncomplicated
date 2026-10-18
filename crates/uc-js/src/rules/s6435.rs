@@ -38,14 +38,14 @@ fn check_class(ctx: &Ctx<'_, '_>, class: &Class<'_>) {
                 if let Some(b) = &m.value.body
                     && !any_return(&b.statements, &mut |_| true)
                 {
-                    report_react(ctx, m.span, MSG);
+                    ctx.report(m.span, MSG);
                 }
             }
             ClassElement::PropertyDefinition(p) => {
                 if let Some(v) = &p.value
                     && !render_returns(v)
                 {
-                    report_react(ctx, p.span, MSG);
+                    ctx.report(p.span, MSG);
                 }
             }
             _ => {}
@@ -71,7 +71,7 @@ impl JsRule for Rule {
                         continue;
                     }
                     if !render_returns(&p.value) {
-                        report_react(ctx, p.span, MSG);
+                        ctx.report(p.span, MSG);
                     }
                     return;
                 }

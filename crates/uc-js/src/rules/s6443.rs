@@ -65,8 +65,7 @@ impl JsRule for Rule {
         {
             return;
         }
-        report_react(
-            ctx,
+        ctx.report(
             call.span,
             "Change the argument of this setter to not use its matching state variable",
         );

@@ -42,7 +42,7 @@ fn check(ctx: &Ctx<'_, '_>, e: &Expression<'_>, rn: &mut Option<bool>) {
         || (t.all(|t| matches!(t, Ty::String))
             && *rn.get_or_insert_with(|| uses_react_native(ctx, e.span().start)));
     if leaks {
-        report_react(ctx, e.span(), MSG);
+        ctx.report(e.span(), MSG);
     }
 }
 

@@ -186,7 +186,7 @@ impl JsRule for Rule {
                     "Remove this property or method or refactor this component, as \"{name}\" is not used inside component body"
                 ),
             };
-            report_react(ctx, sp, msg);
+            ctx.report(sp, msg);
         }
     }
 }
