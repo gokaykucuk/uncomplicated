@@ -9,6 +9,93 @@ impl Rule {
     }
 }
 
+/// Files that run as ES modules, where top-level await is available: not CommonJS by extension,
+/// `package.json` `type`, or (TypeScript) a CommonJS `module` compiler option.
+fn is_esm(ctx: &Ctx<'_, '_>) -> bool {
+    let path = ctx.file.path;
+    if path.ends_with(".mjs") || path.ends_with(".mts") {
+        return true;
+    }
+    if path.ends_with(".cjs") || path.ends_with(".cts") {
+        return false;
+    }
+    // `<script setup>` code runs inside the component's setup function.
+    if path.ends_with(".vue") {
+        return false;
+    }
+    let p = ctx.file.project;
+    match p.module_type.as_deref() {
+        Some("module") => true,
+        Some(_) => false,
+        // Without `"type": "module"`, a package is CommonJS; only trust files outside any package
+        // (scripts, Deno) whose tsconfig does not target CommonJS.
+        None => {
+            p.deps.is_empty()
+                && p.engines_node.is_none()
+                && !p
+                    .ts_module
+                    .as_deref()
+                    .is_some_and(|m| matches!(m, "commonjs" | "umd" | "amd" | "system"))
+        }
+    }
+}
+
+/// `const x = call()` (through TS wrappers): the value is kept, not floating.
+fn is_variable_initializer(ctx: &Ctx<'_, '_>, node: &AstNode<'_>) -> bool {
+    let mut cur = node;
+    loop {
+        let parent = ctx.parent(cur.id());
+        match parent.kind() {
+            AstKind::ChainExpression(_)
+            | AstKind::ParenthesizedExpression(_)
+            | AstKind::TSAsExpression(_)
+            | AstKind::TSNonNullExpression(_)
+            | AstKind::TSSatisfiesExpression(_)
+            | AstKind::TSTypeAssertion(_) => cur = parent,
+            AstKind::VariableDeclarator(v) => {
+                return v
+                    .init
+                    .as_ref()
+                    .is_some_and(|i| i.span() == cur.kind().span());
+            }
+            _ => return false,
+        }
+    }
+}
+
+/// `Promise.all([call()])` (also through `?:`, `||`, `??`): already combined into one promise.
+fn is_in_promise_combinator(ctx: &Ctx<'_, '_>, node: &AstNode<'_>) -> bool {
+    let mut cur = node;
+    let array = loop {
+        let parent = ctx.parent(cur.id());
+        let span = cur.kind().span();
+        match parent.kind() {
+            AstKind::ChainExpression(_) | AstKind::ParenthesizedExpression(_) => cur = parent,
+            AstKind::ConditionalExpression(c)
+                if c.consequent.span() == span || c.alternate.span() == span =>
+            {
+                cur = parent
+            }
+            AstKind::LogicalExpression(l)
+                if l.right.span() == span
+                    || (l.left.span() == span && l.operator != LogicalOperator::And) =>
+            {
+                cur = parent
+            }
+            AstKind::ArrayExpression(_) => break parent,
+            _ => return false,
+        }
+    };
+    let AstKind::CallExpression(c) = ctx.parent_kind(array.id()) else {
+        return false;
+    };
+    c.arguments.len() == 1
+        && c.arguments[0].span() == array.kind().span()
+        && matches!(&c.callee, Expression::StaticMemberExpression(m)
+            if matches!(m.property.name.as_str(), "all" | "allSettled" | "any" | "race")
+                && matches!(&m.object, Expression::Identifier(p) if p.name == "Promise"))
+}
+
 fn is_promise_method(name: &str) -> bool {
     matches!(name, "then" | "catch" | "finally")
 }
@@ -51,9 +138,7 @@ impl JsRule for Rule {
         if !is_module {
             return;
         }
-        // TypeScript files are often compiled to CommonJS (`module` in tsconfig), where top-level
-        // await is unavailable: without the project configuration, only trust `.mts` files.
-        if ctx.is_ts() && !ctx.file.path.ends_with(".mts") {
+        if !is_esm(ctx) {
             return;
         }
         let AstKind::CallExpression(call) = node.kind() else {
@@ -93,6 +178,9 @@ impl JsRule for Rule {
             }
             _ => {}
         }
+        if is_variable_initializer(ctx, node) || is_in_promise_combinator(ctx, node) {
+            return;
+        }
         if ctx
             .ancestors(node.id())
             .any(|a| is_function(&a.kind()) || matches!(a.kind(), AstKind::ClassBody(_)))
@@ -103,16 +191,23 @@ impl JsRule for Rule {
             Problem::Promise(span) => {
                 // A chain handed over to something else may be awaited later: only floating chains.
                 let consumer = ctx.parent_skip_parens(node.id());
-                let floating = match consumer.kind() {
-                    AstKind::ExpressionStatement(_) => true,
-                    AstKind::VariableDeclarator(v) => v.type_annotation.is_none(),
-                    _ => false,
-                };
-                if floating {
+                if matches!(consumer.kind(), AstKind::ExpressionStatement(_)) {
                     ctx.report(span, "Prefer top-level await over using a promise chain.");
                 }
             }
-            Problem::Iife => ctx.report(call.span, "Prefer top-level await over an async IIFE."),
+            Problem::Iife => {
+                // Reported on the function head (the `=>` of an arrow).
+                let head = match strip_parens(&call.callee) {
+                    Expression::ArrowFunctionExpression(a) => find_token(
+                        ctx,
+                        Span::new(a.params.span.end, a.body.span().start),
+                        Kind::Arrow,
+                    )
+                    .unwrap_or(a.span),
+                    e => e.span(),
+                };
+                ctx.report(head, "Prefer top-level await over an async IIFE.")
+            }
             Problem::Identifier(name) => ctx.report(
                 call.span,
                 format!("Prefer top-level await over an async function `{name}` call."),
@@ -148,5 +243,28 @@ function sync() {}
 sync();
 "#,
         );
+    }
+}
+
+#[cfg(test)]
+mod tests_project {
+    use crate::helpers::batch_smell4::{check_project, project_with};
+
+    const CODE: &str = "import x from 'x';\nasync function main() {}\nmain(); // Noncompliant\nconst p = main();\nawait Promise.all([main()]);\n";
+
+    #[test]
+    fn module_kind() {
+        let mut esm = project_with(&[("x", "1")]);
+        esm.module_type = Some("module".into());
+        check_project("S7785", "a.ts", &esm, CODE);
+        check_project("S7785", "a.mjs", &crate::ProjectInfo::default(), CODE);
+        let silent = CODE.replace("// Noncompliant", "");
+        check_project("S7785", "a.js", &project_with(&[("x", "1")]), &silent);
+        check_project("S7785", "a.cjs", &esm, &silent);
+        let ts_cjs = crate::ProjectInfo {
+            ts_module: Some("commonjs".into()),
+            ..Default::default()
+        };
+        check_project("S7785", "a.ts", &ts_cjs, &silent);
     }
 }

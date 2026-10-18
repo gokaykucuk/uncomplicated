@@ -454,7 +454,7 @@ pub fn vue_component_object<'a>(
         }
         AstKind::ExportDefaultDeclaration(d) => {
             let path = ctx.file.path;
-            if !(path.ends_with(".jsx") || path.ends_with(".tsx")) {
+            if !(path.ends_with(".jsx") || path.ends_with(".tsx") || path.ends_with(".vue")) {
                 return None;
             }
             match d.declaration.as_expression().map(skip_as) {
@@ -483,9 +483,116 @@ pub fn find_property<'b, 'a>(
 
 /// Vue `props` option of a component definition node.
 pub fn vue_props<'a>(ctx: &Ctx<'a, '_>, node: &AstNode<'a>) -> Option<&'a Expression<'a>> {
+    // `<script setup>`: `defineProps({...})` / `defineProps([...])`.
+    if let AstKind::CallExpression(c) = node.kind()
+        && matches!(&c.callee, Expression::Identifier(id) if id.name == "defineProps" && ctx.symbol_of(id).is_none())
+    {
+        if !ctx.file.path.ends_with(".vue") || c.type_arguments.is_some() {
+            return None;
+        }
+        return c.arguments.first()?.as_expression().map(skip_as);
+    }
     let obj = vue_component_object(ctx, node)?;
     let props = find_property(obj, "props")?;
     Some(skip_as(&props.value))
+}
+
+/// Parses the leading `major[.minor[.patch]]` of a version, `x`/`*` parts counting as 0.
+fn parse_version(s: &str) -> Option<(u64, u64, u64)> {
+    let s = s
+        .trim()
+        .trim_start_matches(['^', '~', '>', '<', '=', 'v', ' ']);
+    let core = s.split(['-', '+', ' ']).next()?;
+    let mut parts = core.split('.');
+    let num = |p: Option<&str>| -> Option<u64> {
+        match p {
+            None | Some("x" | "X" | "*") => Some(0),
+            Some(p) => p.parse().ok(),
+        }
+    };
+    let major = match parts.next()? {
+        "x" | "X" | "*" | "" => return None,
+        m => m.parse().ok()?,
+    };
+    Some((major, num(parts.next())?, num(parts.next())?))
+}
+
+/// Lowest version satisfying a semver range (`semver.minVersion`), approximately: the lowest
+/// lower bound over the `||` alternatives. `None` when unparseable.
+pub fn min_version(range: &str) -> Option<(u64, u64, u64)> {
+    range
+        .split("||")
+        .map(|alt| {
+            let alt = alt.trim();
+            // `1.2.3 - 2.0.0` and `>=1 <2`: the first comparator is the lower bound.
+            let first = alt.split_whitespace().next().unwrap_or("");
+            let v = parse_version(first)?;
+            // `>1.2.3` excludes the version itself.
+            Some(if first.starts_with('>') && !first.starts_with(">=") {
+                (v.0, v.1, v.2 + 1)
+            } else {
+                v
+            })
+        })
+        .collect::<Option<Vec<_>>>()?
+        .into_iter()
+        .min()
+}
+
+/// Range accepting any version (`*`, `x`, `latest`, empty).
+pub fn is_unbounded_range(range: &str) -> bool {
+    let r = range.trim();
+    r.is_empty() || r == "*" || r.eq_ignore_ascii_case("x") || r.eq_ignore_ascii_case("latest")
+}
+
+/// SonarJS' `isVue2OrEarlier` inverted: the project depends on Vue and the declared range admits
+/// Vue 3 or later (an unparseable range counts as Vue 3, as in SonarJS).
+pub fn is_vue3_project(ctx: &Ctx<'_, '_>) -> bool {
+    let Some(range) = ctx.file.project.deps.get("vue") else {
+        return false;
+    };
+    if is_unbounded_range(range) {
+        return true;
+    }
+    range.split("||").any(|alt| {
+        let alt = alt.trim();
+        let Some(v) = alt.split_whitespace().next().and_then(parse_version) else {
+            return true;
+        };
+        // An open upper bound (`>=2`) reaches Vue 3.
+        (alt.starts_with('>') && !alt.contains('<')) || v.0 >= 3
+    })
+}
+
+/// ECMAScript year of a TypeScript `lib` / `target` name (`es5` → 2009, `es6` → 2015,
+/// `es2017.object` → 2017, `esnext` → max).
+fn es_year(name: &str) -> Option<u32> {
+    let n = name.trim().to_ascii_lowercase();
+    if n.starts_with("esnext") {
+        return Some(u32::MAX);
+    }
+    let y = n.strip_prefix("es")?.split('.').next()?;
+    match y {
+        "3" => Some(1999),
+        "5" => Some(2009),
+        "6" => Some(2015),
+        y => y.parse().ok().filter(|v| *v >= 2015),
+    }
+}
+
+/// The TypeScript libs of the project (tsconfig `lib`, else `target`) include ES`year`. True
+/// without TypeScript configuration.
+pub fn ts_lib_at_least(ctx: &Ctx<'_, '_>, year: u32) -> bool {
+    let p = ctx.file.project;
+    if !p.ts_lib.is_empty() {
+        return p
+            .ts_lib
+            .iter()
+            .any(|l| es_year(l).is_some_and(|y| y >= year));
+    }
+    p.ts_target
+        .as_deref()
+        .is_none_or(|t| es_year(t).is_none_or(|y| y >= year))
 }
 
 /// `-n` where `n` is a positive integer literal: returns `n`.
@@ -565,4 +672,54 @@ pub fn is_valid_this_arg(
         ),
         None => is_null_or_undefined(this_arg),
     }
+}
+
+/// Test helper: like `test_util::check`, with project context. Each line containing
+/// `Noncompliant` expects exactly one issue; `{{message}}` is checked when present.
+#[cfg(test)]
+pub fn check_project(key: &str, file: &str, project: &crate::ProjectInfo, code: &str) {
+    use crate::{FileOptions, JsRules, analyze_in_project};
+    let rules = JsRules::new(|m| (m.key == key).then(uc_core::Params::default));
+    assert_eq!(rules.len(), 1, "{key} is not implemented");
+    let opts = FileOptions {
+        nosonar: false,
+        cpd: false,
+        metrics: false,
+    };
+    let res = analyze_in_project(file, code, false, &rules, &opts, project);
+    let mut actual: Vec<(u32, String)> = res
+        .issues
+        .iter()
+        .map(|i| (i.loc.line, i.message.clone()))
+        .collect();
+    actual.sort();
+    let mut expected: Vec<(u32, Option<String>)> = Vec::new();
+    for (i, line) in code.lines().enumerate() {
+        if let Some(p) = line.find("Noncompliant") {
+            let rest = &line[p..];
+            let msg = rest.find("{{").and_then(|s| {
+                rest[s + 2..]
+                    .find("}}")
+                    .map(|e| rest[s + 2..s + 2 + e].to_string())
+            });
+            expected.push((i as u32 + 1, msg));
+        }
+    }
+    let lines: Vec<u32> = actual.iter().map(|a| a.0).collect();
+    let want: Vec<u32> = expected.iter().map(|e| e.0).collect();
+    assert_eq!(lines, want, "{key} on {file}: issues {actual:?}");
+    for ((_, got), (_, msg)) in actual.iter().zip(&expected) {
+        if let Some(m) = msg {
+            assert_eq!(got, m);
+        }
+    }
+}
+
+#[cfg(test)]
+pub fn project_with(deps: &[(&str, &str)]) -> crate::ProjectInfo {
+    let mut p = crate::ProjectInfo::default();
+    for (k, v) in deps {
+        p.deps.insert(k.to_string(), v.to_string());
+    }
+    p
 }
