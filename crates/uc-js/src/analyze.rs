@@ -251,6 +251,7 @@ pub fn profile_report() -> Vec<(&'static str, u64)> {
 
 fn run_rules(ctx: &Ctx<'_, '_>, rules: &JsRules, lang: Lang, is_test: bool) {
     let project = ctx.file.project;
+    let html = ctx.file.path.ends_with(".html") || ctx.file.path.ends_with(".htm");
     let active: Vec<bool> = rules
         .rules
         .iter()
@@ -258,6 +259,7 @@ fn run_rules(ctx: &Ctx<'_, '_>, rules: &JsRules, lang: Lang, is_test: bool) {
             r.meta.applies_to(lang)
                 && r.meta.applies_to_scope(is_test)
                 && (r.meta.requires.is_empty() || r.meta.requires.iter().any(|d| project.has_dependency(d)))
+                && r.meta.es.is_none_or(|y| project.allows_es(y, lang == Lang::Ts, r.meta.downlevelable, html))
         })
         .collect();
     if let Some(prof) = PROFILE.as_ref() {

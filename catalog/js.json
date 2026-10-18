@@ -7782,7 +7782,9 @@
   "effort": {
    "const": 5
   },
-  "eslint": "prefer-optional-chain"
+  "eslint": "prefer-optional-chain",
+  "es": 2020,
+  "downlevelable": true
  },
  {
   "key": "S6583",
@@ -9746,7 +9748,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "consistent-empty-array-spread"
+  "eslint": "consistent-empty-array-spread",
+  "es": 2015
  },
  {
   "key": "S7721",
@@ -9877,7 +9880,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "no-anonymous-default-export"
+  "eslint": "no-anonymous-default-export",
+  "es": 2015
  },
  {
   "key": "S7727",
@@ -9968,7 +9972,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "no-await-expression-member"
+  "eslint": "no-await-expression-member",
+  "es": 2017
  },
  {
   "key": "S7731",
@@ -10053,7 +10058,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "no-named-default"
+  "eslint": "no-named-default",
+  "es": 2015
  },
  {
   "key": "S7735",
@@ -10409,7 +10415,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-array-find"
+  "eslint": "prefer-array-find",
+  "es": 2015
  },
  {
   "key": "S7751",
@@ -10431,7 +10438,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-array-flat"
+  "eslint": "prefer-array-flat",
+  "es": 2019
  },
  {
   "key": "S7752",
@@ -10453,7 +10461,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-array-flat-map"
+  "eslint": "prefer-array-flat-map",
+  "es": 2019
  },
  {
   "key": "S7753",
@@ -10567,7 +10576,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-class-fields"
+  "eslint": "prefer-class-fields",
+  "es": 2022
  },
  {
   "key": "S7758",
@@ -10589,7 +10599,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-code-point"
+  "eslint": "prefer-code-point",
+  "es": 2015
  },
  {
   "key": "S7759",
@@ -10633,7 +10644,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-default-parameters"
+  "eslint": "prefer-default-parameters",
+  "es": 2015
  },
  {
   "key": "S7761",
@@ -10722,7 +10734,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-global-this"
+  "eslint": "prefer-global-this",
+  "es": 2020
  },
  {
   "key": "S7765",
@@ -10744,7 +10757,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-includes"
+  "eslint": "prefer-includes",
+  "es": 2016
  },
  {
   "key": "S7766",
@@ -10833,7 +10847,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-modern-math-apis"
+  "eslint": "prefer-modern-math-apis",
+  "es": 2015
  },
  {
   "key": "S7770",
@@ -10878,7 +10893,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-negative-index"
+  "eslint": "prefer-negative-index",
+  "es": 2022
  },
  {
   "key": "S7772",
@@ -10923,7 +10939,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-number-properties"
+  "eslint": "prefer-number-properties",
+  "es": 2015
  },
  {
   "key": "S7774",
@@ -10989,7 +11006,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-set-has"
+  "eslint": "prefer-set-has",
+  "es": 2015
  },
  {
   "key": "S7777",
@@ -11011,7 +11029,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-set-size"
+  "eslint": "prefer-set-size",
+  "es": 2015
  },
  {
   "key": "S7778",
@@ -11056,7 +11075,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-string-raw"
+  "eslint": "prefer-string-raw",
+  "es": 2015
  },
  {
   "key": "S7781",
@@ -11078,7 +11098,9 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-string-replace-all"
+  "eslint": "prefer-string-replace-all",
+  "es": 2021,
+  "downlevelable": false
  },
  {
   "key": "S7783",
@@ -11100,7 +11122,8 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-string-trim-start-end"
+  "eslint": "prefer-string-trim-start-end",
+  "es": 2019
  },
  {
   "key": "S7784",

@@ -20,6 +20,12 @@ pub struct ProjectInfo {
     pub ts_lib: Vec<String>,
     pub ts_target: Option<String>,
     pub ts_module: Option<String>,
+    /// Detected ECMAScript year for JS files (`None` = no limit), like SonarJS `detectedEsYear`.
+    pub es_year_js: Option<u16>,
+    /// Detected ECMAScript year for TS files.
+    pub es_year_ts: Option<u16>,
+    /// Year of the tsconfig `target` (ES5 = 2014), for rules whose syntax can't be down-levelled.
+    pub ts_target_year: Option<u16>,
 }
 
 impl ProjectInfo {
@@ -35,6 +41,71 @@ impl ProjectInfo {
     /// Lowest major version allowed by a dependency's range (`^14.2.0` → 14), when parseable.
     pub fn dependency_major(&self, name: &str) -> Option<u64> {
         min_major(self.deps.get(name)?)
+    }
+}
+
+const NODE_TO_ES: &[(u64, u16)] =
+    &[(22, 2024), (20, 2023), (18, 2022), (16, 2021), (14, 2020), (12, 2019), (10, 2018), (8, 2017)];
+
+fn node_major(v: &str) -> Option<u64> {
+    if v == "*" || v == "latest" {
+        return None;
+    }
+    v.split(|c: char| !c.is_ascii_digit()).filter_map(|n| n.parse::<u64>().ok()).filter(|n| (8..100).contains(n)).max()
+}
+
+fn target_year(t: &str, es5: u16) -> Option<u16> {
+    let u = t.to_ascii_uppercase();
+    match u.as_str() {
+        "ESNEXT" | "JSON" => None,
+        "ES3" | "ES5" => Some(es5),
+        "ES6" => Some(2015),
+        _ => u.strip_prefix("ES").and_then(|y| y.parse::<u16>().ok()).filter(|y| (2015..=2030).contains(y)),
+    }
+}
+
+impl ProjectInfo {
+    /// Computes the detected ES years from the collected signals (call after filling the fields).
+    pub fn compute_es_years(&mut self) {
+        let node = self
+            .deps
+            .get("@types/node")
+            .filter(|v| v.as_str() != "*" && v.as_str() != "latest")
+            .or(self.engines_node.as_ref())
+            .and_then(|v| node_major(v))
+            .map(|m| NODE_TO_ES.iter().find(|(n, _)| m >= *n).map_or(2017, |(_, y)| *y));
+        self.es_year_js = node;
+        self.es_year_ts = if !self.ts_lib.is_empty() {
+            if self.ts_lib.iter().any(|l| l.starts_with("esnext")) {
+                None
+            } else {
+                self.ts_lib
+                    .iter()
+                    .filter_map(|l| {
+                        if l == "es6" || l.starts_with("es6.") {
+                            Some(2015)
+                        } else {
+                            l.strip_prefix("es").and_then(|r| r.get(..4)).and_then(|y| y.parse::<u16>().ok())
+                        }
+                    })
+                    .max()
+            }
+        } else {
+            [self.ts_target.as_deref().and_then(|t| target_year(t, 2020)), node].into_iter().flatten().max()
+        };
+        self.ts_target_year = self.ts_target.as_deref().and_then(|t| target_year(t, 2014));
+    }
+
+    /// True if a rule requiring ES `year` applies to a file of this project.
+    pub fn allows_es(&self, year: u16, is_ts: bool, downlevelable: Option<bool>, html: bool) -> bool {
+        if html || (is_ts && downlevelable == Some(true)) {
+            return true;
+        }
+        if is_ts && downlevelable == Some(false) && let Some(t) = self.ts_target_year {
+            return year <= t;
+        }
+        let detected = if is_ts { self.es_year_ts } else { self.es_year_js };
+        detected.is_none_or(|d| year <= d)
     }
 }
 
@@ -72,16 +143,35 @@ pub fn read_package_json(path: &Path) -> Option<(FxHashMap<String, String>, Opti
 /// Reads `compilerOptions` (lib, target, module) from a `tsconfig.json`, which may contain
 /// comments and trailing commas.
 pub fn read_tsconfig(path: &Path) -> Option<(Vec<String>, Option<String>, Option<String>)> {
+    read_tsconfig_depth(path, 0)
+}
+
+fn read_tsconfig_depth(path: &Path, depth: u8) -> Option<(Vec<String>, Option<String>, Option<String>)> {
     let text = strip_jsonc(&std::fs::read_to_string(path).ok()?);
     let v: Value = serde_json::from_str(&text).ok()?;
-    let co = v.get("compilerOptions")?;
-    let lib = co
-        .get("lib")
-        .and_then(Value::as_array)
-        .map(|a| a.iter().filter_map(|x| x.as_str().map(str::to_ascii_lowercase)).collect())
-        .unwrap_or_default();
-    let s = |k: &str| co.get(k).and_then(Value::as_str).map(str::to_ascii_lowercase);
-    Some((lib, s("target"), s("module")))
+    // Relative `extends` provide defaults.
+    let (mut lib, mut target, mut module) = (Vec::new(), None, None);
+    if depth < 5
+        && let Some(ext) = v.get("extends").and_then(Value::as_str)
+        && ext.starts_with('.')
+    {
+        let mut p = path.parent()?.join(ext);
+        if p.extension().is_none_or(|e| e != "json") {
+            p.set_extension("json");
+        }
+        if let Some((l, t, m)) = read_tsconfig_depth(&p, depth + 1) {
+            (lib, target, module) = (l, t, m);
+        }
+    }
+    if let Some(co) = v.get("compilerOptions") {
+        if let Some(a) = co.get("lib").and_then(Value::as_array) {
+            lib = a.iter().filter_map(|x| x.as_str().map(str::to_ascii_lowercase)).collect();
+        }
+        let s = |k: &str| co.get(k).and_then(Value::as_str).map(str::to_ascii_lowercase);
+        target = s("target").or(target);
+        module = s("module").or(module);
+    }
+    Some((lib, target, module))
 }
 
 /// Removes `//` and `/* */` comments and trailing commas from JSONC.

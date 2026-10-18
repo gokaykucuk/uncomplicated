@@ -58,6 +58,7 @@ impl Projects {
                 info.ts_target = target;
                 info.ts_module = module;
             }
+            info.compute_es_years();
             Arc::new(info)
         } else {
             inherited

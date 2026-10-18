@@ -125,6 +125,14 @@ pub struct RuleMeta {
     /// `requiredDependency`).
     #[serde(default)]
     pub requires: Vec<String>,
+    /// ECMAScript year the rule requires: it's off when the project's detected ES year is lower
+    /// (SonarJS `requiredEcmaVersion`).
+    #[serde(default)]
+    pub es: Option<u16>,
+    /// Whether TypeScript can down-level the syntax the rule suggests: `Some(true)` never gates
+    /// TS files, `Some(false)` compares TS files against the compile `target`.
+    #[serde(default)]
+    pub downlevelable: Option<bool>,
     /// ESLint rule name the upstream rule is known as (used for `eslint-disable` directives).
     #[serde(default)]
     pub eslint: Option<String>,
