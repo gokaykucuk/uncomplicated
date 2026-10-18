@@ -54,9 +54,10 @@ mod tests {
 
     #[test]
     fn empty_titles() {
-        check(
+        crate::helpers::batch_tests::check_deps(
             "S8781",
             "a.test.js",
+            &["jest"],
             r#"
 describe('', () => { // Noncompliant {{Replace this empty or whitespace-only title with a descriptive name.}}
   it('   ', () => {}); // Noncompliant

@@ -219,9 +219,10 @@ mod tests {
 
     #[test]
     fn composite() {
-        check(
+        crate::helpers::batch_tests::check_deps(
             "S9073",
             "a.test.js",
+            &["jest"],
             r#"
 it('composite', () => {
   expect(a > 0 && b > 0).toBeTruthy(); // Noncompliant {{This composite assertion hides which condition failed; split it to make failures actionable.}}

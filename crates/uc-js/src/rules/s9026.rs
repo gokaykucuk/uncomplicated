@@ -1,6 +1,6 @@
 //! Promises returned by Testing Library async queries should be handled
 use crate::helpers::batch_tests::{
-    TestEnv, is_known_non_testing_library, query_kind, query_method,
+    TestEnv, is_known_non_testing_library, is_promise_handled, query_kind, query_method,
 };
 use crate::prelude::*;
 
@@ -9,43 +9,6 @@ pub struct Rule;
 impl Rule {
     pub fn new(_: &Params) -> Self {
         Self
-    }
-}
-
-/// Whether the promise-valued expression at `id` is awaited, returned, chained or aggregated.
-fn is_handled(ctx: &Ctx<'_, '_>, mut id: NodeId) -> bool {
-    loop {
-        let span = ctx.node(id).kind().span();
-        let parent = ctx.parent(id);
-        match parent.kind() {
-            AstKind::ParenthesizedExpression(_)
-            | AstKind::TSAsExpression(_)
-            | AstKind::TSNonNullExpression(_)
-            | AstKind::TSSatisfiesExpression(_) => id = parent.id(),
-            AstKind::AwaitExpression(_) | AstKind::ReturnStatement(_) => return true,
-            AstKind::ArrowFunctionExpression(a) => return !a.body.is_function_body(),
-            AstKind::StaticMemberExpression(m) => {
-                return m.object.span() == span
-                    && matches!(m.property.name.as_str(), "then" | "catch" | "finally");
-            }
-            AstKind::ArrayExpression(_) => {
-                let AstKind::CallExpression(c) = ctx.parent(parent.id()).kind() else {
-                    return false;
-                };
-                return matches!(&c.callee, Expression::StaticMemberExpression(m)
-                    if matches!(&m.object, Expression::Identifier(p) if p.name == "Promise")
-                        && matches!(m.property.name.as_str(), "all" | "allSettled" | "race" | "any"));
-            }
-            AstKind::CallExpression(c) => {
-                // expect(promise).resolves / .rejects
-                if !matches!(&c.callee, Expression::Identifier(e) if e.name == "expect") {
-                    return false;
-                }
-                return matches!(ctx.parent(parent.id()).kind(),
-                    AstKind::StaticMemberExpression(m) if matches!(m.property.name.as_str(), "resolves" | "rejects"));
-            }
-            _ => return false,
-        }
     }
 }
 
@@ -69,7 +32,7 @@ impl JsRule for Rule {
             {
                 continue;
             }
-            if is_handled(ctx, node.id()) {
+            if is_promise_handled(ctx, node.id()) {
                 continue;
             }
             let parent = ctx.parent(node.id());
@@ -84,9 +47,9 @@ impl JsRule for Rule {
                     };
                     !ctx.scoping()
                         .get_resolved_references(sym)
-                        .any(|r| is_handled(ctx, r.node_id()))
+                        .any(|r| is_promise_handled(ctx, r.node_id()))
                 }
-                _ => false,
+                _ => true,
             };
             if unhandled {
                 ctx.report(
@@ -120,6 +83,7 @@ test('x', async () => {
   await Promise.all([screen.findByRole('a'), screen.findAllByRole('b')]);
   await screen.findByText('x');
   screen.findByText('y').then(el => el);
+  await waitForElementToBeRemoved(screen.findByRole('alert')); // Noncompliant
   return screen.findByText('z');
 });
 const findButton = () => screen.findByRole('button');

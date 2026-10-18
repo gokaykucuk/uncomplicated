@@ -227,14 +227,7 @@ impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
         let env = TestEnv::new(ctx);
         let fw = Frameworks {
-            jest_like: env.jest
-                || env.vitest
-                || env.bun
-                || (env.global_structure
-                    && env.global_expect
-                    && !env.jasmine
-                    && !env.cypress
-                    && !env.mocha),
+            jest_like: env.jest || env.vitest || env.bun,
             jasmine: env.jasmine,
             playwright: env.playwright,
             node_test: env.node_test,
@@ -295,9 +288,10 @@ mod tests {
 
     #[test]
     fn async_assertions() {
-        check(
+        crate::helpers::batch_tests::check_deps(
             "S8780",
             "a.test.js",
+            &["jest"],
             r#"
 jest.mock('./x');
 test('resolves', async () => {

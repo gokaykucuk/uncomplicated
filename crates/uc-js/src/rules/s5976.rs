@@ -298,9 +298,10 @@ mod tests {
 
     #[test]
     fn similar_tests() {
-        check(
+        crate::helpers::batch_tests::check_deps(
             "S5976",
             "a.test.js",
+            &["jest"],
             r#"
 jest.mock('./x');
 describe('sum', () => {

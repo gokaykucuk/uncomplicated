@@ -346,9 +346,10 @@ mod tests {
 
     #[test]
     fn jest() {
-        check(
+        crate::helpers::batch_tests::check_deps(
             "S5914",
             "a.test.js",
+            &["jest"],
             r#"
 const VALUE = 42;
 it('trivial', () => {

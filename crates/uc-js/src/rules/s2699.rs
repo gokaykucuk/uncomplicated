@@ -1,6 +1,6 @@
 //! Tests should include assertions
 use crate::helpers::batch_tests::{
-    Func, TestEnv, assertion_exec, descendants, imported_from, is_incomplete_should,
+    Func, TestEnv, assertion_exec, descendants, fqn, imported_from, is_incomplete_should,
     local_function, test_case_callback,
 };
 use crate::prelude::*;
@@ -29,21 +29,46 @@ const TEST_FRAMEWORK_IMPORTS: &[&str] = &[
     "vitest",
 ];
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum Evidence {
-    Assertion,
+    None,
     /// Calls a helper defined in another module: it may assert, we can't tell.
     Unknown,
-    None,
+    Assertion,
 }
 
 struct Visitor<'e, 'a> {
     env: &'e TestEnv<'a>,
-    memo: FxHashMap<NodeId, bool>,
+    memo: FxHashMap<NodeId, Evidence>,
+}
+
+/// Node whose subtree holds what a callee identifier runs: a local function, or (in TypeScript,
+/// where Sonar follows declarations with the type checker) the initializer of a local constant
+/// such as `const myEqual = vi.defineHelper((a, b) => expect(a).toEqual(b))`.
+fn callee_target<'a>(ctx: &Ctx<'a, '_>, id: &IdentifierReference<'a>) -> Option<NodeId> {
+    if let Some(f) = local_function(ctx, id) {
+        return Some(f.node_id());
+    }
+    if !ctx.is_ts() {
+        return None;
+    }
+    let sym = ctx.symbol_of(id)?;
+    let decl = ctx.symbol_decl(sym);
+    match decl.kind() {
+        AstKind::VariableDeclarator(d) if d.init.is_some() => Some(decl.id()),
+        _ => None,
+    }
+}
+
+/// Under the type checker `expect.extend(...)` and other setup helpers type-check their
+/// arguments: Sonar counts them as assertions in TypeScript.
+fn is_ts_vitest_evidence<'a>(ctx: &Ctx<'a, '_>, call: &CallExpression<'a>) -> bool {
+    ctx.is_ts() && fqn(ctx, &call.callee).is_some_and(|f| f.starts_with("vitest.expect."))
 }
 
 impl<'a> Visitor<'_, 'a> {
     fn visit(&mut self, ctx: &Ctx<'a, '_>, root: NodeId) -> Evidence {
-        let mut unknown = false;
+        let mut best = Evidence::None;
         for n in descendants(ctx, root) {
             match n.kind() {
                 kind @ AstKind::StaticMemberExpression(_)
@@ -53,45 +78,49 @@ impl<'a> Visitor<'_, 'a> {
                     return Evidence::Assertion;
                 }
                 kind @ AstKind::CallExpression(call) => {
-                    if assertion_exec(ctx, self.env, &kind).is_some() {
+                    if assertion_exec(ctx, self.env, &kind).is_some()
+                        || is_ts_vitest_evidence(ctx, call)
+                    {
                         return Evidence::Assertion;
                     }
-                    let Expression::Identifier(id) = &call.callee else {
-                        if let Some(base) = member_base(&call.callee)
-                            && imported_from(ctx, base, is_local_module)
-                        {
-                            unknown = true;
-                        }
-                        continue;
+                    // `helper()`, or in TypeScript `helpers.method()` on a local object
+                    let id = match &call.callee {
+                        Expression::Identifier(id) => id,
+                        callee if ctx.is_ts() => match member_base(callee) {
+                            Some(base) => base,
+                            None => continue,
+                        },
+                        _ => continue,
                     };
-                    if let Some(f) = local_function(ctx, id) {
-                        let fid = f.node_id();
-                        if fid != root {
-                            let found = match self.memo.get(&fid) {
-                                Some(v) => *v,
-                                None => {
-                                    self.memo.insert(fid, false);
-                                    let v = matches!(self.visit(ctx, fid), Evidence::Assertion);
-                                    self.memo.insert(fid, v);
-                                    v
-                                }
-                            };
-                            if found {
-                                return Evidence::Assertion;
+                    // In TypeScript Sonar follows calls into other modules with the type
+                    // checker; we can't, so a helper imported from the project may assert.
+                    if ctx.is_ts() && imported_from(ctx, id, is_local_module) {
+                        best = best.max(Evidence::Unknown);
+                        continue;
+                    }
+                    if let Some(target) = callee_target(ctx, id)
+                        && target != root
+                        && !ctx.nodes().ancestor_ids(root).any(|a| a == target)
+                    {
+                        let found = match self.memo.get(&target) {
+                            Some(v) => *v,
+                            None => {
+                                self.memo.insert(target, Evidence::None);
+                                let v = self.visit(ctx, target);
+                                self.memo.insert(target, v);
+                                v
                             }
+                        };
+                        if found == Evidence::Assertion {
+                            return found;
                         }
-                    } else if imported_from(ctx, id, is_local_module) {
-                        unknown = true;
+                        best = best.max(found);
                     }
                 }
                 _ => {}
             }
         }
-        if unknown {
-            Evidence::Unknown
-        } else {
-            Evidence::None
-        }
+        best
     }
 }
 
@@ -150,7 +179,11 @@ impl JsRule for Rule {
             || env.vitest
             || env.jasmine
             || env.cypress
-            || env.global_structure;
+            || env.mocha
+            || env.playwright
+            || ["chai", "sinon", "supertest", "uvu"]
+                .iter()
+                .any(|d| helpers::batch_tests::has_dep(ctx.file.project, d));
         if !has_framework || !env.has_assertion_source() {
             return;
         }
@@ -208,6 +241,13 @@ describe('suite', () => {
   it('helper', () => {
     check(compute());
   });
+  let assigned;
+  beforeEach(() => {
+    assigned = function (v) { expect(v).to.equal(1); };
+  });
+  it('assigned helper', () => {
+    assigned(compute());
+  });
   it('done with error', (done) => {
     promise.catch(done);
   });
@@ -224,9 +264,10 @@ function check(v) {
 
     #[test]
     fn jest_globals() {
-        check(
+        crate::helpers::batch_tests::check_deps(
             "S2699",
             "a.test.ts",
+            &["jest"],
             r#"
 import { render } from './test-utils';
 import { helper } from '../helpers';
@@ -237,12 +278,30 @@ describe('suite', () => {
   test('nothing', () => { // Noncompliant
     sum(1, 2);
   });
-  test('imported helper may assert', () => {
+  test('imported helper may assert (TypeScript)', () => {
     helper();
   });
   test('cypress', () => {
     cy.get('a').should('be.visible');
   });
+});
+"#,
+        );
+    }
+
+    #[test]
+    fn node_test_context() {
+        crate::test_util::check(
+            "S2699",
+            "a.test.js",
+            r#"
+import test from 'node:test';
+import { startVitest } from 'vitest/node';
+test('context assert', async (t) => {
+  t.assert.equal(await run(), 1);
+});
+test('nothing', async (t) => { // Noncompliant
+  await run();
 });
 "#,
         );
