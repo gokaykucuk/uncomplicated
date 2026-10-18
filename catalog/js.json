@@ -155,7 +155,10 @@
   "params": {
    "max": "7"
   },
-  "eslint": "max-params"
+  "eslint": "max-params",
+  "eslint_aliases": [
+   "eslint/max-params"
+  ]
  },
  {
   "key": "S108",
@@ -207,7 +210,10 @@
    "ignoreNumericLiteralTypes": "true",
    "ignoreReadonlyClassProperties": "true"
   },
-  "eslint": "no-magic-numbers"
+  "eslint": "no-magic-numbers",
+  "eslint_aliases": [
+   "typescript-eslint/no-magic-numbers"
+  ]
  },
  {
   "key": "S113",
@@ -390,7 +396,11 @@
   "effort": {
    "const": 5
   },
-  "eslint": "switch-without-default"
+  "eslint": "switch-without-default",
+  "eslint_aliases": [
+   "switch-exhaustiveness-check",
+   "typescript-eslint/switch-exhaustiveness-check"
+  ]
  },
  {
   "key": "S134",
@@ -562,7 +572,10 @@
    "allowTaggedTemplates": "true",
    "enforceForJSX": "true"
   },
-  "eslint": "no-unused-expressions"
+  "eslint": "no-unused-expressions",
+  "eslint_aliases": [
+   "typescript-eslint/no-unused-expressions"
+  ]
  },
  {
   "key": "S909",
@@ -666,7 +679,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-unused-private-class-members"
+  "eslint": "no-unused-private-class-members",
+  "eslint_aliases": [
+   "eslint/no-unused-private-class-members"
+  ]
  },
  {
   "key": "S1077",
@@ -688,7 +704,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "alt-text"
+  "eslint": "alt-text",
+  "eslint_aliases": [
+   "jsx-a11y/alt-text"
+  ]
  },
  {
   "key": "S1082",
@@ -709,7 +728,13 @@
   "effort": {
    "const": 5
   },
-  "eslint": "mouse-events-a11y"
+  "eslint": "mouse-events-a11y",
+  "eslint_aliases": [
+   "mouse-events-have-key-events",
+   "jsx-a11y/mouse-events-have-key-events",
+   "click-events-have-key-events",
+   "jsx-a11y/click-events-have-key-events"
+  ]
  },
  {
   "key": "S1090",
@@ -772,7 +797,10 @@
   "params": {
    "allowSingleLine": "true"
   },
-  "eslint": "brace-style"
+  "eslint": "brace-style",
+  "eslint_aliases": [
+   "@stylistic/eslint-plugin/brace-style"
+  ]
  },
  {
   "key": "S1110",
@@ -808,7 +836,10 @@
   "effort": {
    "const": 2
   },
-  "eslint": "no-extra-semi"
+  "eslint": "no-extra-semi",
+  "eslint_aliases": [
+   "@stylistic/eslint-plugin/no-extra-semi"
+  ]
  },
  {
   "key": "S1117",
@@ -1018,7 +1049,10 @@
   "effort": {
    "const": 30
   },
-  "eslint": "no-unsafe-finally"
+  "eslint": "no-unsafe-finally",
+  "eslint_aliases": [
+   "eslint/no-unsafe-finally"
+  ]
  },
  {
   "key": "S1154",
@@ -1081,7 +1115,10 @@
   "params": {
    "allow": "['arrowFunctions', 'constructors', 'private-constructors']"
   },
-  "eslint": "no-empty-function"
+  "eslint": "no-empty-function",
+  "eslint_aliases": [
+   "typescript-eslint/no-empty-function"
+  ]
  },
  {
   "key": "S1192",
@@ -1321,7 +1358,10 @@
   "effort": {
    "const": 1
   },
-  "eslint": "semi"
+  "eslint": "semi",
+  "eslint_aliases": [
+   "@stylistic/eslint-plugin/semi"
+  ]
  },
  {
   "key": "S1439",
@@ -1748,7 +1788,16 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-dupe-keys"
+  "eslint": "no-dupe-keys",
+  "eslint_aliases": [
+   "eslint/no-dupe-keys",
+   "no-dupe-class-members",
+   "typescript-eslint/no-dupe-class-members",
+   "jsx-no-duplicate-props",
+   "react/jsx-no-duplicate-props",
+   "no-duplicate-attributes",
+   "vue/no-duplicate-attributes"
+  ]
  },
  {
   "key": "S1535",
@@ -1938,7 +1987,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-unreachable"
+  "eslint": "no-unreachable",
+  "eslint_aliases": [
+   "eslint/no-unreachable"
+  ]
  },
  {
   "key": "S1764",
@@ -1998,7 +2050,10 @@
   "effort": {
    "const": 20
   },
-  "eslint": "default-param-last"
+  "eslint": "default-param-last",
+  "eslint_aliases": [
+   "typescript-eslint/default-param-last"
+  ]
  },
  {
   "key": "S1821",
@@ -2284,7 +2339,10 @@
    "allowStaticOnly": "true",
    "allowWithDecorator": "true"
   },
-  "eslint": "no-extraneous-class"
+  "eslint": "no-extraneous-class",
+  "eslint_aliases": [
+   "typescript-eslint/no-extraneous-class"
+  ]
  },
  {
   "key": "S2123",
@@ -2392,7 +2450,11 @@
   "effort": {
    "const": 15
   },
-  "eslint": "no-infinite-loop"
+  "eslint": "no-infinite-loop",
+  "eslint_aliases": [
+   "no-unmodified-loop-condition",
+   "eslint/no-unmodified-loop-condition"
+  ]
  },
  {
   "key": "S2201",
@@ -2595,7 +2657,10 @@
   "params": {
    "getWithoutSet": "false"
   },
-  "eslint": "accessor-pairs"
+  "eslint": "accessor-pairs",
+  "eslint_aliases": [
+   "eslint/accessor-pairs"
+  ]
  },
  {
   "key": "S2392",
@@ -2701,7 +2766,10 @@
    "capIsNew": "false",
    "properties": "false"
   },
-  "eslint": "new-cap"
+  "eslint": "new-cap",
+  "eslint_aliases": [
+   "eslint/new-cap"
+  ]
  },
  {
   "key": "S2432",
@@ -2885,7 +2953,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "use-isnan"
+  "eslint": "use-isnan",
+  "eslint_aliases": [
+   "eslint/use-isnan"
+  ]
  },
  {
   "key": "S2692",
@@ -3043,7 +3114,10 @@
    "builtinGlobals": "false",
    "ignoreDeclarationMerge": "true"
   },
-  "eslint": "no-redeclare"
+  "eslint": "no-redeclare",
+  "eslint_aliases": [
+   "typescript-eslint/no-redeclare"
+  ]
  },
  {
   "key": "S2817",
@@ -3490,7 +3564,10 @@
   "effort": {
    "const": 1
   },
-  "eslint": "object-shorthand"
+  "eslint": "object-shorthand",
+  "eslint_aliases": [
+   "eslint/object-shorthand"
+  ]
  },
  {
   "key": "S3499",
@@ -3552,7 +3629,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-var"
+  "eslint": "no-var",
+  "eslint_aliases": [
+   "eslint/no-var"
+  ]
  },
  {
   "key": "S3512",
@@ -3573,7 +3653,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "prefer-template"
+  "eslint": "prefer-template",
+  "eslint_aliases": [
+   "eslint/prefer-template"
+  ]
  },
  {
   "key": "S3513",
@@ -3842,7 +3925,10 @@
   "effort": {
    "const": 20
   },
-  "eslint": "no-throw-literal"
+  "eslint": "no-throw-literal",
+  "eslint_aliases": [
+   "eslint/no-throw-literal"
+  ]
  },
  {
   "key": "S3699",
@@ -3878,7 +3964,11 @@
   "effort": {
    "const": 2
   },
-  "eslint": "enforce-trailing-comma"
+  "eslint": "enforce-trailing-comma",
+  "eslint_aliases": [
+   "comma-dangle",
+   "@stylistic/eslint-plugin/comma-dangle"
+  ]
  },
  {
   "key": "S3735",
@@ -4095,7 +4185,10 @@
   "params": {
    "allowObjectPatternsAsParameters": "true"
   },
-  "eslint": "no-empty-pattern"
+  "eslint": "no-empty-pattern",
+  "eslint_aliases": [
+   "eslint/no-empty-pattern"
+  ]
  },
  {
   "key": "S3800",
@@ -4210,7 +4303,13 @@
   "effort": {
    "const": 5
   },
-  "eslint": "super-invocation"
+  "eslint": "super-invocation",
+  "eslint_aliases": [
+   "constructor-super",
+   "eslint/constructor-super",
+   "no-this-before-super",
+   "eslint/no-this-before-super"
+  ]
  },
  {
   "key": "S3863",
@@ -4348,7 +4447,10 @@
   "params": {
    "allowSingleExtends": "true"
   },
-  "eslint": "no-empty-interface"
+  "eslint": "no-empty-interface",
+  "eslint_aliases": [
+   "typescript-eslint/no-empty-interface"
+  ]
  },
  {
   "key": "S4030",
@@ -4433,7 +4535,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "media-has-caption"
+  "eslint": "media-has-caption",
+  "eslint_aliases": [
+   "jsx-a11y/media-has-caption"
+  ]
  },
  {
   "key": "S4123",
@@ -4549,7 +4654,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "prefer-for-of"
+  "eslint": "prefer-for-of",
+  "eslint_aliases": [
+   "typescript-eslint/prefer-for-of"
+  ]
  },
  {
   "key": "S4139",
@@ -4651,7 +4759,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "prefer-namespace-keyword"
+  "eslint": "prefer-namespace-keyword",
+  "eslint_aliases": [
+   "typescript-eslint/prefer-namespace-keyword"
+  ]
  },
  {
   "key": "S4157",
@@ -4752,7 +4863,11 @@
   "params": {
    "allowImplicit": "false"
   },
-  "eslint": "no-accessor-field-mismatch"
+  "eslint": "no-accessor-field-mismatch",
+  "eslint_aliases": [
+   "getter-return",
+   "eslint/getter-return"
+  ]
  },
  {
   "key": "S4322",
@@ -4873,7 +4988,10 @@
   "params": {
    "allowDestructuring": "true"
   },
-  "eslint": "no-this-alias"
+  "eslint": "no-this-alias",
+  "eslint_aliases": [
+   "typescript-eslint/no-this-alias"
+  ]
  },
  {
   "key": "S4328",
@@ -5381,7 +5499,12 @@
   "effort": {
    "const": 5
   },
-  "eslint": "html-has-lang"
+  "eslint": "html-has-lang",
+  "eslint_aliases": [
+   "lang",
+   "jsx-a11y/lang",
+   "jsx-a11y/html-has-lang"
+  ]
  },
  {
   "key": "S5256",
@@ -7216,6 +7339,9 @@
   "eslint": "rules-of-hooks",
   "requires": [
    "react"
+  ],
+  "eslint_aliases": [
+   "react-hooks/rules-of-hooks"
   ]
  },
  {
@@ -7240,6 +7366,9 @@
   "eslint": "no-unused-class-component-methods",
   "requires": [
    "react"
+  ],
+  "eslint_aliases": [
+   "react/no-unused-class-component-methods"
   ]
  },
  {
@@ -7308,7 +7437,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "jsx-key"
+  "eslint": "jsx-key",
+  "eslint_aliases": [
+   "react/jsx-key"
+  ]
  },
  {
   "key": "S6478",
@@ -7337,6 +7469,9 @@
   "eslint": "no-unstable-nested-components",
   "requires": [
    "react"
+  ],
+  "eslint_aliases": [
+   "react/no-unstable-nested-components"
   ]
  },
  {
@@ -7359,7 +7494,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-array-index-key"
+  "eslint": "no-array-index-key",
+  "eslint_aliases": [
+   "react/no-array-index-key"
+  ]
  },
  {
   "key": "S6480",
@@ -7410,6 +7548,9 @@
   "eslint": "jsx-no-constructed-context-values",
   "requires": [
    "react"
+  ],
+  "eslint_aliases": [
+   "react/jsx-no-constructed-context-values"
   ]
  },
  {
@@ -7495,7 +7636,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-unsafe-optional-chaining"
+  "eslint": "no-unsafe-optional-chaining",
+  "eslint_aliases": [
+   "eslint/no-unsafe-optional-chaining"
+  ]
  },
  {
   "key": "S6534",
@@ -7537,7 +7681,13 @@
   "effort": {
    "const": 5
   },
-  "eslint": "unnecessary-character-escapes"
+  "eslint": "unnecessary-character-escapes",
+  "eslint_aliases": [
+   "no-useless-escape",
+   "eslint/no-useless-escape",
+   "no-nonoctal-decimal-escape",
+   "eslint/no-nonoctal-decimal-escape"
+  ]
  },
  {
   "key": "S6544",
@@ -7566,7 +7716,12 @@
    "checksVoidReturn": "{",
    "ignoreIIFE": "true"
   },
-  "eslint": "no-misused-promises"
+  "eslint": "no-misused-promises",
+  "eslint_aliases": [
+   "typescript-eslint/no-misused-promises",
+   "no-async-promise-executor",
+   "eslint/no-async-promise-executor"
+  ]
  },
  {
   "key": "S6550",
@@ -7610,7 +7765,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-base-to-string"
+  "eslint": "no-base-to-string",
+  "eslint_aliases": [
+   "typescript-eslint/no-base-to-string"
+  ]
  },
  {
   "key": "S6557",
@@ -7632,7 +7790,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "prefer-string-starts-ends-with"
+  "eslint": "prefer-string-starts-ends-with",
+  "eslint_aliases": [
+   "typescript-eslint/prefer-string-starts-ends-with"
+  ]
  },
  {
   "key": "S6564",
@@ -7726,7 +7887,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-redundant-type-constituents"
+  "eslint": "no-redundant-type-constituents",
+  "eslint_aliases": [
+   "typescript-eslint/no-redundant-type-constituents"
+  ]
  },
  {
   "key": "S6572",
@@ -7743,7 +7907,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "prefer-enum-initializers"
+  "eslint": "prefer-enum-initializers",
+  "eslint_aliases": [
+   "typescript-eslint/prefer-enum-initializers"
+  ]
  },
  {
   "key": "S6578",
@@ -7784,7 +7951,10 @@
   },
   "eslint": "prefer-optional-chain",
   "es": 2020,
-  "downlevelable": true
+  "downlevelable": true,
+  "eslint_aliases": [
+   "typescript-eslint/prefer-optional-chain"
+  ]
  },
  {
   "key": "S6583",
@@ -7865,7 +8035,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "prefer-function-type"
+  "eslint": "prefer-function-type",
+  "eslint_aliases": [
+   "typescript-eslint/prefer-function-type"
+  ]
  },
  {
   "key": "S6606",
@@ -7893,7 +8066,10 @@
    "ignoreTernaryTests": "false",
    "ignorePrimitives": "true"
   },
-  "eslint": "prefer-nullish-coalescing"
+  "eslint": "prefer-nullish-coalescing",
+  "eslint_aliases": [
+   "typescript-eslint/prefer-nullish-coalescing"
+  ]
  },
  {
   "key": "S6627",
@@ -7987,7 +8163,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-extend-native"
+  "eslint": "no-extend-native",
+  "eslint_aliases": [
+   "eslint/no-extend-native"
+  ]
  },
  {
   "key": "S6644",
@@ -8050,7 +8229,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-useless-constructor"
+  "eslint": "no-useless-constructor",
+  "eslint_aliases": [
+   "eslint/no-useless-constructor"
+  ]
  },
  {
   "key": "S6650",
@@ -8148,7 +8330,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-lonely-if"
+  "eslint": "no-lonely-if",
+  "eslint_aliases": [
+   "eslint/no-lonely-if"
+  ]
  },
  {
   "key": "S6661",
@@ -8169,7 +8354,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "prefer-object-spread"
+  "eslint": "prefer-object-spread",
+  "eslint_aliases": [
+   "eslint/prefer-object-spread"
+  ]
  },
  {
   "key": "S6666",
@@ -8189,7 +8377,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "prefer-spread"
+  "eslint": "prefer-spread",
+  "eslint_aliases": [
+   "eslint/prefer-spread"
+  ]
  },
  {
   "key": "S6671",
@@ -8233,7 +8424,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-useless-call"
+  "eslint": "no-useless-call",
+  "eslint_aliases": [
+   "eslint/no-useless-call"
+  ]
  },
  {
   "key": "S6679",
@@ -8251,7 +8445,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-self-compare"
+  "eslint": "no-self-compare",
+  "eslint_aliases": [
+   "eslint/no-self-compare"
+  ]
  },
  {
   "key": "S6746",
@@ -8298,6 +8495,11 @@
   "eslint": "no-unknown-property",
   "requires": [
    "react"
+  ],
+  "eslint_aliases": [
+   "react/no-unknown-property",
+   "aria-props",
+   "jsx-a11y/aria-props"
   ]
  },
  {
@@ -8345,7 +8547,10 @@
   "params": {
    "allowExpressions": "true"
   },
-  "eslint": "jsx-no-useless-fragment"
+  "eslint": "jsx-no-useless-fragment",
+  "eslint_aliases": [
+   "react/jsx-no-useless-fragment"
+  ]
  },
  {
   "key": "S6750",
@@ -8395,6 +8600,9 @@
   "eslint": "hook-use-state",
   "requires": [
    "react"
+  ],
+  "eslint_aliases": [
+   "react/hook-use-state"
   ]
  },
  {
@@ -8441,6 +8649,9 @@
   "eslint": "no-this-in-sfc",
   "requires": [
    "react"
+  ],
+  "eslint_aliases": [
+   "react/no-this-in-sfc"
   ]
  },
  {
@@ -8557,6 +8768,9 @@
   "eslint": "no-unused-prop-types",
   "requires": [
    "react"
+  ],
+  "eslint_aliases": [
+   "react/no-unused-prop-types"
   ]
  },
  {
@@ -8598,7 +8812,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "jsx-child-element-spacing"
+  "eslint": "jsx-child-element-spacing",
+  "eslint_aliases": [
+   "react/jsx-child-element-spacing"
+  ]
  },
  {
   "key": "S6774",
@@ -8621,6 +8838,9 @@
   "eslint": "prop-types",
   "requires": [
    "react"
+  ],
+  "eslint_aliases": [
+   "react/prop-types"
   ]
  },
  {
@@ -8669,6 +8889,9 @@
   "eslint": "no-find-dom-node",
   "requires": [
    "react"
+  ],
+  "eslint_aliases": [
+   "react/no-find-dom-node"
   ]
  },
  {
@@ -8742,6 +8965,9 @@
   "eslint": "no-unsafe",
   "requires": [
    "react"
+  ],
+  "eslint_aliases": [
+   "react/no-unsafe"
   ]
  },
  {
@@ -8826,7 +9052,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "prefer-tag-over-role"
+  "eslint": "prefer-tag-over-role",
+  "eslint_aliases": [
+   "jsx-a11y/prefer-tag-over-role"
+  ]
  },
  {
   "key": "S6821",
@@ -8957,7 +9186,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "anchor-has-content"
+  "eslint": "anchor-has-content",
+  "eslint_aliases": [
+   "jsx-a11y/anchor-has-content"
+  ]
  },
  {
   "key": "S6836",
@@ -9080,7 +9312,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "anchor-is-valid"
+  "eslint": "anchor-is-valid",
+  "eslint_aliases": [
+   "jsx-a11y/anchor-is-valid"
+  ]
  },
  {
   "key": "S6845",
@@ -9101,7 +9336,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-noninteractive-tabindex"
+  "eslint": "no-noninteractive-tabindex",
+  "eslint_aliases": [
+   "jsx-a11y/no-noninteractive-tabindex"
+  ]
  },
  {
   "key": "S6846",
@@ -9185,7 +9423,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "heading-has-content"
+  "eslint": "heading-has-content",
+  "eslint_aliases": [
+   "jsx-a11y/heading-has-content"
+  ]
  },
  {
   "key": "S6851",
@@ -9248,7 +9489,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "label-has-associated-control"
+  "eslint": "label-has-associated-control",
+  "eslint_aliases": [
+   "jsx-a11y/label-has-associated-control"
+  ]
  },
  {
   "key": "S6859",
@@ -9269,7 +9513,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-absolute-path"
+  "eslint": "no-absolute-path",
+  "eslint_aliases": [
+   "import/no-absolute-path"
+  ]
  },
  {
   "key": "S6861",
@@ -9310,6 +9557,10 @@
   "eslint": "no-deprecated-react",
   "requires": [
    "react"
+  ],
+  "eslint_aliases": [
+   "no-deprecated",
+   "react/no-deprecated"
   ]
  },
  {
@@ -9389,7 +9640,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-self-import"
+  "eslint": "no-self-import",
+  "eslint_aliases": [
+   "import/no-self-import"
+  ]
  },
  {
   "key": "S7503",
@@ -9409,7 +9663,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "require-await"
+  "eslint": "require-await",
+  "eslint_aliases": [
+   "typescript-eslint/require-await"
+  ]
  },
  {
   "key": "S7639",
@@ -9520,6 +9777,9 @@
   "eslint": "no-input-rename",
   "requires": [
    "@angular/core"
+  ],
+  "eslint_aliases": [
+   "@angular-eslint/no-input-rename"
   ]
  },
  {
@@ -9611,6 +9871,9 @@
   "eslint": "no-output-rename",
   "requires": [
    "@angular/core"
+  ],
+  "eslint_aliases": [
+   "@angular-eslint/no-output-rename"
   ]
  },
  {
@@ -9816,7 +10079,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "new-for-builtins"
+  "eslint": "new-for-builtins",
+  "eslint_aliases": [
+   "unicorn/new-for-builtins"
+  ]
  },
  {
   "key": "S7724",
@@ -9928,7 +10194,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "no-array-for-each"
+  "eslint": "no-array-for-each",
+  "eslint_aliases": [
+   "unicorn/no-array-for-each"
+  ]
  },
  {
   "key": "S7729",
@@ -9950,7 +10219,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "no-array-method-this-argument"
+  "eslint": "no-array-method-this-argument",
+  "eslint_aliases": [
+   "unicorn/no-array-method-this-argument"
+  ]
  },
  {
   "key": "S7730",
@@ -10167,7 +10439,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "no-thenable"
+  "eslint": "no-thenable",
+  "eslint_aliases": [
+   "unicorn/no-thenable"
+  ]
  },
  {
   "key": "S7740",
@@ -10531,7 +10806,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-at"
+  "eslint": "prefer-at",
+  "eslint_aliases": [
+   "unicorn/prefer-at"
+  ]
  },
  {
   "key": "S7756",
@@ -10622,7 +10900,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-date-now"
+  "eslint": "prefer-date-now",
+  "eslint_aliases": [
+   "unicorn/prefer-date-now"
+  ]
  },
  {
   "key": "S7760",
@@ -10713,7 +10994,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-export-from"
+  "eslint": "prefer-export-from",
+  "eslint_aliases": [
+   "unicorn/prefer-export-from"
+  ]
  },
  {
   "key": "S7764",
@@ -10781,7 +11065,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-math-min-max"
+  "eslint": "prefer-math-min-max",
+  "eslint_aliases": [
+   "unicorn/prefer-math-min-max"
+  ]
  },
  {
   "key": "S7767",
@@ -10802,7 +11089,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-math-trunc"
+  "eslint": "prefer-math-trunc",
+  "eslint_aliases": [
+   "unicorn/prefer-math-trunc"
+  ]
  },
  {
   "key": "S7768",
@@ -10870,7 +11160,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-native-coercion-functions"
+  "eslint": "prefer-native-coercion-functions",
+  "eslint_aliases": [
+   "unicorn/prefer-native-coercion-functions"
+  ]
  },
  {
   "key": "S7771",
@@ -11053,7 +11346,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-single-call"
+  "eslint": "prefer-single-call",
+  "eslint_aliases": [
+   "unicorn/prefer-single-call"
+  ]
  },
  {
   "key": "S7780",
@@ -11145,7 +11441,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-structured-clone"
+  "eslint": "prefer-structured-clone",
+  "eslint_aliases": [
+   "unicorn/prefer-structured-clone"
+  ]
  },
  {
   "key": "S7785",
@@ -11170,7 +11469,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-top-level-await"
+  "eslint": "prefer-top-level-await",
+  "eslint_aliases": [
+   "unicorn/prefer-top-level-await"
+  ]
  },
  {
   "key": "S7786",
@@ -11570,6 +11872,9 @@
   "eslint": "no-required-prop-with-default",
   "requires": [
    "vue"
+  ],
+  "eslint_aliases": [
+   "vue/no-required-prop-with-default"
   ]
  },
  {
@@ -11593,6 +11898,9 @@
   "eslint": "no-mutating-props",
   "requires": [
    "vue"
+  ],
+  "eslint_aliases": [
+   "vue/no-mutating-props"
   ]
  },
  {
@@ -11687,6 +11995,9 @@
   "eslint": "require-explicit-emits",
   "requires": [
    "vue"
+  ],
+  "eslint_aliases": [
+   "vue/require-explicit-emits"
   ]
  },
  {
@@ -11784,6 +12095,9 @@
   "eslint": "no-unnecessary-act",
   "requires": [
    "@testing-library/react"
+  ],
+  "eslint_aliases": [
+   "testing-library/no-unnecessary-act"
   ]
  },
  {
@@ -11836,6 +12150,9 @@
   "eslint": "require-v-for-key",
   "requires": [
    "vue"
+  ],
+  "eslint_aliases": [
+   "vue/require-v-for-key"
   ]
  },
  {
@@ -11859,6 +12176,9 @@
   "eslint": "valid-v-for",
   "requires": [
    "vue"
+  ],
+  "eslint_aliases": [
+   "vue/valid-v-for"
   ]
  },
  {
@@ -11887,6 +12207,9 @@
    "@testing-library/vue",
    "@testing-library/angular",
    "@testing-library/svelte"
+  ],
+  "eslint_aliases": [
+   "testing-library/no-wait-for-side-effects"
   ]
  },
  {
@@ -11910,6 +12233,9 @@
   "eslint": "no-use-v-if-with-v-for",
   "requires": [
    "vue"
+  ],
+  "eslint_aliases": [
+   "vue/no-use-v-if-with-v-for"
   ]
  },
  {
@@ -11933,6 +12259,9 @@
   "eslint": "no-side-effects-in-computed-properties",
   "requires": [
    "vue"
+  ],
+  "eslint_aliases": [
+   "vue/no-side-effects-in-computed-properties"
   ]
  },
  {
@@ -11962,6 +12291,9 @@
    "@testing-library/angular",
    "@testing-library/svelte",
    "storybook"
+  ],
+  "eslint_aliases": [
+   "testing-library/no-promise-in-fire-event"
   ]
  },
  {
@@ -12007,7 +12339,12 @@
   "effort": {
    "const": 2
   },
-  "eslint": "button-has-type"
+  "eslint": "button-has-type",
+  "eslint_aliases": [
+   "react/button-has-type",
+   "html-button-has-type",
+   "vue/html-button-has-type"
+  ]
  },
  {
   "key": "S9012",
@@ -12035,6 +12372,9 @@
    "@testing-library/vue",
    "@testing-library/angular",
    "@testing-library/svelte"
+  ],
+  "eslint_aliases": [
+   "testing-library/no-wait-for-snapshot"
   ]
  },
  {
@@ -12058,6 +12398,9 @@
   "eslint": "no-ref-as-operand",
   "requires": [
    "vue"
+  ],
+  "eslint_aliases": [
+   "vue/no-ref-as-operand"
   ]
  },
  {
@@ -12087,6 +12430,9 @@
    "@testing-library/angular",
    "@testing-library/svelte",
    "storybook"
+  ],
+  "eslint_aliases": [
+   "testing-library/prefer-find-by"
   ]
  },
  {
@@ -12110,6 +12456,9 @@
   "eslint": "no-async-in-computed-properties",
   "requires": [
    "vue"
+  ],
+  "eslint_aliases": [
+   "vue/no-async-in-computed-properties"
   ]
  },
  {
@@ -12139,6 +12488,9 @@
    "@testing-library/angular",
    "@testing-library/svelte",
    "storybook"
+  ],
+  "eslint_aliases": [
+   "testing-library/await-async-queries"
   ]
  },
  {
@@ -12264,6 +12616,9 @@
   "eslint": "require-prop-type-constructor",
   "requires": [
    "vue"
+  ],
+  "eslint_aliases": [
+   "vue/require-prop-type-constructor"
   ]
  },
  {
@@ -12313,6 +12668,9 @@
   "eslint": "await-async-events",
   "requires": [
    "@testing-library/user-event"
+  ],
+  "eslint_aliases": [
+   "testing-library/await-async-events"
   ]
  },
  {
@@ -12336,6 +12694,9 @@
   "eslint": "no-dupe-keys",
   "requires": [
    "vue"
+  ],
+  "eslint_aliases": [
+   "vue/no-dupe-keys"
   ]
  },
  {
@@ -12579,6 +12940,9 @@
    "@testing-library/angular",
    "@testing-library/svelte",
    "storybook"
+  ],
+  "eslint_aliases": [
+   "testing-library/no-await-sync-queries"
   ]
  },
  {
@@ -12622,7 +12986,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-autofocus"
+  "eslint": "no-autofocus",
+  "eslint_aliases": [
+   "jsx-a11y/no-autofocus"
+  ]
  },
  {
   "key": "S9380",
@@ -12643,7 +13010,10 @@
   "effort": {
    "const": 1
   },
-  "eslint": "scope"
+  "eslint": "scope",
+  "eslint_aliases": [
+   "jsx-a11y/scope"
+  ]
  },
  {
   "key": "S9381",
@@ -12666,7 +13036,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-nesting"
+  "eslint": "no-nesting",
+  "eslint_aliases": [
+   "promise/no-nesting"
+  ]
  },
  {
   "key": "S9382",
@@ -12689,7 +13062,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-await-in-loop"
+  "eslint": "no-await-in-loop",
+  "eslint_aliases": [
+   "eslint/no-await-in-loop"
+  ]
  },
  {
   "key": "S9383",
@@ -12712,6 +13088,9 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-floating-promises"
+  "eslint": "no-floating-promises",
+  "eslint_aliases": [
+   "typescript-eslint/no-floating-promises"
+  ]
  }
 ]

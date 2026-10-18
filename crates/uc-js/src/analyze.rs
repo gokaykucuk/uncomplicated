@@ -216,8 +216,8 @@ fn analyze_in(
         .into_iter()
         .filter_map(|i| {
             let loc = lines.location(i.span);
-            let eslint = rules.rules.iter().find(|r| r.key == i.rule).and_then(|r| r.meta.eslint.as_deref());
-            if sup.suppressed(i.rule, eslint, i.span.start, loc.line) {
+            let meta = rules.rules.iter().find(|r| r.key == i.rule).map(|r| r.meta);
+            if sup.suppressed(i.rule, meta, i.span.start, loc.line) {
                 return None;
             }
             Some(FileIssue {
@@ -414,18 +414,19 @@ impl Suppressions {
         s
     }
 
-    fn matches(rules: &Option<Vec<String>>, key: &str, eslint: Option<&str>) -> bool {
+    fn matches(rules: &Option<Vec<String>>, key: &str, meta: Option<&uc_core::RuleMeta>) -> bool {
+        let names = || meta.into_iter().flat_map(|m| m.eslint.iter().chain(m.eslint_aliases.iter()));
         match rules {
             None => true,
             Some(list) => list.iter().any(|r| {
                 r == key
                     || r.rsplit('/').next() == Some(key)
-                    || eslint.is_some_and(|e| r == e || r.rsplit_once('/').is_some_and(|(_, n)| n == e))
+                    || names().any(|e| r == e || r.rsplit_once('/').is_some_and(|(_, n)| n == e))
             }),
         }
     }
 
-    fn suppressed(&self, key: &str, eslint: Option<&str>, offset: u32, line: u32) -> bool {
+    fn suppressed(&self, key: &str, eslint: Option<&uc_core::RuleMeta>, offset: u32, line: u32) -> bool {
         self.nosonar.binary_search(&line).is_ok()
             || self.lines.iter().any(|(l, r)| *l == line && Self::matches(r, key, eslint))
             || self.ranges.iter().any(|(s, e, r)| offset >= *s && offset < *e && Self::matches(r, key, eslint))

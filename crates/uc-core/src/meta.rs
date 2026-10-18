@@ -136,6 +136,9 @@ pub struct RuleMeta {
     /// ESLint rule name the upstream rule is known as (used for `eslint-disable` directives).
     #[serde(default)]
     pub eslint: Option<String>,
+    /// Other names of the upstream rule (decorated ESLint rules), also matched by directives.
+    #[serde(default)]
+    pub eslint_aliases: Vec<String>,
     /// Default parameter values as documented upstream (informational).
     #[serde(default)]
     pub params: FxHashMap<String, String>,
