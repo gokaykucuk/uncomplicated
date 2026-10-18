@@ -2,7 +2,9 @@
 //!
 //! Covers the Node.js `https` / `tls` / `request` options. The AWS CDK part of the Sonar rule
 //! (API Gateway / OpenSearch TLS policies) is not implemented.
-use crate::helpers::batch_security1::{call_fqn, fqn, get_property, resolve_object, resolve_value};
+use crate::helpers::batch_security1::{
+    call_fqn, fqn, get_property, imports_any, resolve_object, resolve_value,
+};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -96,9 +98,18 @@ impl Rule {
     }
 }
 
+const MODULES: &[&str] = &["https", "tls", "request"];
+
 impl JsRule for Rule {
-    fn interests(&self) -> &'static [AstType] {
-        &[AstType::CallExpression]
+    fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
+        if !imports_any(ctx, MODULES) {
+            return;
+        }
+        for node in ctx.nodes().iter() {
+            if matches!(node.kind(), AstKind::CallExpression(_)) {
+                self.run(node, ctx);
+            }
+        }
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {

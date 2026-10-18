@@ -1,5 +1,5 @@
 //! OS commands should not rely on PATH resolution
-use crate::helpers::batch_security1::{call_fqn, resolve_value};
+use crate::helpers::batch_security1::{call_fqn, imports_any, resolve_value};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -20,9 +20,18 @@ const METHODS: &[&str] = &[
 ];
 const PREFIXES: &[&str] = &["./", ".\\", "..", "..\\", "/", "\\", "C:\\"];
 
+const MODULES: &[&str] = &["child_process"];
+
 impl JsRule for Rule {
-    fn interests(&self) -> &'static [AstType] {
-        &[AstType::CallExpression]
+    fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
+        if !imports_any(ctx, MODULES) {
+            return;
+        }
+        for node in ctx.nodes().iter() {
+            if matches!(node.kind(), AstKind::CallExpression(_)) {
+                self.run(node, ctx);
+            }
+        }
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {

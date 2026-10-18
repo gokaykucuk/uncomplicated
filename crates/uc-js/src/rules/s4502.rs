@@ -1,6 +1,6 @@
 //! CSRF protections should not be disabled
 use crate::helpers::batch_security1::{
-    flatten_args, fqn, get_property, require_module, sec, src_mentions,
+    flatten_args, fqn, get_property, imports_any, require_module, sec,
 };
 use crate::prelude::*;
 
@@ -56,7 +56,7 @@ impl Rule {
 
 impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
-        if !src_mentions(ctx, &["csurf"]) {
+        if !imports_any(ctx, &["csurf"]) {
             return;
         }
         let mut global_protection = false;

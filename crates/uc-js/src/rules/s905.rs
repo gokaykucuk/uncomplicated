@@ -64,7 +64,8 @@ impl Rule {
             }
             // typescript-eslint looks through TS wrappers.
             Expression::TSAsExpression(x) => self.is_disallowed(&x.expression),
-            Expression::TSSatisfiesExpression(x) => self.is_disallowed(&x.expression),
+            // typescript-eslint does not look through `satisfies`.
+            Expression::TSSatisfiesExpression(_) => false,
             Expression::TSNonNullExpression(x) => self.is_disallowed(&x.expression),
             Expression::TSTypeAssertion(x) => self.is_disallowed(&x.expression),
             Expression::TSInstantiationExpression(_) => true,

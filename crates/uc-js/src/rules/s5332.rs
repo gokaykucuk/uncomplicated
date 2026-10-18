@@ -89,7 +89,9 @@ fn message(protocol: &str) -> String {
 impl Rule {
     /// Host (lowercase, without port) and path of `scheme://[user@]host[:port][/path]`.
     fn has_exception_host(&self, rest: &str) -> bool {
-        let end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+        let end = rest
+            .find(|c: char| matches!(c, '/' | '?' | '#') || c.is_whitespace())
+            .unwrap_or(rest.len());
         let authority = &rest[..end];
         let path = if end < rest.len() && rest.as_bytes()[end] == b'/' {
             let p = &rest[end..];
@@ -181,12 +183,13 @@ impl Rule {
     }
 
     fn check_nodemailer<'a>(&self, ctx: &Ctx<'a, '_>, call: &CallExpression<'a>) {
-        let Some(opts) = call
-            .arguments
-            .first()
-            .and_then(|a| a.as_expression())
-            .and_then(|e| resolve_object(ctx, e))
-        else {
+        let Some(first) = call.arguments.first().and_then(|a| a.as_expression()) else {
+            return;
+        };
+        // Like Sonar, a transport configured by something else than an object literal (a
+        // transport name, a variable) is reported.
+        let Some(opts) = resolve_object(ctx, first) else {
+            ctx.report(call.callee.span(), message("http"));
             return;
         };
         if get_property(ctx, opts, "SES").found().is_some() {
@@ -260,6 +263,8 @@ const nodemailer = require('nodemailer');
 nodemailer.createTransport({ secure: false, port: 25 }); // Noncompliant
 nodemailer.createTransport({ secure: true });
 nodemailer.createTransport({ port: 465 });
+nodemailer.createTransport(name); // Noncompliant
+const link = <a href="http://api.mycompany.com">x</a>; // Noncompliant
 const Client = require('ftp');
 const ftp = new Client();
 ftp.connect({ secure: false }); // Noncompliant

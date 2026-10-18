@@ -824,6 +824,42 @@ pub fn has_jump_tokens(ctx: &Ctx<'_, '_>, span: Span) -> bool {
 
 // ---- cookie flags (S2092, S3330) ------------------------------------------------------------
 
+/// True if the file imports (ESM `import`, `import x = require()`, or a `require()` call anywhere)
+/// one of the modules `names` (or a sub-path of it; the `node:` prefix is ignored). This is a
+/// cheap per-file pre-filter for rules about specific libraries.
+pub fn imports_any(ctx: &Ctx<'_, '_>, names: &[&str]) -> bool {
+    let matches = |m: &str| {
+        let m = m.strip_prefix("node:").unwrap_or(m);
+        names.iter().any(|n| {
+            m == *n || (m.len() > n.len() && m.starts_with(n) && m.as_bytes()[n.len()] == b'/')
+        })
+    };
+    if let AstKind::Program(p) = ctx.node(NodeId::ROOT).kind() {
+        for s in &p.body {
+            let found = match s {
+                Statement::ImportDeclaration(d) => matches(d.source.value.as_str()),
+                Statement::TSImportEqualsDeclaration(d) => match &d.module_reference {
+                    TSModuleReference::ExternalModuleReference(r) => {
+                        matches(r.expression.value.as_str())
+                    }
+                    _ => false,
+                },
+                _ => false,
+            };
+            if found {
+                return true;
+            }
+        }
+    }
+    let Some(ids) = ctx.scoping().root_unresolved_references().get("require") else {
+        return false;
+    };
+    ids.iter().any(|&rid| {
+        let node = ctx.scoping().get_reference(rid).node_id();
+        matches!(ctx.parent_kind(node), AstKind::CallExpression(c) if require_module(c).is_some_and(matches))
+    })
+}
+
 /// True if the source text contains any of `needles` (cheap per-file pre-filter).
 pub fn src_mentions(ctx: &Ctx<'_, '_>, needles: &[&str]) -> bool {
     let src = ctx.src.as_bytes();
@@ -834,7 +870,10 @@ pub fn src_mentions(ctx: &Ctx<'_, '_>, needles: &[&str]) -> bool {
 
 /// Whether a file may use one of the cookie modules checked by [`check_cookie_flag`].
 pub fn mentions_cookie_module(ctx: &Ctx<'_, '_>) -> bool {
-    src_mentions(ctx, &["cookie", "session", "csurf"])
+    imports_any(
+        ctx,
+        &["cookie-session", "express-session", "csurf", "cookies"],
+    )
 }
 
 /// Sonar's `CookieFlagCheck`: reports cookie configurations setting `flag` to `false`

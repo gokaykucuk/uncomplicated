@@ -26,19 +26,29 @@ const MIN_LENGTH: usize = 5;
 const ENTROPY_THRESHOLD: f64 = 3.0;
 
 fn shannon_entropy(s: &str) -> f64 {
-    let mut counts: FxHashMap<char, u32> = FxHashMap::default();
+    let mut ascii = [0u32; 128];
+    let mut other: Vec<(char, u32)> = Vec::new();
     let mut len = 0u32;
     for c in s.chars() {
-        *counts.entry(c).or_default() += 1;
         len += 1;
+        if c.is_ascii() {
+            ascii[c as usize] += 1;
+        } else if let Some(e) = other.iter_mut().find(|(o, _)| *o == c) {
+            e.1 += 1;
+        } else {
+            other.push((c, 1));
+        }
     }
     if len == 0 {
         return 0.0;
     }
     let len = f64::from(len);
-    counts
-        .values()
-        .map(|&c| f64::from(c) / len)
+    ascii
+        .iter()
+        .copied()
+        .chain(other.iter().map(|(_, n)| *n))
+        .filter(|&n| n > 0)
+        .map(|c| f64::from(c) / len)
         .map(|f| -f * f.ln())
         .sum::<f64>()
         / 2f64.ln()
@@ -92,6 +102,25 @@ fn is_excluded(value: &str) -> bool {
         || value.starts_with('$')
 }
 
+/// ASCII case-insensitive substring search (`needle` is lowercase).
+fn contains_ci(hay: &str, needle: &str) -> bool {
+    let (h, n) = (hay.as_bytes(), needle.as_bytes());
+    !n.is_empty() && n.len() <= h.len() && h.windows(n.len()).any(|w| w.eq_ignore_ascii_case(n))
+}
+
+/// Cheap shape check before looking at names: could the value be a hard-coded string?
+fn may_be_suspect(e: &Expression<'_>) -> bool {
+    match strip_parens(e) {
+        Expression::StringLiteral(s) => s.value.len() >= MIN_LENGTH,
+        Expression::TemplateLiteral(t) => t.expressions.is_empty(),
+        Expression::ConditionalExpression(c) => {
+            may_be_suspect(&c.consequent) || may_be_suspect(&c.alternate)
+        }
+        Expression::LogicalExpression(l) => may_be_suspect(&l.right),
+        _ => false,
+    }
+}
+
 fn is_non_credential_char(c: char) -> bool {
     c.is_whitespace() || matches!(c, '/' | '[' | '"' | '\'' | ']' | '<' | '>')
 }
@@ -128,8 +157,11 @@ fn find_suspect(e: &Expression<'_>) -> Option<Span> {
 
 impl Rule {
     fn check_assignment(&self, ctx: &Ctx<'_, '_>, target: Span, value: &Expression<'_>) {
-        let name = ctx.text(target).to_lowercase();
-        if !self.words.iter().any(|w| name.contains(w.as_str())) {
+        if !may_be_suspect(value) {
+            return;
+        }
+        let name = ctx.text(target);
+        if !self.words.iter().any(|w| contains_ci(name, w)) {
             return;
         }
         if find_suspect(value).is_some() {
@@ -138,6 +170,9 @@ impl Rule {
     }
 
     fn check_string(&self, ctx: &Ctx<'_, '_>, value: &str, span: Span) {
+        if !self.words.iter().any(|w| contains_ci(value, w)) {
+            return;
+        }
         let lower = value.to_lowercase();
         if lower.len() != value.len() {
             return;

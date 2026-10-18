@@ -1,5 +1,5 @@
 //! Debugging features should not be enabled in production
-use crate::helpers::batch_security1::{call_fqn, flatten_args, parents, src_mentions};
+use crate::helpers::batch_security1::{call_fqn, flatten_args, imports_any, parents};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -12,7 +12,7 @@ impl Rule {
 
 impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
-        if !src_mentions(ctx, &["errorhandler"]) {
+        if !imports_any(ctx, &["errorhandler"]) {
             return;
         }
         for node in ctx.nodes().iter() {

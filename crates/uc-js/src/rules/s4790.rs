@@ -193,11 +193,15 @@ fn is_digest_truncated(ctx: &Ctx<'_, '_>, call_id: NodeId) -> bool {
     let mut node = call_id;
     let mut digest: Option<NodeId> = None;
     loop {
-        let parent = ctx.parent(node);
+        // ESTree has no parentheses: `(h.digest('hex')).slice(0, 8)` is a plain chain.
+        let mut parent = ctx.parent(node);
+        while matches!(parent.kind(), AstKind::ParenthesizedExpression(_)) {
+            parent = ctx.parent(parent.id());
+        }
         let AstKind::StaticMemberExpression(m) = parent.kind() else {
             break;
         };
-        if m.object.span() != ctx.node(node).kind().span() {
+        if strip_parens(&m.object).span() != ctx.node(node).kind().span() {
             break;
         }
         let gp = ctx.parent(parent.id());

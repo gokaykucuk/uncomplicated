@@ -4,7 +4,7 @@
 //! receiver's name when the type is unknown. Without a type checker we use the name heuristic
 //! unless our local inference resolves the receiver to a named, non-window type.
 use crate::helpers::batch_security1::{
-    FnLike, parents, resolve_function, resolve_str, resolve_value_deep,
+    FnLike, parents, resolve_function, resolve_str, resolve_value_deep, src_mentions,
 };
 use crate::prelude::*;
 
@@ -23,6 +23,16 @@ fn mentions_window(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> bool {
 }
 
 fn is_window_object(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> bool {
+    // DOM globals typed `Window & typeof globalThis`.
+    if let Expression::Identifier(id) = strip_parens(e)
+        && ctx.symbol_of(id).is_none()
+        && matches!(
+            id.name.as_str(),
+            "self" | "globalThis" | "top" | "parent" | "frames"
+        )
+    {
+        return true;
+    }
     match type_of(ctx, e) {
         Ty::Named(n) => n.contains("Window"),
         t if !t.is_unknown() => false,
@@ -112,8 +122,18 @@ fn check_listener<'a>(ctx: &Ctx<'a, '_>, listener: &Expression<'a>, report: Span
 }
 
 impl JsRule for Rule {
-    fn interests(&self) -> &'static [AstType] {
-        &[AstType::CallExpression, AstType::AssignmentExpression]
+    fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
+        if !src_mentions(ctx, &["postMessage", "addEventListener", "onmessage"]) {
+            return;
+        }
+        for node in ctx.nodes().iter() {
+            if matches!(
+                node.kind(),
+                AstKind::CallExpression(_) | AstKind::AssignmentExpression(_)
+            ) {
+                self.run(node, ctx);
+            }
+        }
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
@@ -211,6 +231,7 @@ window.addEventListener("click", (e) => go(e));
 window.onmessage = function (e) { use(e.data); }; // Noncompliant
 window.onmessage = function (e) { if (e.origin === o) use(e.data); };
 ws.onmessage = function (e) { use(e.data); };
+self.addEventListener('message', async (event) => { use(event.data); }); // Noncompliant
 "#,
         );
     }

@@ -53,8 +53,11 @@ impl JsRule for Rule {
                 if value.is_empty() {
                     return;
                 }
-                if UNIX_DIRS.iter().any(|d| starts_with_ci(value, d))
-                    || self.windows.is_match(value)
+                let unix = value.as_bytes()[0] == b'/'
+                    && UNIX_DIRS.iter().any(|d| starts_with_ci(value, d));
+                if unix
+                    || (memchr::memchr(b'\\', value.as_bytes()).is_some()
+                        && self.windows.is_match(value))
                 {
                     ctx.report(s.span, MESSAGE);
                 }
