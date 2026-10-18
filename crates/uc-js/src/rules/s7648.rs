@@ -19,6 +19,9 @@ impl JsRule for Rule {
         let AstKind::Class(class) = node.kind() else {
             return;
         };
+        if class.r#type != ClassType::ClassDeclaration {
+            return;
+        }
         let Some((_, decorator)) = angular_decorator(class, &["Component", "Directive", "Pipe"])
         else {
             return;
@@ -29,10 +32,10 @@ impl JsRule for Rule {
         let Some(standalone) = object_property(meta, "standalone") else {
             return;
         };
-        if matches!(strip_parens(&standalone.value), Expression::BooleanLiteral(b) if !b.value) {
+        if !matches!(strip_parens(&standalone.value), Expression::BooleanLiteral(b) if b.value) {
             ctx.report(
-                decorator.span,
-                "Components, Directives and Pipes should not opt out of standalone",
+                standalone.span,
+                "Components, Directives and Pipes should not opt out of standalone. Following this guide is highly recommended: https://angular.dev/reference/migrations/standalone",
             );
         }
     }
@@ -48,9 +51,9 @@ mod tests {
             "S7648",
             "a.ts",
             r#"
-@Component({ // Noncompliant {{Components, Directives and Pipes should not opt out of standalone}}
+@Component({
   selector: 'a',
-  standalone: false,
+  standalone: false, // Noncompliant {{Components, Directives and Pipes should not opt out of standalone. Following this guide is highly recommended: https://angular.dev/reference/migrations/standalone}}
 })
 class A {}
 @Directive({ selector: 'b', standalone: true })

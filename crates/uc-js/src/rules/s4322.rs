@@ -1,5 +1,4 @@
 //! Type predicates should be used
-use crate::helpers::batch_ts::ancestors;
 use crate::prelude::*;
 
 pub struct Rule;
@@ -74,7 +73,7 @@ impl JsRule for Rule {
         };
         let applies = match f.r#type {
             FunctionType::FunctionDeclaration => true,
-            FunctionType::FunctionExpression => ancestors(ctx, node.id())
+            FunctionType::FunctionExpression => ctx.ancestors(node.id())
                 .any(|a| matches!(a.kind(), AstKind::MethodDefinition(m) if m.kind == MethodDefinitionKind::Method)),
             _ => false,
         };

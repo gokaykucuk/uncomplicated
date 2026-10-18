@@ -41,6 +41,9 @@ impl JsRule for Rule {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
+        if crate::helpers::batch_ts::no_type_info(ctx) {
+            return;
+        }
         let AstKind::TSEnumDeclaration(e) = node.kind() else {
             return;
         };

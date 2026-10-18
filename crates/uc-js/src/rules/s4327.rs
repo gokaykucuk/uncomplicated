@@ -1,5 +1,4 @@
 //! "this" should not be assigned to variables
-use crate::helpers::batch_ts::ancestors;
 use crate::prelude::*;
 
 pub struct Rule {
@@ -20,7 +19,7 @@ fn referenced_inside_generator(ctx: &Ctx<'_, '_>, sym: SymbolId) -> bool {
         .scoping()
         .get_node_id(ctx.scoping().symbol_scope_id(sym));
     ctx.scoping().get_resolved_references(sym).any(|r| {
-        for a in std::iter::once(ctx.node(r.node_id())).chain(ancestors(ctx, r.node_id())) {
+        for a in std::iter::once(ctx.node(r.node_id())).chain(ctx.ancestors(r.node_id())) {
             if a.id() == scope_node {
                 return false;
             }

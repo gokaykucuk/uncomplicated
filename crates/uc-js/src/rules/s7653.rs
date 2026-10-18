@@ -7,6 +7,8 @@ use crate::prelude::*;
 
 pub struct Rule;
 
+const MSG: &str = "Output bindings should not be aliased (https://angular.dev/guide/components/outputs#choosing-event-names)";
+
 impl Rule {
     pub fn new(_: &Params) -> Self {
         Self
@@ -53,7 +55,7 @@ impl JsRule for Rule {
                 continue;
             };
             if alias != b.name {
-                if alias_allowed_by_selector(class, b.name, alias) {
+                if alias_allowed_by_selector(class, b.name, alias, false) {
                     continue;
                 }
                 if let Some(id) = &identity
@@ -62,7 +64,7 @@ impl JsRule for Rule {
                     continue;
                 }
             }
-            ctx.report(span, "Output bindings should not be aliased");
+            ctx.report(span, MSG);
         }
     }
 }
@@ -80,7 +82,7 @@ mod tests {
 import { output } from '@angular/core';
 @Component({ selector: 'app-a' })
 class A {
-  @Output('changed') change = new EventEmitter(); // Noncompliant {{Output bindings should not be aliased}}
+  @Output('changed') change = new EventEmitter(); // Noncompliant {{Output bindings should not be aliased (https://angular.dev/guide/components/outputs#choosing-event-names)}}
   @Output() plain = new EventEmitter();
   sig = output({ alias: 'other' }); // Noncompliant
 }

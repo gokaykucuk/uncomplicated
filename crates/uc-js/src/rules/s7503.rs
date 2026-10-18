@@ -14,27 +14,7 @@ impl Rule {
 
 /// True if a value of this type can't be a thenable.
 fn not_thenable(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> bool {
-    type_of(ctx, e).all(|t| {
-        matches!(
-            t,
-            Ty::String
-                | Ty::Number
-                | Ty::BigInt
-                | Ty::Boolean
-                | Ty::Null
-                | Ty::Undefined
-                | Ty::Void
-                | Ty::Symbol
-                | Ty::Array
-                | Ty::Tuple
-                | Ty::Function
-                | Ty::RegExp
-                | Ty::Date
-                | Ty::Map
-                | Ty::Set
-                | Ty::Error
-        )
-    })
+    type_of(ctx, e).all(non_thenable_ty)
 }
 
 /// Looks for `await`, `for await`, `await using` and possibly-thenable returns, not entering
@@ -216,6 +196,9 @@ impl JsRule for Rule {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
+        if crate::helpers::batch_ts::no_type_info(ctx) {
+            return;
+        }
         let parent = skip_parens_parent(ctx, node.id());
         let mut scan = Scan {
             ctx,
@@ -243,16 +226,12 @@ impl JsRule for Rule {
                 if !a.r#async {
                     return;
                 }
-                // Upstream checks every direct child of an async arrow (parameters, return type, …)
-                // for a thenable type: only annotated, clearly non-thenable parameters are safe.
-                if a.return_type.is_some() || a.params.rest.is_some() {
-                    return;
-                }
+                // Upstream checks every direct child of an async arrow (notably its parameters)
+                // for a thenable type: annotated parameters must not look like promises.
                 let params_ok = a.params.items.iter().all(|p| {
-                    p.initializer.is_none()
-                        && p.type_annotation
-                            .as_ref()
-                            .is_some_and(|t| from_annotation_non_thenable(ctx, &t.type_annotation))
+                    p.type_annotation
+                        .as_ref()
+                        .is_none_or(|t| param_type_ok(ctx, &t.type_annotation))
                 });
                 if !params_ok {
                     return;
@@ -292,8 +271,31 @@ impl JsRule for Rule {
     }
 }
 
-fn from_annotation_non_thenable(ctx: &Ctx<'_, '_>, t: &TSType<'_>) -> bool {
-    helpers::types::from_annotation(ctx, t, 0).all(|t| {
+/// Parameter annotation that can't be a thenable: known non-thenable types, `any`, or a named
+/// type whose name doesn't suggest a promise.
+fn param_type_ok(ctx: &Ctx<'_, '_>, t: &TSType<'_>) -> bool {
+    let ty = helpers::types::from_annotation(ctx, t, 0);
+    if ty == Ty::Any {
+        return true;
+    }
+    ty.all(|t| match t {
+        Ty::Named(n) => ![
+            "Promise",
+            "Thenable",
+            "Deferred",
+            "Future",
+            "Awaitable",
+            "Task",
+            "Observable",
+        ]
+        .iter()
+        .any(|w| n.contains(w)),
+        t => non_thenable_ty(t),
+    })
+}
+
+fn non_thenable_ty(t: &Ty) -> bool {
+    {
         matches!(
             t,
             Ty::String
@@ -301,6 +303,7 @@ fn from_annotation_non_thenable(ctx: &Ctx<'_, '_>, t: &TSType<'_>) -> bool {
                 | Ty::BigInt
                 | Ty::Boolean
                 | Ty::Null
+                | Ty::Void
                 | Ty::Undefined
                 | Ty::Symbol
                 | Ty::Array
@@ -312,7 +315,7 @@ fn from_annotation_non_thenable(ctx: &Ctx<'_, '_>, t: &TSType<'_>) -> bool {
                 | Ty::Set
                 | Ty::Error
         )
-    })
+    }
 }
 
 #[cfg(test)]
@@ -370,9 +373,10 @@ async function forAwait() {
   for await (const x of xs) {}
 }
 async function* gen() { yield 1; }
-xs.map(async (p) => { doSomething(p); });
+xs.map(async (p) => { doSomething(p); }); // Noncompliant
+ps.map(async (p: Promise<number>) => { doSomething(p); });
 const typed = async (n: number) => { doSomething(n); }; // Noncompliant
-const ret = async (): Promise<void> => { doSomething(); };
+const ret = async (): Promise<void> => { doSomething(); }; // Noncompliant
 "#,
         );
     }

@@ -138,6 +138,9 @@ impl JsRule for Rule {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
+        if crate::helpers::batch_ts::no_type_info(ctx) {
+            return;
+        }
         match node.kind() {
             AstKind::TSNonNullExpression(e) => {
                 if let AstKind::AssignmentExpression(_) = ctx.parent_skip_parens(node.id()).kind() {

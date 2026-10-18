@@ -3,7 +3,7 @@ use oxc_ast::{AstKind, ast::*};
 use oxc_span::{GetSpan, Span};
 
 use crate::Ctx;
-use crate::helpers::ast::{property_key_name, strip_parens};
+use crate::helpers::ast::{property_key_name, string_value, strip_parens};
 
 /// Strips parenthesized types: `((A))` → `A`.
 pub fn strip_type_parens<'b, 'a>(mut t: &'b TSType<'a>) -> &'b TSType<'a> {
@@ -30,16 +30,6 @@ pub fn type_parent<'s, 'a>(
     cur
 }
 
-/// Ancestors of a node, nearest (the parent) first.
-///
-/// Note: `Ctx::ancestors` skips the parent (oxc's `ancestor_ids` already starts at the parent).
-pub fn ancestors<'s, 'a>(
-    ctx: &Ctx<'a, 's>,
-    id: oxc_semantic::NodeId,
-) -> impl Iterator<Item = &'s oxc_semantic::AstNode<'a>> + 's {
-    ctx.nodes().ancestors(id)
-}
-
 /// Name of a decorator `@Foo(...)` or `@Foo`.
 pub fn decorator_name<'a>(d: &Decorator<'a>) -> Option<&'a str> {
     match strip_parens(&d.expression) {
@@ -61,8 +51,14 @@ pub fn decorator_call<'b, 'a>(d: &'b Decorator<'a>) -> Option<&'b CallExpression
 }
 
 /// Angular class decorators.
-pub const ANGULAR_CLASS_DECORATORS: &[&str] =
-    &["Component", "Directive", "Injectable", "NgModule", "Pipe"];
+pub const ANGULAR_CLASS_DECORATORS: &[&str] = &[
+    "Component",
+    "Directive",
+    "Injectable",
+    "NgModule",
+    "Pipe",
+    "Service",
+];
 
 /// Angular lifecycle methods and their interfaces.
 pub const ANGULAR_LIFECYCLE: &[(&str, &str)] = &[
@@ -305,21 +301,27 @@ fn alias_in_options<'a>(o: &ObjectExpression<'a>) -> Option<(Span, &'a str)> {
     }
 }
 
-/// Bindings of kind `decorator` (`Input` / `Output`) declared with the decorator or the matching
-/// signal function (`input` / `output`) imported from `@angular/core`.
+/// Bindings declared with the `decorator` (`Input` on properties and setters, `Output` on
+/// properties and getters) or the matching signal function (`input()` / `input.required()`,
+/// `output()`), as angular-eslint's selectors find them (by callee name).
 pub fn angular_bindings<'a>(
     ctx: &Ctx<'a, '_>,
     class: &Class<'a>,
     decorator: &str,
     signal: &str,
 ) -> Vec<Binding<'a>> {
+    let accessor = if decorator == "Output" {
+        MethodDefinitionKind::Get
+    } else {
+        MethodDefinitionKind::Set
+    };
     let mut out = Vec::new();
     for el in &class.body.body {
         let (key, computed, decorators, value, span) = match el {
             ClassElement::PropertyDefinition(p) => {
                 (&p.key, p.computed, &p.decorators, p.value.as_ref(), p.span)
             }
-            ClassElement::MethodDefinition(m) if m.kind == MethodDefinitionKind::Set => {
+            ClassElement::MethodDefinition(m) if m.kind == accessor => {
                 (&m.key, m.computed, &m.decorators, None, m.span)
             }
             _ => continue,
@@ -347,26 +349,23 @@ pub fn angular_bindings<'a>(
                 };
             }
         }
-        if !found && let Some(Expression::CallExpression(call)) = value.map(strip_parens) {
-            let callee = match strip_parens(&call.callee) {
-                Expression::Identifier(c) => Some(c),
-                Expression::StaticMemberExpression(m) if m.property.name == "required" => {
-                    match strip_parens(&m.object) {
-                        Expression::Identifier(c) => Some(c),
-                        _ => None,
-                    }
+        if !found && let Some(Expression::CallExpression(call)) = value {
+            let is_signal = match &call.callee {
+                Expression::Identifier(c) => c.name == signal,
+                Expression::StaticMemberExpression(m) => {
+                    signal == "input"
+                        && m.property.name == "required"
+                        && matches!(&m.object, Expression::Identifier(c) if c.name == "input")
                 }
-                _ => None,
+                _ => false,
             };
-            if let Some(c) = callee
-                && imported_name(ctx, c, "@angular/core") == Some(signal)
-            {
+            if is_signal {
                 found = true;
                 alias = call
                     .arguments
                     .iter()
                     .filter_map(|a| a.as_expression())
-                    .find_map(|a| match strip_parens(a) {
+                    .find_map(|a| match a {
                         Expression::ObjectExpression(o) => alias_in_options(o),
                         _ => None,
                     });
@@ -388,8 +387,49 @@ pub fn angular_bindings<'a>(
     out
 }
 
-/// Attribute names of a component/directive selector: `[foo]`, `a[bar], [baz]` → `foo`, `bar`, `baz`.
-pub fn selector_attributes<'a>(class: &Class<'a>) -> Vec<&'a str> {
+/// The `selector` of a `@Component` / `@Directive` decorator, as written.
+fn selector_text<'a>(class: &Class<'a>) -> Option<&'a str> {
+    let (_, d) = angular_decorator(class, &["Component", "Directive"])?;
+    let p = object_property(decorator_metadata(d)?, "selector")?;
+    string_value(&p.value)
+}
+
+/// angular-eslint's selector names: the selector without brackets and whitespace, split on `,`
+/// (`[tooltip], a[b]` → `tooltip`, `ab`), plus the first bracketed attribute name.
+pub fn selector_names(class: &Class<'_>) -> (Vec<String>, Option<String>) {
+    let Some(text) = selector_text(class) else {
+        return (Vec::new(), None);
+    };
+    let cleaned: String = text
+        .chars()
+        .filter(|c| !matches!(c, '[' | ']') && !c.is_whitespace())
+        .collect();
+    let directive = text.find('[').and_then(|i| {
+        let rest = &text[i + 1..];
+        rest.find(']').map(|j| rest[..j].to_string())
+    });
+    (cleaned.split(',').map(str::to_string).collect(), directive)
+}
+
+/// angular-eslint's `isAliasNameAllowed`: the alias is a selector name, the directive attribute
+/// (inputs only) or a selector name followed by the capitalized member name.
+pub fn alias_allowed_by_selector(
+    class: &Class<'_>,
+    name: &str,
+    alias: &str,
+    with_directive: bool,
+) -> bool {
+    let (selectors, directive) = selector_names(class);
+    let cap = capitalize(name);
+    selectors.iter().any(|s| {
+        s == alias
+            || (with_directive && directive.as_deref() == Some(alias))
+            || format!("{s}{cap}") == alias
+    })
+}
+
+/// String entries of the `inputs` / `outputs` metadata arrays of `@Component` / `@Directive`.
+pub fn metadata_entries<'a>(class: &Class<'a>, property: &str) -> Vec<(Span, &'a str)> {
     let mut out = Vec::new();
     let Some((_, d)) = angular_decorator(class, &["Component", "Directive"]) else {
         return out;
@@ -397,18 +437,18 @@ pub fn selector_attributes<'a>(class: &Class<'a>) -> Vec<&'a str> {
     let Some(meta) = decorator_metadata(d) else {
         return out;
     };
-    let Some(p) = object_property(meta, "selector") else {
+    let Some(p) = object_property(meta, property) else {
         return out;
     };
-    let Expression::StringLiteral(s) = strip_parens(&p.value) else {
+    let Expression::ArrayExpression(a) = strip_parens(&p.value) else {
         return out;
     };
-    let mut rest = s.value.as_str();
-    while let Some(i) = rest.find('[') {
-        rest = &rest[i + 1..];
-        let end = rest.find([']', '=']).unwrap_or(rest.len());
-        out.push(rest[..end].trim());
-        rest = &rest[end..];
+    for e in &a.elements {
+        if let Some(e) = e.as_expression()
+            && let Some(v) = string_value(e)
+        {
+            out.push((e.span(), v));
+        }
     }
     out
 }
@@ -426,13 +466,13 @@ pub fn check_metadata_property(ctx: &Ctx<'_, '_>, class: &Class<'_>, property: &
     }
 }
 
-/// `alias` is the selector attribute itself, or the attribute followed by the capitalized member
-/// name (`[tooltip]`: `tooltip`, `tooltipColor` for member `color`).
-pub fn alias_allowed_by_selector(class: &Class<'_>, name: &str, alias: &str) -> bool {
-    let cap = capitalize(name);
-    selector_attributes(class)
-        .iter()
-        .any(|s| *s == alias || format!("{s}{cap}") == alias)
+/// angular-eslint's `getMethodName`: a string-literal key, or a non-computed identifier.
+pub fn angular_method_name<'a>(m: &MethodDefinition<'a>) -> Option<(&'a str, Span)> {
+    match &m.key {
+        PropertyKey::StringLiteral(s) => Some((s.value.as_str(), s.span)),
+        PropertyKey::StaticIdentifier(id) if !m.computed => Some((id.name.as_str(), id.span)),
+        _ => None,
+    }
 }
 
 /// `changed` → `Changed`.
@@ -460,4 +500,10 @@ pub fn implements_name<'a>(class: &Class<'a>, name: &str) -> bool {
         TSTypeName::QualifiedName(q) => q.right.name == name,
         TSTypeName::ThisExpression(_) => false,
     })
+}
+
+/// Sonar has no TypeScript type information in Vue single-file components, so its
+/// type-dependent rules raise nothing there.
+pub fn no_type_info(ctx: &Ctx<'_, '_>) -> bool {
+    ctx.file.path.ends_with(".vue")
 }

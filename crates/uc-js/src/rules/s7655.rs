@@ -1,5 +1,7 @@
 //! Angular classes should implement lifecycle interfaces for their lifecycle methods
-use crate::helpers::batch_ts::{implements_name, lifecycle_interface};
+use crate::helpers::batch_ts::{
+    ANGULAR_CLASS_DECORATORS, angular_decorator, implements_name, lifecycle_interface,
+};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -19,7 +21,9 @@ impl JsRule for Rule {
         let AstKind::Class(class) = node.kind() else {
             return;
         };
-        if class.r#type != ClassType::ClassDeclaration {
+        if class.r#type != ClassType::ClassDeclaration
+            || angular_decorator(class, ANGULAR_CLASS_DECORATORS).is_none()
+        {
             return;
         }
         for el in &class.body.body {
@@ -29,7 +33,8 @@ impl JsRule for Rule {
             let PropertyKey::StaticIdentifier(id) = &m.key else {
                 continue;
             };
-            if m.computed || m.kind != MethodDefinitionKind::Method {
+            // `override` implies the base class is responsible for the interface.
+            if m.r#override {
                 continue;
             }
             let Some(interface) = lifecycle_interface(&id.name) else {
@@ -39,7 +44,7 @@ impl JsRule for Rule {
                 ctx.report(
                     id.span,
                     format!(
-                        "Lifecycle interface '{interface}' should be implemented for method '{}'. (https://angular.dev/style-guide#style-09-01)",
+                        "Lifecycle interface '{interface}' should be implemented for method '{}'. (https://angular.dev/style-guide#use-lifecycle-hook-interfaces)",
                         id.name
                     ),
                 );
@@ -61,10 +66,15 @@ mod tests {
 @Component({})
 class C implements OnInit {
   ngOnInit() {}
-  ngOnDestroy() {} // Noncompliant {{Lifecycle interface 'OnDestroy' should be implemented for method 'ngOnDestroy'. (https://angular.dev/style-guide#style-09-01)}}
+  ngOnDestroy() {} // Noncompliant {{Lifecycle interface 'OnDestroy' should be implemented for method 'ngOnDestroy'. (https://angular.dev/style-guide#use-lifecycle-hook-interfaces)}}
   other() {}
 }
+class Plain {
+  ngOnInit() {}
+}
+@Directive({})
 class D implements ng.OnChanges {
+  override ngOnInit() {}
   ngOnChanges() {}
 }
 "#,

@@ -1,5 +1,5 @@
 //! Fields that are only assigned in the constructor should be "readonly"
-use crate::helpers::batch_ts::{MemberWrite, ancestors, written_members};
+use crate::helpers::batch_ts::{MemberWrite, written_members};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -20,7 +20,7 @@ fn head_start(ctx: &Ctx<'_, '_>, start: u32, decorators: &[Decorator<'_>]) -> u3
 
 /// True if `id` is directly inside a class constructor (no nested function in between).
 fn directly_in_constructor(ctx: &Ctx<'_, '_>, id: NodeId) -> bool {
-    for a in ancestors(ctx, id) {
+    for a in ctx.ancestors(id) {
         match a.kind() {
             AstKind::Function(_) => {
                 return matches!(ctx.parent_kind(a.id()),
@@ -75,6 +75,9 @@ fn modified_names<'a>(ctx: &Ctx<'a, '_>) -> FxHashSet<std::borrow::Cow<'a, str>>
 
 impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
+        if crate::helpers::batch_ts::no_type_info(ctx) {
+            return;
+        }
         if !ctx.nodes().contains(AstType::Class) {
             return;
         }

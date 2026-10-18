@@ -19,15 +19,14 @@ impl JsRule for Rule {
         let AstKind::Class(class) = node.kind() else {
             return;
         };
-        let Some((_, decorator)) = angular_decorator(class, &["Pipe"]) else {
+        if class.r#type != ClassType::ClassDeclaration
+            || angular_decorator(class, &["Pipe"]).is_none()
+            || implements_name(class, "PipeTransform")
+        {
             return;
-        };
-        if !implements_name(class, "PipeTransform") {
-            ctx.report(
-                decorator.span,
-                "Pipes should implement `PipeTransform` interface",
-            );
         }
+        let span = class.id.as_ref().map_or(class.span, |id| id.span);
+        ctx.report(span, "Pipes should implement `PipeTransform` interface");
     }
 }
 
@@ -41,8 +40,8 @@ mod tests {
             "S7656",
             "a.ts",
             r#"
-@Pipe({ name: 'a' }) // Noncompliant {{Pipes should implement `PipeTransform` interface}}
-class A {
+@Pipe({ name: 'a' })
+class A { // Noncompliant {{Pipes should implement `PipeTransform` interface}}
   transform(v: string) { return v; }
 }
 @Pipe({ name: 'b' })
