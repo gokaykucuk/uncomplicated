@@ -111,7 +111,7 @@ class F extends Base {}
 
     #[test]
     fn rule() {
-        check_project("S9145", "a.ts", &project_with(&[("vue", "^3.3.0")]), CODE);
+        check_project("S9145", "a.ts", &project_with(&[("vue", "^3.3.0"), ("vue-class-component", "^8.0.0")]), CODE);
         let no_issue: String = CODE.replace("// Noncompliant", "//");
         check_project(
             "S9145",
