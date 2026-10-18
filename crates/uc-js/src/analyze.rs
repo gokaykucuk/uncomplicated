@@ -130,8 +130,10 @@ fn analyze_in(
         }
     }
     let lines = LineIndex::new(src);
-    if let Some(d) = ret.diagnostics.first() {
+    if ret.fatal_error && let Some(d) = ret.diagnostics.first() {
         // Like SonarJS: a file that doesn't parse only gets a parsing-failure issue (S2260).
+        // Recoverable diagnostics (often TypeScript semantic errors that Sonar's parser accepts)
+        // don't stop the analysis.
         let msg = d.message.to_string();
         result.parse_error = Some(msg.clone());
         result.metrics.lines = lines.line_count();
