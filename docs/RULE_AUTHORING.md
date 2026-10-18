@@ -56,8 +56,17 @@ Rules must be stateless between files (`Send + Sync`). Per-file state goes in lo
 ## Context (`Ctx`) and helpers
 
 - Reporting: `ctx.report(span, msg)`, `ctx.report_with(span, msg, [(span, Some(msg))])` for
-  secondary locations, `ctx.report_gap(span, msg, gap)` for linear remediation cost.
-- Tree: `ctx.parent(id)`, `ctx.parent_kind(id)`, `ctx.parent_skip_parens(id)`,
+  secondary locations, `ctx.report_gap(span, msg, gap)` for linear remediation cost,
+  `ctx.report_file(msg)` for file-level issues (Sonar's line 0; annotate tests with
+  `// Noncompliant@0`).
+- Suppression is handled by the engine: `NOSONAR`, and `eslint-disable` / `-line` / `-next-line`
+  directives matched against the rule's Sonar key or its upstream ESLint id (catalog `eslint`).
+  Fatal parse errors produce `S2260` and stop the file's analysis.
+- Project: `ctx.file.project` (`ProjectInfo`): `has_dependency(name)`, `has_dependency_prefix`,
+  `dependency_major(name)`, `module_type`, `engines_node`, `ts_lib`, `ts_target`, `ts_module`,
+  merged from the `package.json` files enclosing the file and the nearest `tsconfig.json`. Use it
+  for rules SonarJS only enables for projects depending on a package.
+- Tree (`ancestors` starts at the direct parent): `ctx.parent(id)`, `ctx.parent_kind(id)`, `ctx.parent_skip_parens(id)`,
   `ctx.ancestors(id)`, `ctx.enclosing_function(id)`, `ctx.node(id)`, `ctx.nodes()`.
 - Symbols: `ctx.symbol_of(&IdentifierReference)`, `ctx.is_global(ident, "name")`,
   `ctx.symbol_decl(sym)`, `ctx.scoping()` (oxc `Scoping`: `get_resolved_references(sym)`,
