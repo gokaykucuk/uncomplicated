@@ -1206,7 +1206,7 @@ checksum = "d0af592be68c579aa78a16846bd19422978c3c52e438523d45ff5d1bff1f9d4a"
 
 [[package]]
 name = "uc-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap",
  "mimalloc",
@@ -1217,7 +1217,7 @@ dependencies = [
 
 [[package]]
 name = "uc-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "memchr",
  "rustc-hash",
@@ -1227,7 +1227,7 @@ dependencies = [
 
 [[package]]
 name = "uc-engine"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitcode",
  "globset",
@@ -1247,7 +1247,7 @@ dependencies = [
 
 [[package]]
 name = "uc-go"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "memchr",
  "regex",
@@ -1261,7 +1261,7 @@ dependencies = [
 
 [[package]]
 name = "uc-js"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "memchr",
  "oxc_allocator",

@@ -30,7 +30,7 @@ runs:
         if [ -z "$v" ] && [[ "$ACTION_REF" == v[0-9]* ]]; then v="$ACTION_REF"; fi
         echo "tag=${v:-latest}" >> "$GITHUB_OUTPUT"
     - if: inputs.cache == 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: .uncomplicated
         key: unc-${{ runner.os }}-${{ steps.v.outputs.tag }}-${{ github.sha }}

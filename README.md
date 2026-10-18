@@ -60,10 +60,10 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # new-code detection needs the merge base
-      - uses: gokaykucuk/uncomplicated@v0.1.0
+      - uses: gokaykucuk/uncomplicated@v0.1.1
         with:
           args: analyze --format github --new-code origin/${{ github.base_ref || 'main' }} --lcov coverage/lcov.info
 ```
@@ -76,7 +76,7 @@ be uploaded with `github/codeql-action/upload-sarif` (needs code scanning on the
 ```yaml
 code_quality:
   image:
-    name: ghcr.io/gokaykucuk/uncomplicated:0.1.0
+    name: ghcr.io/gokaykucuk/uncomplicated:0.1.1
     entrypoint: [""]
   variables:
     GIT_DEPTH: 0
