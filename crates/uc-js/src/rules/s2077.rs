@@ -61,6 +61,42 @@ const SIGNATURES: &[&str] = &[
     "typeorm.getRepository.query",
 ];
 
+/// Last segment of one of `SIGNATURES`.
+fn is_sql_method(name: &str) -> bool {
+    matches!(
+        name,
+        "query"
+            | "run"
+            | "get"
+            | "all"
+            | "each"
+            | "exec"
+            | "prepare"
+            | "batch"
+            | "execute"
+            | "executeMany"
+            | "queryStream"
+            | "any"
+            | "func"
+            | "many"
+            | "manyOrNone"
+            | "map"
+            | "multi"
+            | "multiResult"
+            | "none"
+            | "one"
+            | "oneOrNone"
+            | "proc"
+            | "result"
+            | "raw"
+            | "whereRaw"
+            | "havingRaw"
+            | "groupByRaw"
+            | "orderByRaw"
+            | "joinRaw"
+    )
+}
+
 fn is_hardcoded(e: &Expression<'_>) -> bool {
     is_literal(e)
         || matches!(strip_parens(e), Expression::TemplateLiteral(t) if t.expressions.is_empty())
@@ -108,14 +144,10 @@ impl JsRule for Rule {
         let Some(first) = call.arguments.first().and_then(|a| a.as_expression()) else {
             return;
         };
-        let Some(name) = callee_name(call) else {
+        let Expression::StaticMemberExpression(m) = strip_parens(&call.callee) else {
             return;
         };
-        if !SIGNATURES
-            .iter()
-            .any(|s| s.rsplit('.').next() == Some(name))
-            || !is_questionable(first)
-        {
+        if !is_sql_method(m.property.name.as_str()) || !is_questionable(first) {
             return;
         }
         if fqn(ctx, &call.callee).is_some_and(|q| SIGNATURES.contains(&q.as_str())) {
