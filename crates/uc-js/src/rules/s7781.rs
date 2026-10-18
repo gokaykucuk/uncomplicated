@@ -4,7 +4,7 @@ use oxc_regular_expression::ast::{
     Alternative, CharacterClassContents, CharacterKind, Disjunction, Pattern, Term,
 };
 
-use crate::helpers::batch_unicorn::{const_init, is_method_call, method_call};
+use crate::helpers::batch_unicorn::{effective_const_init, is_method_call, method_call};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -61,9 +61,11 @@ fn is_global_regexp(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> bool {
     if let Some((_, flags)) = regexp_constructor(e) {
         return flags.contains('g');
     }
-    const_init(ctx, e)
-        .and_then(regex_literal)
-        .is_some_and(|r| r.regex.flags.contains(RegExpFlags::G))
+    match effective_const_init(ctx, e) {
+        Some(init @ Expression::RegExpLiteral(_)) => is_global_regexp(ctx, init),
+        Some(init @ Expression::NewExpression(_)) => is_global_regexp(ctx, init),
+        _ => false,
+    }
 }
 
 fn has_lone_surrogate_in_unicode_mode(r: &RegExpLiteral<'_>, pattern: &Pattern<'_>) -> bool {
@@ -301,7 +303,12 @@ impl JsRule for Rule {
             return;
         }
         // Sonar only reports `replace()` when the regex matches a fixed string.
-        let reducible = match inline.or_else(|| const_init(ctx, pattern).and_then(regex_literal)) {
+        // A variable initialized once is followed to its regex, like Sonar's `getParsedRegex`.
+        let source = match effective_const_init(ctx, pattern) {
+            Some(init) => init,
+            None => pattern,
+        };
+        let reducible = match inline.or_else(|| regex_literal(source)) {
             Some(r) => {
                 let Some(parsed) = r.regex.pattern.pattern.as_deref() else {
                     return;
@@ -312,7 +319,7 @@ impl JsRule for Rule {
                     && equivalent_literal(&parsed.body, &mut lit)
                     && !lit.is_empty()
             }
-            None => match regexp_constructor(pattern) {
+            None => match regexp_constructor(source) {
                 // Only plain strings without regex syntax are known to be fixed.
                 Some((Some(p), flags)) => {
                     !p.is_empty()

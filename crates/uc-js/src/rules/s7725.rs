@@ -26,7 +26,7 @@ impl JsRule for Rule {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
         // Closest non-arrow function, not crossing a class boundary.
         let mut func = None;
-        for a in crate::helpers::batch_unicorn::ancestors(ctx, node.id()) {
+        for a in ctx.ancestors(node.id()) {
             match a.kind() {
                 AstKind::Class(_) => return,
                 AstKind::Function(_) => {

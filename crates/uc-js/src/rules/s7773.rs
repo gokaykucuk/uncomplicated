@@ -12,14 +12,20 @@ impl Rule {
 impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
         let scoping = ctx.scoping();
+        let unresolved = scoping.root_unresolved_references();
         // `Infinity` is not checked by default (`checkInfinity: false`).
-        for name in ["parseInt", "parseFloat", "NaN", "isNaN", "isFinite"] {
-            let Some(ids) = scoping.root_unresolved_references().get(name) else {
+        const NAMES: [&str; 5] = ["parseInt", "parseFloat", "NaN", "isNaN", "isFinite"];
+        for name in NAMES {
+            let Some(ids) = unresolved.get(name) else {
                 continue;
             };
+            // Like eslint-utils' ReferenceTracker, a reassigned global is not tracked at all.
+            if ids.iter().any(|r| scoping.get_reference(*r).is_write()) {
+                continue;
+            }
             for &rid in ids.iter() {
                 let r = scoping.get_reference(rid);
-                if !r.is_read() || r.is_write() {
+                if !r.is_read() {
                     continue;
                 }
                 let node = ctx.node(r.node_id());
@@ -27,6 +33,35 @@ impl JsRule for Rule {
                     node.kind().span(),
                     format!("Prefer `Number.{name}` over `{name}`."),
                 );
+            }
+        }
+        // `window.parseInt`, `globalThis.isNaN`, ...
+        for global in ["window", "globalThis", "self", "global"] {
+            let Some(ids) = unresolved.get(global) else {
+                continue;
+            };
+            for &rid in ids.iter() {
+                let node = ctx.node(scoping.get_reference(rid).node_id());
+                let member = ctx.parent(node.id());
+                let AstKind::StaticMemberExpression(m) = member.kind() else {
+                    continue;
+                };
+                let name = m.property.name.as_str();
+                if m.object.span() != node.kind().span() || !NAMES.contains(&name) {
+                    continue;
+                }
+                let is_lhs = match ctx.parent_kind(member.id()) {
+                    AstKind::AssignmentExpression(a) => a.left.span() == m.span,
+                    AstKind::UpdateExpression(_)
+                    | AstKind::ArrayAssignmentTarget(_)
+                    | AstKind::AssignmentTargetPropertyProperty(_)
+                    | AstKind::AssignmentTargetWithDefault(_) => true,
+                    AstKind::UnaryExpression(u) => u.operator == UnaryOperator::Delete,
+                    _ => false,
+                };
+                if !is_lhs {
+                    ctx.report(m.span, format!("Prefer `Number.{name}` over `{name}`."));
+                }
             }
         }
     }
@@ -49,6 +84,16 @@ const d = x === NaN; // Noncompliant
 const e = Infinity;
 const f = Number.parseInt('10');
 function g(parseInt) { return parseInt(x); }
+const h = window.isFinite(x); // Noncompliant {{Prefer `Number.isFinite` over `isFinite`.}}
+window.parseFloat = foo;
+"#,
+        );
+        check(
+            "S7773",
+            "b.js",
+            r#"
+parseFloat = polyfill(parseFloat);
+const a = parseFloat('1');
 "#,
         );
     }

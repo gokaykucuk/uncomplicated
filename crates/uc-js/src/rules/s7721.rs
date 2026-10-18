@@ -1,4 +1,5 @@
 //! Functions should be moved to the highest possible scope
+use crate::helpers::batch_unicorn::is_env_global;
 use crate::prelude::*;
 
 pub struct Rule {
@@ -216,7 +217,7 @@ impl JsRule for Rule {
         if nodes.contains(AstType::JSXElement) {
             for n in nodes.iter() {
                 if let AstKind::JSXElement(_) = n.kind()
-                    && let Some(f) = crate::helpers::batch_unicorn::enclosing_fn(ctx, n.id())
+                    && let Some(f) = ctx.enclosing_function(n.id())
                 {
                     jsx_fns.insert(f.id());
                 }
@@ -241,6 +242,27 @@ impl JsRule for Rule {
             .map(|(i, c)| (c.fscope, i))
             .collect();
         let scoping = ctx.scoping();
+        // The scope ESLint would put a reference in: oxc gives every `for` loop a scope, ESLint
+        // only those declaring `let`/`const`.
+        let es_scope = |mut s: ScopeId| loop {
+            let lexical = |d: &VariableDeclaration<'_>| d.kind != VariableDeclarationKind::Var;
+            let skip = match ctx.node(scoping.get_node_id(s)).kind() {
+                AstKind::ForStatement(f) => {
+                    !matches!(&f.init, Some(ForStatementInit::VariableDeclaration(d)) if lexical(d))
+                }
+                AstKind::ForInStatement(f) => {
+                    !matches!(&f.left, ForStatementLeft::VariableDeclaration(d) if lexical(d))
+                }
+                AstKind::ForOfStatement(f) => {
+                    !matches!(&f.left, ForStatementLeft::VariableDeclaration(d) if lexical(d))
+                }
+                _ => false,
+            };
+            match scoping.scope_parent_id(s) {
+                Some(p) if skip => s = p,
+                _ => break s,
+            }
+        };
 
         // Resolved references.
         for sym in scoping.symbol_ids() {
@@ -258,7 +280,7 @@ impl JsRule for Rule {
                     let c = &cands[i];
                     let hit = refs
                         .iter()
-                        .any(|r2| scoping.get_reference(*r2).scope_id() == c.pscope)
+                        .any(|r2| es_scope(scoping.get_reference(*r2).scope_id()) == c.pscope)
                         || (s_scope == c.pscope && decl != c.node)
                         || decl == c.pnode;
                     if hit {
@@ -268,11 +290,16 @@ impl JsRule for Rule {
             }
         }
 
-        // Unresolved references (globals): blocked when the parent scope uses the same global.
-        for (_, ids) in scoping.root_unresolved_references().iter() {
+        // Unresolved references: ESLint resolves the environment globals Sonar configures (ES
+        // builtins, browser, node, test frameworks) to global variables, so the function is blocked
+        // when the parent scope uses the same one. Other unresolved names are ignored, like unicorn.
+        for (name, ids) in scoping.root_unresolved_references().iter() {
+            if !is_env_global(name) {
+                continue;
+            }
             let scopes: FxHashSet<ScopeId> = ids
                 .iter()
-                .map(|r| scoping.get_reference(*r).scope_id())
+                .map(|r| es_scope(scoping.get_reference(*r).scope_id()))
                 .collect();
             for &r in ids.iter() {
                 let rs = scoping.get_reference(r).scope_id();
@@ -346,6 +373,19 @@ function nestedBlocks(c) {
   if (c) {
     function inIf() {}
   }
+}
+function nonEnvGlobals() {
+  forEach(1);
+  DomEvent.add(1);
+  function usesUnknownGlobal() { return forEach(2) + DomEvent.x; } // Noncompliant
+}
+function forScopes() {
+  let idx = 0;
+  function inner() {
+    function readsIdx() { return idx; }
+    for (; idx < 3; idx++) { readsIdx(); }
+  }
+  return inner;
 }
 function recursive() {
   function fact(n) { return n ? n * fact(n - 1) : 1; } // Noncompliant
