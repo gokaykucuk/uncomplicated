@@ -142,9 +142,6 @@ impl JsRule for Rule {
                     _ => return,
                 };
                 for p in &params.items {
-                    if p.accessibility.is_some() || p.readonly || p.r#override {
-                        continue;
-                    }
                     if let (Some(ann), Some(init)) = (&p.type_annotation, &p.initializer) {
                         report(
                             ctx,
@@ -184,7 +181,7 @@ class C {
   x: number = 1; // Noncompliant
   readonly y: number = 1;
   z?: number = 1;
-  constructor(private w: number = 1) {}
+  constructor(private w: number = 1) {} // Noncompliant
 }
 const ok1: number = foo();
 const ok2: string = 5 as any;

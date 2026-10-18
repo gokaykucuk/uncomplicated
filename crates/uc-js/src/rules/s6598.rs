@@ -39,6 +39,42 @@ fn message(kind: &str) -> String {
     format!("{kind} has only a call signature, you should use a function type instead.")
 }
 
+fn call_only(members: &[TSSignature<'_>]) -> bool {
+    matches!(members, [TSSignature::TSCallSignatureDeclaration(_)])
+}
+
+/// True if the instantiation at `id` is the type argument list of a `defineEmits<...>()` call.
+fn is_define_emits_args(ctx: &Ctx<'_, '_>, id: NodeId) -> bool {
+    let AstKind::TSTypeParameterInstantiation(_) = ctx.node(id).kind() else {
+        return false;
+    };
+    matches!(ctx.parent_kind(id), AstKind::CallExpression(c)
+        if matches!(&c.callee, Expression::Identifier(f) if f.name == "defineEmits"))
+}
+
+/// Sonar exempts call signatures used to type Vue's `defineEmits` (in `.vue` files).
+fn used_by_define_emits(
+    ctx: &Ctx<'_, '_>,
+    node: &AstNode<'_>,
+    name: Option<&BindingIdentifier<'_>>,
+) -> bool {
+    if !ctx.file.path.ends_with(".vue") {
+        return false;
+    }
+    match name {
+        // Inline literal: `defineEmits<{ (e: 'close'): void }>()`.
+        None => is_define_emits_args(ctx, ctx.parent(node.id()).id()),
+        // Interface or alias referenced as `defineEmits<Emits>()`.
+        Some(id) => id.symbol_id.get().is_some_and(|sym| {
+            ctx.scoping().get_resolved_references(sym).any(|r| {
+                let reference = ctx.parent(r.node_id());
+                matches!(reference.kind(), AstKind::TSTypeReference(_))
+                    && is_define_emits_args(ctx, ctx.parent(reference.id()).id())
+            })
+        }),
+    }
+}
+
 impl JsRule for Rule {
     fn interests(&self) -> &'static [AstType] {
         &[AstType::TSInterfaceDeclaration, AstType::TSTypeLiteral]
@@ -70,11 +106,21 @@ impl JsRule for Rule {
                             i.id.name
                         ),
                     ),
+                    None if call_only(&i.body.body) && used_by_define_emits(ctx, node, Some(&i.id)) => {}
                     None => ctx.report(span, message("Interface")),
                 }
             }
             AstKind::TSTypeLiteral(l) => {
                 if let Some(span) = signature_span(&l.members) {
+                    if call_only(&l.members) {
+                        let alias = match ctx.parent_kind(node.id()) {
+                            AstKind::TSTypeAliasDeclaration(a) => Some(&a.id),
+                            _ => None,
+                        };
+                        if used_by_define_emits(ctx, node, alias) {
+                            return;
+                        }
+                    }
                     ctx.report(span, message("Type literal"));
                 }
             }
@@ -116,6 +162,21 @@ interface Ctor {
   new (): Foo; // Noncompliant
 }
 type T = () => void;
+"#,
+        );
+    }
+
+    #[test]
+    fn vue_define_emits() {
+        check(
+            "S6598",
+            "a.vue",
+            r#"<script setup lang="ts">
+const emit = defineEmits<{ (e: 'close'): void }>()
+interface Emits { (e: 'save'): void }
+defineEmits<Emits>()
+type Other = { (x: number): void } // Noncompliant
+</script>
 "#,
         );
     }

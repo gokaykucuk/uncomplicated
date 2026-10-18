@@ -135,6 +135,9 @@ impl JsRule for Rule {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
+        if crate::helpers::batch_ts::no_type_info(ctx) {
+            return;
+        }
         match node.kind() {
             AstKind::TSUnionType(u) => {
                 let never_ok = inside_return_type(ctx, node.id());

@@ -1,5 +1,4 @@
 //! "undefined" should not be passed as the value of optional parameters
-use crate::helpers::batch_ts::ancestors;
 use crate::prelude::*;
 
 pub struct Rule;
@@ -39,7 +38,7 @@ fn this_method_params<'a>(
     name: &str,
 ) -> Option<&'a FormalParameters<'a>> {
     let mut is_static = None;
-    for a in ancestors(ctx, node) {
+    for a in ctx.ancestors(node) {
         match a.kind() {
             AstKind::ArrowFunctionExpression(_) => {}
             AstKind::Function(_) if is_static.is_none() => match ctx.parent_kind(a.id()) {
@@ -77,6 +76,9 @@ impl JsRule for Rule {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
+        if crate::helpers::batch_ts::no_type_info(ctx) {
+            return;
+        }
         let AstKind::CallExpression(call) = node.kind() else {
             return;
         };

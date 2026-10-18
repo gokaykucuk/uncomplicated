@@ -203,6 +203,9 @@ impl JsRule for Rule {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
+        if crate::helpers::batch_ts::no_type_info(ctx) {
+            return;
+        }
         match node.kind() {
             AstKind::ConditionalExpression(c) => {
                 if self.ignore_ternary_tests {

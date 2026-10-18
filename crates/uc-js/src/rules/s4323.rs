@@ -1,5 +1,5 @@
 //! Type aliases should be used
-use crate::helpers::batch_ts::{ancestors, type_span};
+use crate::helpers::batch_ts::type_span;
 use crate::prelude::*;
 
 pub struct Rule;
@@ -43,7 +43,8 @@ impl JsRule for Rule {
             {
                 continue;
             }
-            if ancestors(ctx, node.id())
+            if ctx
+                .ancestors(node.id())
                 .any(|a| matches!(a.kind(), AstKind::TSTypeAliasDeclaration(_)))
             {
                 continue;

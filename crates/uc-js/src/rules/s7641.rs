@@ -1,5 +1,7 @@
 //! Angular lifecycle methods should be used in the correct context
-use crate::helpers::batch_ts::{ANGULAR_CLASS_DECORATORS, ANGULAR_LIFECYCLE, angular_decorator};
+use crate::helpers::batch_ts::{
+    ANGULAR_CLASS_DECORATORS, ANGULAR_LIFECYCLE, angular_decorator, angular_method_name,
+};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -14,7 +16,7 @@ impl Rule {
 fn allowed(decorator: &str, method: &str) -> bool {
     match decorator {
         "Component" | "Directive" => method != "ngDoBootstrap",
-        "Injectable" | "Pipe" => method == "ngOnDestroy",
+        "Injectable" | "Pipe" | "Service" => method == "ngOnDestroy",
         "NgModule" => method == "ngDoBootstrap",
         _ => true,
     }
@@ -29,6 +31,9 @@ impl JsRule for Rule {
         let AstKind::Class(class) = node.kind() else {
             return;
         };
+        if class.r#type != ClassType::ClassDeclaration {
+            return;
+        }
         let Some((decorator, _)) = angular_decorator(class, ANGULAR_CLASS_DECORATORS) else {
             return;
         };
@@ -36,18 +41,17 @@ impl JsRule for Rule {
             let ClassElement::MethodDefinition(m) = el else {
                 continue;
             };
-            let PropertyKey::StaticIdentifier(id) = &m.key else {
+            let Some((name, span)) = angular_method_name(m) else {
                 continue;
             };
-            if m.computed || !ANGULAR_LIFECYCLE.iter().any(|(n, _)| *n == id.name) {
+            if !ANGULAR_LIFECYCLE.iter().any(|(n, _)| *n == name) {
                 continue;
             }
-            if !allowed(decorator, &id.name) {
+            if !allowed(decorator, name) {
                 ctx.report(
-                    id.span,
+                    span,
                     format!(
-                        "Angular will not invoke the `{}` lifecycle method within `@{decorator}()` classes",
-                        id.name
+                        "Angular will not invoke the `{name}` lifecycle method within `@{decorator}()` classes"
                     ),
                 );
             }

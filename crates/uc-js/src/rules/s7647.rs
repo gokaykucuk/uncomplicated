@@ -1,5 +1,7 @@
 //! Empty Angular lifecycle methods should be removed
-use crate::helpers::batch_ts::{ANGULAR_CLASS_DECORATORS, ANGULAR_LIFECYCLE, angular_decorator};
+use crate::helpers::batch_ts::{
+    ANGULAR_CLASS_DECORATORS, ANGULAR_LIFECYCLE, angular_decorator, angular_method_name,
+};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -19,17 +21,19 @@ impl JsRule for Rule {
         let AstKind::Class(class) = node.kind() else {
             return;
         };
-        if angular_decorator(class, ANGULAR_CLASS_DECORATORS).is_none() {
+        if class.r#type != ClassType::ClassDeclaration
+            || angular_decorator(class, ANGULAR_CLASS_DECORATORS).is_none()
+        {
             return;
         }
         for el in &class.body.body {
             let ClassElement::MethodDefinition(m) = el else {
                 continue;
             };
-            let PropertyKey::StaticIdentifier(id) = &m.key else {
+            let Some((name, _)) = angular_method_name(m) else {
                 continue;
             };
-            if m.computed || !ANGULAR_LIFECYCLE.iter().any(|(n, _)| *n == id.name) {
+            if !ANGULAR_LIFECYCLE.iter().any(|(n, _)| *n == name) {
                 continue;
             }
             if m.value
