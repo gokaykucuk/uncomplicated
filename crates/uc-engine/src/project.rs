@@ -28,7 +28,7 @@ impl Projects {
             p.hashes.entry(key).or_insert_with(|| {
                 let mut deps: Vec<_> = info.deps.iter().collect();
                 deps.sort();
-                let s = format!("{deps:?}{:?}{:?}{:?}{:?}{:?}", info.module_type, info.engines_node, info.ts_lib, info.ts_target, info.ts_module);
+                let s = format!("{deps:?}{:?}", (&info.module_type, &info.engines_node, &info.ts_lib, &info.ts_target, &info.ts_module, &info.ts_base_url, &info.ts_paths, &info.package_names, &info.module_aliases, &info.workspaces));
                 xxhash_rust::xxh3::xxh3_64(s.as_bytes())
             });
         }
@@ -49,15 +49,23 @@ impl Projects {
         let info = if has_pkg || has_ts {
             let mut info = (*inherited).clone();
             info.has_package_json |= has_pkg;
-            if has_pkg && let Some((deps, ty, node)) = read_package_json(&pkg) {
-                info.deps.extend(deps);
-                info.module_type = ty;
-                info.engines_node = node;
+            if has_pkg && let Some(p) = read_package_json(&pkg) {
+                info.deps.extend(p.deps);
+                info.module_type = p.module_type;
+                info.engines_node = p.engines_node;
+                if let Some(n) = p.name {
+                    info.package_names.insert(0, n);
+                }
+                info.module_aliases.extend(p.module_aliases);
+                info.workspaces.extend(p.workspaces);
             }
-            if has_ts && let Some((lib, target, module)) = read_tsconfig(&ts) {
-                info.ts_lib = lib;
-                info.ts_target = target;
-                info.ts_module = module;
+            if has_ts && let Some(t) = read_tsconfig(&ts) {
+                info.ts_lib = t.lib;
+                info.ts_target = t.target;
+                info.ts_module = t.module;
+                info.ts_base_url = t.base_url;
+                info.ts_paths = t.paths;
+                info.tsconfig_dir = Some(dir.to_path_buf());
             }
             info.compute_es_years();
             Arc::new(info)

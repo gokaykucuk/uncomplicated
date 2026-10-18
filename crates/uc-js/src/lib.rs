@@ -18,7 +18,7 @@ use oxc_ast::AstType;
 use oxc_semantic::AstNode;
 use uc_core::{Catalog, Lang, Params, RuleMeta};
 
-pub use analyze::{FileOptions, analyze, analyze_in_project, profile_report};
+pub use analyze::{FileOptions, analyze, analyze_file, analyze_in_project, profile_report};
 pub use project::ProjectInfo;
 pub use ctx::{Ctx, FileInfo};
 

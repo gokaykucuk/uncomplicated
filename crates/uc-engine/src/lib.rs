@@ -170,8 +170,9 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
                 return None;
             }
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| match f.lang {
-                FileLang::Js => uc_js::analyze_in_project(
+                FileLang::Js => uc_js::analyze_file(
                     &f.rel,
+                    Some(&f.abs),
                     &src,
                     f.is_test,
                     match &ts_rules {

@@ -58,6 +58,19 @@ pub fn analyze_in_project(
     opts: &FileOptions,
     project: &ProjectInfo,
 ) -> FileResult {
+    analyze_file(path, None, src, is_test, rules, opts, project)
+}
+
+/// Like [`analyze_in_project`], with the file's absolute path.
+pub fn analyze_file(
+    path: &str,
+    abs_path: Option<&std::path::Path>,
+    src: &str,
+    is_test: bool,
+    rules: &JsRules,
+    opts: &FileOptions,
+    project: &ProjectInfo,
+) -> FileResult {
     let raw = src;
     let embedded = embedded_scripts(path, src);
     let (src, lang) = match &embedded {
@@ -66,7 +79,7 @@ pub fn analyze_in_project(
     };
     ALLOC.with_borrow_mut(|alloc| {
         alloc.reset();
-        analyze_in(alloc, path, src, raw, lang, embedded.is_some(), is_test, rules, opts, project)
+        analyze_in(alloc, path, abs_path, src, raw, lang, embedded.is_some(), is_test, rules, opts, project)
     })
 }
 
@@ -121,6 +134,7 @@ fn attr_value(attrs: &str, name: &str) -> Option<String> {
 fn analyze_in(
     alloc: &Allocator,
     path: &str,
+    abs_path: Option<&std::path::Path>,
     src: &str,
     raw: &str,
     lang: Lang,
@@ -186,7 +200,7 @@ fn analyze_in(
     let program = alloc.alloc(ret.program);
     let semantic = SemanticBuilder::new().with_cfg(true).with_build_nodes(true).with_class_table(true).build(program).semantic;
     let tokens: &[oxc_parser::Token] = &ret.tokens;
-    let file = FileInfo { path, lang, is_test, jsx: st.is_jsx(), is_module, raw, project };
+    let file = FileInfo { path, abs_path, lang, is_test, jsx: st.is_jsx(), is_module, raw, project };
     let ctx = Ctx {
         semantic: &semantic,
         src,

@@ -28,6 +28,18 @@ pub struct ProjectInfo {
     pub es_year_ts: Option<u16>,
     /// Year of the tsconfig `target` (ES5 = 2014), for rules whose syntax can't be down-levelled.
     pub ts_target_year: Option<u16>,
+    /// Directory of the nearest `tsconfig.json` (absolute).
+    pub tsconfig_dir: Option<std::path::PathBuf>,
+    /// tsconfig `compilerOptions.baseUrl`, relative to `tsconfig_dir`.
+    pub ts_base_url: Option<String>,
+    /// tsconfig `compilerOptions.paths` patterns (e.g. `@utils/*`).
+    pub ts_paths: Vec<String>,
+    /// `name` of every `package.json` enclosing the file, nearest first.
+    pub package_names: Vec<String>,
+    /// `_moduleAliases` keys (module-alias package) of enclosing `package.json` files.
+    pub module_aliases: Vec<String>,
+    /// `workspaces` globs of enclosing `package.json` files.
+    pub workspaces: Vec<String>,
 }
 
 impl ProjectInfo {
@@ -135,33 +147,64 @@ pub fn min_major(range: &str) -> Option<u64> {
         .min()
 }
 
-/// Reads a `package.json` into (deps, type, engines.node).
-pub fn read_package_json(path: &Path) -> Option<(FxHashMap<String, String>, Option<String>, Option<String>)> {
+/// Contents of a `package.json` that rules care about.
+#[derive(Debug, Default)]
+pub struct PackageJson {
+    pub deps: FxHashMap<String, String>,
+    pub module_type: Option<String>,
+    pub engines_node: Option<String>,
+    pub name: Option<String>,
+    pub module_aliases: Vec<String>,
+    pub workspaces: Vec<String>,
+}
+
+pub fn read_package_json(path: &Path) -> Option<PackageJson> {
     let v: Value = serde_json::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
-    let mut deps = FxHashMap::default();
+    let mut p = PackageJson::default();
     for key in ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] {
         if let Some(Value::Object(m)) = v.get(key) {
             for (k, ver) in m {
-                deps.insert(k.clone(), ver.as_str().unwrap_or("").to_string());
+                p.deps.insert(k.clone(), ver.as_str().unwrap_or("").to_string());
             }
         }
     }
-    let ty = v.get("type").and_then(Value::as_str).map(str::to_string);
-    let node = v.get("engines").and_then(|e| e.get("node")).and_then(Value::as_str).map(str::to_string);
-    Some((deps, ty, node))
+    p.module_type = v.get("type").and_then(Value::as_str).map(str::to_string);
+    p.engines_node = v.get("engines").and_then(|e| e.get("node")).and_then(Value::as_str).map(str::to_string);
+    p.name = v.get("name").and_then(Value::as_str).map(str::to_string);
+    if let Some(Value::Object(m)) = v.get("_moduleAliases") {
+        p.module_aliases = m.keys().cloned().collect();
+    }
+    p.workspaces = match v.get("workspaces") {
+        Some(Value::Array(a)) => a.iter().filter_map(|x| x.as_str().map(str::to_string)).collect(),
+        Some(Value::Object(o)) => o
+            .get("packages")
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(|x| x.as_str().map(str::to_string)).collect())
+            .unwrap_or_default(),
+        _ => Vec::new(),
+    };
+    Some(p)
 }
 
-/// Reads `compilerOptions` (lib, target, module) from a `tsconfig.json`, which may contain
-/// comments and trailing commas.
-pub fn read_tsconfig(path: &Path) -> Option<(Vec<String>, Option<String>, Option<String>)> {
+/// `compilerOptions` of a `tsconfig.json` that rules care about.
+#[derive(Debug, Default, Clone)]
+pub struct TsConfig {
+    pub lib: Vec<String>,
+    pub target: Option<String>,
+    pub module: Option<String>,
+    pub base_url: Option<String>,
+    pub paths: Vec<String>,
+}
+
+/// Reads `compilerOptions` from a `tsconfig.json` (JSONC), following relative `extends`.
+pub fn read_tsconfig(path: &Path) -> Option<TsConfig> {
     read_tsconfig_depth(path, 0)
 }
 
-fn read_tsconfig_depth(path: &Path, depth: u8) -> Option<(Vec<String>, Option<String>, Option<String>)> {
+fn read_tsconfig_depth(path: &Path, depth: u8) -> Option<TsConfig> {
     let text = strip_jsonc(&std::fs::read_to_string(path).ok()?);
     let v: Value = serde_json::from_str(&text).ok()?;
-    // Relative `extends` provide defaults.
-    let (mut lib, mut target, mut module) = (Vec::new(), None, None);
+    let mut cfg = TsConfig::default();
     if depth < 5
         && let Some(ext) = v.get("extends").and_then(Value::as_str)
         && ext.starts_with('.')
@@ -170,19 +213,25 @@ fn read_tsconfig_depth(path: &Path, depth: u8) -> Option<(Vec<String>, Option<St
         if p.extension().is_none_or(|e| e != "json") {
             p.set_extension("json");
         }
-        if let Some((l, t, m)) = read_tsconfig_depth(&p, depth + 1) {
-            (lib, target, module) = (l, t, m);
+        if let Some(base) = read_tsconfig_depth(&p, depth + 1) {
+            cfg = base;
         }
     }
     if let Some(co) = v.get("compilerOptions") {
         if let Some(a) = co.get("lib").and_then(Value::as_array) {
-            lib = a.iter().filter_map(|x| x.as_str().map(str::to_ascii_lowercase)).collect();
+            cfg.lib = a.iter().filter_map(|x| x.as_str().map(str::to_ascii_lowercase)).collect();
         }
         let s = |k: &str| co.get(k).and_then(Value::as_str).map(str::to_ascii_lowercase);
-        target = s("target").or(target);
-        module = s("module").or(module);
+        cfg.target = s("target").or(cfg.target);
+        cfg.module = s("module").or(cfg.module);
+        if let Some(b) = co.get("baseUrl").and_then(Value::as_str) {
+            cfg.base_url = Some(b.to_string());
+        }
+        if let Some(Value::Object(m)) = co.get("paths") {
+            cfg.paths = m.keys().cloned().collect();
+        }
     }
-    Some((lib, target, module))
+    Some(cfg)
 }
 
 /// Removes `//` and `/* */` comments and trailing commas from JSONC.

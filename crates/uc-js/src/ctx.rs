@@ -10,6 +10,8 @@ use uc_core::{Issue, Lang, LineIndex, Secondary};
 #[derive(Debug, Clone)]
 pub struct FileInfo<'s> {
     pub path: &'s str,
+    /// Absolute path of the file on disk, when known (for existence checks).
+    pub abs_path: Option<&'s std::path::Path>,
     pub lang: Lang,
     pub is_test: bool,
     pub jsx: bool,
