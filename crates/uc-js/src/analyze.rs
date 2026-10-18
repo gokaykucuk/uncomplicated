@@ -146,7 +146,26 @@ fn analyze_in(
             st = st2;
         }
     }
+    if ret.fatal_error {
+        // SonarJS falls back to the TypeScript parser for JS files, and Vue `lang="ts"` blocks
+        // may contain JSX: retry as TSX.
+        let st2 = SourceType::tsx();
+        if !st.is_typescript() || !st.is_jsx() {
+            let ret2 = parse(alloc, src, st2);
+            if !ret2.fatal_error {
+                ret = ret2;
+                st = st2;
+            }
+        }
+    }
     let lines = LineIndex::new(src);
+    let is_html = path.ends_with(".html") || path.ends_with(".htm");
+    if ret.fatal_error && is_html {
+        // Broken inline scripts in HTML pages are not reported, like SonarJS.
+        result.parse_error = ret.diagnostics.first().map(|d| d.message.to_string());
+        result.metrics.lines = lines.line_count();
+        return result;
+    }
     if ret.fatal_error && let Some(d) = ret.diagnostics.first() {
         // Like SonarJS: a file that doesn't parse only gets a parsing-failure issue (S2260).
         // Recoverable diagnostics (often TypeScript semantic errors that Sonar's parser accepts)
@@ -162,10 +181,12 @@ fn analyze_in(
         return result;
     }
 
+    // Ambiguous `.js` sources are resolved by the parser; Sonar treats JS as ES modules.
+    let is_module = ret.program.source_type.is_module() || ret.module_record.has_module_syntax || lang == Lang::Ts;
     let program = alloc.alloc(ret.program);
     let semantic = SemanticBuilder::new().with_cfg(true).with_build_nodes(true).with_class_table(true).build(program).semantic;
     let tokens: &[oxc_parser::Token] = &ret.tokens;
-    let file = FileInfo { path, lang, is_test, jsx: st.is_jsx(), is_module: st.is_module(), raw, project };
+    let file = FileInfo { path, lang, is_test, jsx: st.is_jsx(), is_module, raw, project };
     let ctx = Ctx {
         semantic: &semantic,
         src,
@@ -229,8 +250,16 @@ pub fn profile_report() -> Vec<(&'static str, u64)> {
 }
 
 fn run_rules(ctx: &Ctx<'_, '_>, rules: &JsRules, lang: Lang, is_test: bool) {
-    let active: Vec<bool> =
-        rules.rules.iter().map(|r| r.meta.applies_to(lang) && r.meta.applies_to_scope(is_test)).collect();
+    let project = ctx.file.project;
+    let active: Vec<bool> = rules
+        .rules
+        .iter()
+        .map(|r| {
+            r.meta.applies_to(lang)
+                && r.meta.applies_to_scope(is_test)
+                && (r.meta.requires.is_empty() || r.meta.requires.iter().any(|d| project.has_dependency(d)))
+        })
+        .collect();
     if let Some(prof) = PROFILE.as_ref() {
         return run_rules_profiled(ctx, rules, &active, prof);
     }

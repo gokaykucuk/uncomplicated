@@ -6,7 +6,7 @@
 
 use uc_core::{Catalog, Params, Scope};
 
-use crate::{FileOptions, JsRules, analyze};
+use crate::{FileOptions, JsRules};
 
 pub struct Expect {
     pub line: u32,
@@ -65,7 +65,19 @@ pub fn check_with(key: &str, file: &str, params: serde_json::Value, code: &str) 
     let rules = JsRules::new(|m| (m.key == key).then(|| params.clone()));
     assert_eq!(rules.len(), 1, "{key} is not implemented");
     let is_test = meta.scope == Scope::Tests;
-    let res = analyze(file, code, is_test, &rules, &FileOptions { nosonar: false, cpd: false, metrics: false });
+    // Rules gated on a dependency run as if the project declared it.
+    let mut project = crate::ProjectInfo::default();
+    for d in &meta.requires {
+        project.deps.insert(d.clone(), "*".into());
+    }
+    let res = crate::analyze_in_project(
+        file,
+        code,
+        is_test,
+        &rules,
+        &FileOptions { nosonar: false, cpd: false, metrics: false },
+        &project,
+    );
     if key != "S2260" {
         assert!(res.parse_error.is_none(), "parse error in test code: {:?}", res.parse_error);
     }

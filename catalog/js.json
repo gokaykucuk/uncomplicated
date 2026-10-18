@@ -4932,7 +4932,10 @@
   "effort": {
    "const": 2
   },
-  "eslint": "weak-ssl"
+  "eslint": "weak-ssl",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S4426",
@@ -6404,7 +6407,10 @@
   "effort": {
    "const": 10
   },
-  "eslint": "aws-s3-bucket-insecure-http"
+  "eslint": "aws-s3-bucket-insecure-http",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6252",
@@ -6425,7 +6431,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "aws-s3-bucket-versioning"
+  "eslint": "aws-s3-bucket-versioning",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6265",
@@ -6447,7 +6456,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "aws-s3-bucket-granted-access"
+  "eslint": "aws-s3-bucket-granted-access",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6268",
@@ -6490,7 +6502,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "aws-iam-public-access"
+  "eslint": "aws-iam-public-access",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6275",
@@ -6513,7 +6528,10 @@
   "effort": {
    "const": 30
   },
-  "eslint": "aws-ec2-unencrypted-ebs-volume"
+  "eslint": "aws-ec2-unencrypted-ebs-volume",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6281",
@@ -6535,7 +6553,10 @@
   "effort": {
    "const": 30
   },
-  "eslint": "aws-s3-bucket-public-access"
+  "eslint": "aws-s3-bucket-public-access",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6302",
@@ -6558,7 +6579,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "aws-iam-all-privileges"
+  "eslint": "aws-iam-all-privileges",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6303",
@@ -6581,7 +6605,10 @@
   "effort": {
    "const": 10
   },
-  "eslint": "aws-rds-unencrypted-databases"
+  "eslint": "aws-rds-unencrypted-databases",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6304",
@@ -6603,7 +6630,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "aws-iam-all-resources-accessible"
+  "eslint": "aws-iam-all-resources-accessible",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6308",
@@ -6626,7 +6656,10 @@
   "effort": {
    "const": 10
   },
-  "eslint": "aws-opensearchservice-domain"
+  "eslint": "aws-opensearchservice-domain",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6317",
@@ -6647,7 +6680,10 @@
   "effort": {
    "const": 60
   },
-  "eslint": "aws-iam-privilege-escalation"
+  "eslint": "aws-iam-privilege-escalation",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6319",
@@ -6670,7 +6706,10 @@
   "effort": {
    "const": 10
   },
-  "eslint": "aws-sagemaker-unencrypted-notebook"
+  "eslint": "aws-sagemaker-unencrypted-notebook",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6321",
@@ -6691,7 +6730,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "aws-restricted-ip-admin-access"
+  "eslint": "aws-restricted-ip-admin-access",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6323",
@@ -6799,7 +6841,10 @@
   "effort": {
    "const": 45
   },
-  "eslint": "aws-sns-unencrypted-topics"
+  "eslint": "aws-sns-unencrypted-topics",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6328",
@@ -6842,7 +6887,10 @@
   "effort": {
    "const": 30
   },
-  "eslint": "aws-ec2-rds-dms-public"
+  "eslint": "aws-ec2-rds-dms-public",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6330",
@@ -6865,7 +6913,10 @@
   "effort": {
    "const": 10
   },
-  "eslint": "aws-sqs-unencrypted-queue"
+  "eslint": "aws-sqs-unencrypted-queue",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6331",
@@ -6909,7 +6960,10 @@
   "effort": {
    "const": 10
   },
-  "eslint": "aws-efs-unencrypted"
+  "eslint": "aws-efs-unencrypted",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6333",
@@ -6931,7 +6985,10 @@
   "effort": {
    "const": 15
   },
-  "eslint": "aws-apigateway-public-api"
+  "eslint": "aws-apigateway-public-api",
+  "requires": [
+   "aws-cdk-lib"
+  ]
  },
  {
   "key": "S6351",
@@ -7066,7 +7123,10 @@
   "effort": {
    "const": 1
   },
-  "eslint": "require-render-return"
+  "eslint": "require-render-return",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6437",
@@ -7129,7 +7189,11 @@
   "effort": {
    "const": 5
   },
-  "eslint": "jsx-no-leaked-render"
+  "eslint": "jsx-no-leaked-render",
+  "requires": [
+   "react",
+   "react-native"
+  ]
  },
  {
   "key": "S6440",
@@ -7149,7 +7213,10 @@
   "effort": {
    "const": 10
   },
-  "eslint": "rules-of-hooks"
+  "eslint": "rules-of-hooks",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6441",
@@ -7170,7 +7237,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-unused-class-component-methods"
+  "eslint": "no-unused-class-component-methods",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6442",
@@ -7190,7 +7260,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-hook-setter-in-body"
+  "eslint": "no-hook-setter-in-body",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6443",
@@ -7210,7 +7283,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-useless-react-setstate"
+  "eslint": "no-useless-react-setstate",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6477",
@@ -7258,7 +7334,10 @@
    "allowAsProps": "false",
    "propNamePattern": "'{render*,*Enhancer,*Renderer}'"
   },
-  "eslint": "no-unstable-nested-components"
+  "eslint": "no-unstable-nested-components",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6479",
@@ -7328,7 +7407,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "jsx-no-constructed-context-values"
+  "eslint": "jsx-no-constructed-context-values",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6486",
@@ -8187,7 +8269,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-direct-mutation-state"
+  "eslint": "no-direct-mutation-state",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6747",
@@ -8208,7 +8293,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-unknown-property"
+  "eslint": "no-unknown-property",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6748",
@@ -8228,7 +8316,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-children-prop"
+  "eslint": "no-children-prop",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6749",
@@ -8272,7 +8363,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-render-return-value"
+  "eslint": "no-render-return-value",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6754",
@@ -8296,7 +8390,10 @@
   "params": {
    "allowDestructuredState": "true"
   },
-  "eslint": "hook-use-state"
+  "eslint": "hook-use-state",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6756",
@@ -8316,7 +8413,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-access-state-in-setstate"
+  "eslint": "no-access-state-in-setstate",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6757",
@@ -8336,7 +8436,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-this-in-sfc"
+  "eslint": "no-this-in-sfc",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6759",
@@ -8376,7 +8479,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-danger-with-children"
+  "eslint": "no-danger-with-children",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6763",
@@ -8397,7 +8503,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-redundant-should-component-update"
+  "eslint": "no-redundant-should-component-update",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6766",
@@ -8443,7 +8552,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-unused-prop-types"
+  "eslint": "no-unused-prop-types",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6770",
@@ -8504,7 +8616,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "prop-types"
+  "eslint": "prop-types",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6775",
@@ -8525,7 +8640,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "default-props-match-prop-types"
+  "eslint": "default-props-match-prop-types",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6788",
@@ -8546,7 +8664,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-find-dom-node"
+  "eslint": "no-find-dom-node",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6789",
@@ -8566,7 +8687,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-is-mounted"
+  "eslint": "no-is-mounted",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6790",
@@ -8587,7 +8711,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-string-refs"
+  "eslint": "no-string-refs",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6791",
@@ -8610,7 +8737,10 @@
   "params": {
    "checkAliases": "true"
   },
-  "eslint": "no-unsafe"
+  "eslint": "no-unsafe",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6793",
@@ -9175,7 +9305,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-deprecated-react"
+  "eslint": "no-deprecated-react",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S6958",
@@ -9314,7 +9447,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "contextual-lifecycle"
+  "eslint": "contextual-lifecycle",
+  "requires": [
+   "@angular/core"
+  ]
  },
  {
   "key": "S7647",
@@ -9334,7 +9470,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "no-empty-lifecycle-method"
+  "eslint": "no-empty-lifecycle-method",
+  "requires": [
+   "@angular/core"
+  ]
  },
  {
   "key": "S7648",
@@ -9353,7 +9492,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "prefer-standalone"
+  "eslint": "prefer-standalone",
+  "requires": [
+   "@angular/core"
+  ]
  },
  {
   "key": "S7649",
@@ -9373,7 +9515,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "no-input-rename"
+  "eslint": "no-input-rename",
+  "requires": [
+   "@angular/core"
+  ]
  },
  {
   "key": "S7650",
@@ -9393,7 +9538,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "no-inputs-metadata-property"
+  "eslint": "no-inputs-metadata-property",
+  "requires": [
+   "@angular/core"
+  ]
  },
  {
   "key": "S7651",
@@ -9412,7 +9560,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "no-output-native"
+  "eslint": "no-output-native",
+  "requires": [
+   "@angular/core"
+  ]
  },
  {
   "key": "S7652",
@@ -9432,7 +9583,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "no-output-on-prefix"
+  "eslint": "no-output-on-prefix",
+  "requires": [
+   "@angular/core"
+  ]
  },
  {
   "key": "S7653",
@@ -9452,7 +9606,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "no-output-rename"
+  "eslint": "no-output-rename",
+  "requires": [
+   "@angular/core"
+  ]
  },
  {
   "key": "S7654",
@@ -9472,7 +9629,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "no-outputs-metadata-property"
+  "eslint": "no-outputs-metadata-property",
+  "requires": [
+   "@angular/core"
+  ]
  },
  {
   "key": "S7655",
@@ -9494,7 +9654,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "use-lifecycle-interface"
+  "eslint": "use-lifecycle-interface",
+  "requires": [
+   "@angular/core"
+  ]
  },
  {
   "key": "S7656",
@@ -9514,7 +9677,10 @@
   "effort": {
    "const": 0
   },
-  "eslint": "use-pipe-transform-interface"
+  "eslint": "use-pipe-transform-interface",
+  "requires": [
+   "@angular/core"
+  ]
  },
  {
   "key": "S7718",
@@ -11378,7 +11544,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-required-prop-with-default"
+  "eslint": "no-required-prop-with-default",
+  "requires": [
+   "vue"
+  ]
  },
  {
   "key": "S8951",
@@ -11398,7 +11567,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-mutating-props"
+  "eslint": "no-mutating-props",
+  "requires": [
+   "vue"
+  ]
  },
  {
   "key": "S8957",
@@ -11418,7 +11590,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "require-prop-types"
+  "eslint": "require-prop-types",
+  "requires": [
+   "vue"
+  ]
  },
  {
   "key": "S8959",
@@ -11486,7 +11661,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "require-explicit-emits"
+  "eslint": "require-explicit-emits",
+  "requires": [
+   "vue"
+  ]
  },
  {
   "key": "S8962",
@@ -11505,7 +11683,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "require-typed-ref"
+  "eslint": "require-typed-ref",
+  "requires": [
+   "vue"
+  ]
  },
  {
   "key": "S8967",
@@ -11577,7 +11758,10 @@
   "params": {
    "isStrict": "false"
   },
-  "eslint": "no-unnecessary-act"
+  "eslint": "no-unnecessary-act",
+  "requires": [
+   "@testing-library/react"
+  ]
  },
  {
   "key": "S8981",
@@ -11598,7 +11782,15 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-global-regexp-flag-in-query"
+  "eslint": "no-global-regexp-flag-in-query",
+  "requires": [
+   "@testing-library/dom",
+   "@testing-library/react",
+   "@testing-library/vue",
+   "@testing-library/angular",
+   "@testing-library/svelte",
+   "storybook"
+  ]
  },
  {
   "key": "S8982",
@@ -11618,7 +11810,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "require-v-for-key"
+  "eslint": "require-v-for-key",
+  "requires": [
+   "vue"
+  ]
  },
  {
   "key": "S8984",
@@ -11638,7 +11833,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "valid-v-for"
+  "eslint": "valid-v-for",
+  "requires": [
+   "vue"
+  ]
  },
  {
   "key": "S8985",
@@ -11659,7 +11857,14 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-wait-for-side-effects"
+  "eslint": "no-wait-for-side-effects",
+  "requires": [
+   "@testing-library/dom",
+   "@testing-library/react",
+   "@testing-library/vue",
+   "@testing-library/angular",
+   "@testing-library/svelte"
+  ]
  },
  {
   "key": "S8987",
@@ -11679,7 +11884,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-use-v-if-with-v-for"
+  "eslint": "no-use-v-if-with-v-for",
+  "requires": [
+   "vue"
+  ]
  },
  {
   "key": "S8988",
@@ -11699,7 +11907,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-side-effects-in-computed-properties"
+  "eslint": "no-side-effects-in-computed-properties",
+  "requires": [
+   "vue"
+  ]
  },
  {
   "key": "S8990",
@@ -11720,7 +11931,15 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-promise-in-fire-event"
+  "eslint": "no-promise-in-fire-event",
+  "requires": [
+   "@testing-library/dom",
+   "@testing-library/react",
+   "@testing-library/vue",
+   "@testing-library/angular",
+   "@testing-library/svelte",
+   "storybook"
+  ]
  },
  {
   "key": "S8998",
@@ -11786,7 +12005,14 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-wait-for-snapshot"
+  "eslint": "no-wait-for-snapshot",
+  "requires": [
+   "@testing-library/dom",
+   "@testing-library/react",
+   "@testing-library/vue",
+   "@testing-library/angular",
+   "@testing-library/svelte"
+  ]
  },
  {
   "key": "S9019",
@@ -11806,7 +12032,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-ref-as-operand"
+  "eslint": "no-ref-as-operand",
+  "requires": [
+   "vue"
+  ]
  },
  {
   "key": "S9020",
@@ -11827,7 +12056,15 @@
   "effort": {
    "const": 5
   },
-  "eslint": "prefer-find-by"
+  "eslint": "prefer-find-by",
+  "requires": [
+   "@testing-library/dom",
+   "@testing-library/react",
+   "@testing-library/vue",
+   "@testing-library/angular",
+   "@testing-library/svelte",
+   "storybook"
+  ]
  },
  {
   "key": "S9025",
@@ -11847,7 +12084,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-async-in-computed-properties"
+  "eslint": "no-async-in-computed-properties",
+  "requires": [
+   "vue"
+  ]
  },
  {
   "key": "S9026",
@@ -11868,7 +12108,15 @@
   "effort": {
    "const": 5
   },
-  "eslint": "await-async-queries"
+  "eslint": "await-async-queries",
+  "requires": [
+   "@testing-library/dom",
+   "@testing-library/react",
+   "@testing-library/vue",
+   "@testing-library/angular",
+   "@testing-library/svelte",
+   "storybook"
+  ]
  },
  {
   "key": "S9027",
@@ -11889,7 +12137,14 @@
   "effort": {
    "const": 5
   },
-  "eslint": "testing-library-query-assertion"
+  "eslint": "testing-library-query-assertion",
+  "requires": [
+   "@testing-library/dom",
+   "@testing-library/react",
+   "@testing-library/vue",
+   "@testing-library/angular",
+   "@testing-library/svelte"
+  ]
  },
  {
   "key": "S9072",
@@ -11983,7 +12238,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "require-prop-type-constructor"
+  "eslint": "require-prop-type-constructor",
+  "requires": [
+   "vue"
+  ]
  },
  {
   "key": "S9114",
@@ -12005,7 +12263,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-debounce-throttle-in-render"
+  "eslint": "no-debounce-throttle-in-render",
+  "requires": [
+   "react"
+  ]
  },
  {
   "key": "S9115",
@@ -12026,7 +12287,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "await-async-events"
+  "eslint": "await-async-events",
+  "requires": [
+   "@testing-library/user-event"
+  ]
  },
  {
   "key": "S9128",
@@ -12046,7 +12310,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-dupe-keys"
+  "eslint": "no-dupe-keys",
+  "requires": [
+   "vue"
+  ]
  },
  {
   "key": "S9135",
@@ -12109,7 +12376,11 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-vue-class-component"
+  "eslint": "no-vue-class-component",
+  "requires": [
+   "vue-class-component",
+   "vue-property-decorator"
+  ]
  },
  {
   "key": "S9150",
@@ -12129,7 +12400,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-vue-mixins"
+  "eslint": "no-vue-mixins",
+  "requires": [
+   "vue"
+  ]
  },
  {
   "key": "S9153",
@@ -12150,7 +12424,14 @@
   "effort": {
    "const": 5
   },
-  "eslint": "testing-library-prefer-query-by-disappearance"
+  "eslint": "testing-library-prefer-query-by-disappearance",
+  "requires": [
+   "@testing-library/dom",
+   "@testing-library/react",
+   "@testing-library/vue",
+   "@testing-library/angular",
+   "@testing-library/svelte"
+  ]
  },
  {
   "key": "S9162",
@@ -12171,7 +12452,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "prefer-cypress-should"
+  "eslint": "prefer-cypress-should",
+  "requires": [
+   "cypress"
+  ]
  },
  {
   "key": "S9163",
@@ -12191,7 +12475,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-mutate-reactive-state-in-updated-hook"
+  "eslint": "no-mutate-reactive-state-in-updated-hook",
+  "requires": [
+   "vue"
+  ]
  },
  {
   "key": "S9169",
@@ -12212,7 +12499,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "vitest-mock-at-module-scope"
+  "eslint": "vitest-mock-at-module-scope",
+  "requires": [
+   "vitest"
+  ]
  },
  {
   "key": "S9332",
@@ -12234,7 +12524,10 @@
   "effort": {
    "const": 5
   },
-  "eslint": "no-networkidle-wait"
+  "eslint": "no-networkidle-wait",
+  "requires": [
+   "@playwright/test"
+  ]
  },
  {
   "key": "S9333",
@@ -12255,7 +12548,15 @@
   "effort": {
    "const": 2
   },
-  "eslint": "no-await-sync-queries"
+  "eslint": "no-await-sync-queries",
+  "requires": [
+   "@testing-library/dom",
+   "@testing-library/react",
+   "@testing-library/vue",
+   "@testing-library/angular",
+   "@testing-library/svelte",
+   "storybook"
+  ]
  },
  {
   "key": "S9339",

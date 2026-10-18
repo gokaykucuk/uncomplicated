@@ -121,6 +121,10 @@ pub struct RuleMeta {
     pub tags: Vec<String>,
     pub scope: Scope,
     pub effort: Effort,
+    /// The rule only runs in projects depending on one of these packages (SonarJS
+    /// `requiredDependency`).
+    #[serde(default)]
+    pub requires: Vec<String>,
     /// ESLint rule name the upstream rule is known as (used for `eslint-disable` directives).
     #[serde(default)]
     pub eslint: Option<String>,
