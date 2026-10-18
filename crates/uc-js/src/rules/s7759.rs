@@ -84,10 +84,7 @@ impl JsRule for Rule {
                             && matches!(m.property.name.as_str(), "getTime" | "valueOf")
                             && is_new_date(ctx, &m.object) =>
                     {
-                        let msg = format!(
-                            "Prefer `Date.now()` over `new Date().{}()`.",
-                            m.property.name
-                        );
+                        let msg = format!("Prefer `Date.now()` over `Date#{}()`.", m.property.name);
                         report(ctx, node, c.span, msg);
                     }
                     Expression::Identifier(id)
@@ -160,7 +157,7 @@ mod tests {
             "S7759",
             "a.js",
             r#"
-var t1 = new Date().getTime(); // Noncompliant {{Prefer `Date.now()` over `new Date().getTime()`.}}
+var t1 = new Date().getTime(); // Noncompliant {{Prefer `Date.now()` over `Date#getTime()`.}}
 var t2 = new Date().valueOf(); // Noncompliant
 var t3 = +(new Date()); // Noncompliant {{Prefer `Date.now()` over `new Date()`.}}
 var t4 = Number(new Date()); // Noncompliant {{Prefer `Date.now()` over `Number(new Date())`.}}

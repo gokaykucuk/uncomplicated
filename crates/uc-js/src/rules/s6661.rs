@@ -1,4 +1,5 @@
 //! Object spread syntax should be used instead of "Object.assign"
+use crate::helpers::batch_smell4::min_version;
 use crate::prelude::*;
 
 pub struct Rule;
@@ -13,6 +14,8 @@ fn has_accessor(e: &Expression<'_>) -> bool {
     matches!(strip_parens(e), Expression::ObjectExpression(o) if o.properties.iter().any(|p| matches!(
         p,
         ObjectPropertyKind::ObjectProperty(p) if p.kind != PropertyKind::Init
+            // A `__proto__` key sets the prototype in a literal, unlike in `Object.assign`.
+            || (!p.computed && property_key_name(&p.key) == Some("__proto__"))
     )))
 }
 
@@ -25,6 +28,12 @@ impl JsRule for Rule {
         let AstKind::CallExpression(call) = node.kind() else {
             return;
         };
+        // Object spread needs Node.js 8.3: silent for projects supporting older versions.
+        if let Some(range) = &ctx.file.project.engines_node
+            && min_version(range).is_some_and(|v| v < (8, 3, 0))
+        {
+            return;
+        }
         let Expression::StaticMemberExpression(callee) = &call.callee else {
             return;
         };
@@ -83,6 +92,27 @@ var assign = Object.assign;
 assign({}, foo);
 function f(Object) { Object.assign({}, foo); }
 "#,
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_engines {
+    use crate::helpers::batch_smell4::check_project;
+
+    #[test]
+    fn old_node() {
+        let mut p = crate::ProjectInfo {
+            engines_node: Some(">=8.0.0".into()),
+            ..Default::default()
+        };
+        check_project("S6661", "a.js", &p, "const a = Object.assign({}, foo);\n");
+        p.engines_node = Some(">=10".into());
+        check_project(
+            "S6661",
+            "a.js",
+            &p,
+            "const a = Object.assign({}, foo); // Noncompliant\nconst b = Object.assign({ __proto__: x }, foo);\n",
         );
     }
 }

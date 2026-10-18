@@ -30,9 +30,18 @@ impl JsRule for Rule {
         ) {
             return;
         }
-        // Only iterable receivers can be rewritten as `for...of`.
-        let iterable = type_of(ctx, &callee.object)
-            .all(|t| matches!(t, Ty::Array | Ty::Tuple | Ty::Map | Ty::Set));
+        // Only iterable receivers can be rewritten as `for...of`. In plain JavaScript, an untyped
+        // receiver is reported like SonarJS does for `any`.
+        let t = type_of(ctx, &callee.object);
+        let iterable = t.all(|t| matches!(t, Ty::Array | Ty::Tuple | Ty::Map | Ty::Set))
+            || (t == Ty::Unknown
+                && !ctx.is_ts()
+                && !matches!(callee.object, Expression::ThisExpression(_))
+                && call.arguments.len() == 1
+                && matches!(
+                    call.arguments[0],
+                    Argument::FunctionExpression(_) | Argument::ArrowFunctionExpression(_)
+                ));
         if iterable {
             ctx.report(
                 callee.property.span,
@@ -65,6 +74,26 @@ declare const collection: { forEach(cb: (x: string) => void): void };
 collection.forEach(x => x);
 unknown.forEach(x => x);
 arr?.forEach(x => x);
+"#,
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_js {
+    use crate::test_util::*;
+
+    #[test]
+    fn untyped_javascript() {
+        check(
+            "S7728",
+            "a.js",
+            r#"
+items.forEach(item => use(item)); // Noncompliant
+items.forEach(function (item) { use(item); }); // Noncompliant
+this.forEach(item => use(item));
+items.forEach(this.handle, this);
+ts.forEach(list, item => item);
 "#,
         );
     }

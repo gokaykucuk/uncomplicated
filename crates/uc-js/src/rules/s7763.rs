@@ -27,9 +27,6 @@ impl JsRule for Rule {
             let Statement::ImportDeclaration(import) = stmt else {
                 continue;
             };
-            if import.import_kind.is_type() {
-                continue;
-            }
             let Some(specifiers) = &import.specifiers else {
                 continue;
             };
@@ -37,7 +34,7 @@ impl JsRule for Rule {
                 let local = match spec {
                     ImportDeclarationSpecifier::ImportSpecifier(s) => {
                         // Re-exporting a default import under a meaningful name is fine.
-                        if s.import_kind.is_type() || export_name(&s.imported) == "default" {
+                        if export_name(&s.imported) == "default" {
                             continue;
                         }
                         &s.local
@@ -54,14 +51,8 @@ impl JsRule for Rule {
                     let ref_span = ctx.node(r.node_id()).kind().span();
                     let parent = ctx.parent(r.node_id());
                     match parent.kind() {
-                        AstKind::ExportSpecifier(s) if !s.export_kind.is_type() => {
-                            let is_type_export = matches!(ctx.parent_kind(parent.id()),
-                                AstKind::ExportNamedDeclaration(d) if d.export_kind.is_type());
-                            if is_type_export {
-                                used_locally = true;
-                            } else {
-                                exports.push((s.span, export_name(&s.exported)));
-                            }
+                        AstKind::ExportSpecifier(s) => {
+                            exports.push((s.span, export_name(&s.exported)))
                         }
                         AstKind::ExportDefaultDeclaration(d) => exports.push((d.span, "default")),
                         AstKind::VariableDeclarator(v)
@@ -129,6 +120,25 @@ export { used };
 export { foo, bar };
 const local = 1;
 export { local };
+"#,
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_types {
+    use crate::test_util::*;
+
+    #[test]
+    fn type_reexports() {
+        check(
+            "S7763",
+            "a.ts",
+            r#"
+import type { Plugin } from 'vite';
+import { Config } from './config';
+export type { Plugin }; // Noncompliant
+export type { Config }; // Noncompliant
 "#,
         );
     }

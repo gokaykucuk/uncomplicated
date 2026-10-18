@@ -1,5 +1,5 @@
 //! Complex index access patterns should be replaced with ".at()" method
-use crate::helpers::batch_smell4::{is_write_target, negative_integer};
+use crate::helpers::batch_smell4::{is_write_target, negative_integer, ts_lib_at_least};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -11,7 +11,15 @@ impl Rule {
 }
 
 /// Receivers known to have an `.at()` method.
+/// `.at()` is declared by the TypeScript libs the project compiles against.
+fn lib_has_at(ctx: &Ctx<'_, '_>) -> bool {
+    ts_lib_at_least(ctx, 2022)
+}
+
 fn has_at(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> bool {
+    if !lib_has_at(ctx) {
+        return false;
+    }
     let t = type_of(ctx, e);
     t.is_array() || t.is_string()
 }
@@ -125,6 +133,7 @@ impl JsRule for Rule {
                         if call.arguments.len() == 1
                             && let Some(arg) = call.arguments[0].as_expression()
                             && is_negative_index(ctx, arg, &callee.object)
+                            && lib_has_at(ctx)
                             && type_of(ctx, &callee.object).is_string()
                         {
                             ctx.report(
@@ -187,6 +196,32 @@ foo = other[array.length - 1];
 function f(items: NodeList) { return items[items.length - 1]; }
 foo = unknown[unknown.length - 1];
 "#,
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_lib {
+    use crate::helpers::batch_smell4::check_project;
+
+    #[test]
+    fn old_lib() {
+        let mut p = crate::ProjectInfo {
+            ts_target: Some("es5".into()),
+            ..Default::default()
+        };
+        check_project(
+            "S7755",
+            "a.ts",
+            &p,
+            "const array = [1];\nfoo = array[array.length - 1];\n",
+        );
+        p.ts_lib = vec!["dom".into(), "es2022".into()];
+        check_project(
+            "S7755",
+            "a.ts",
+            &p,
+            "const array = [1];\nfoo = array[array.length - 1]; // Noncompliant\n",
         );
     }
 }
