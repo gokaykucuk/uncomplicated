@@ -197,13 +197,14 @@ fn text(a: &Analysis, items: &[Item<'_>], color: bool, list: bool) -> String {
             color,
             "2",
             &format!(
-                "Analyzed {:.1} MB in {:.0} ms (discovery {:.0} ms, analysis {:.0} ms, duplication {:.0} ms, {} cached)",
+                "Analyzed {:.1} MB in {:.0} ms (discovery {:.0} ms, analysis {:.0} ms, duplication {:.0} ms, {} cached, {} skipped as generated/minified)",
                 a.bytes as f64 / 1e6,
                 t.total.as_secs_f64() * 1e3,
                 t.discovery.as_secs_f64() * 1e3,
                 t.analysis.as_secs_f64() * 1e3,
                 t.cpd.as_secs_f64() * 1e3,
                 a.cached_files,
+                a.skipped_files,
             )
         )
     );

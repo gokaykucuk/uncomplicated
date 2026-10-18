@@ -8,34 +8,30 @@ use serde::Deserialize;
 pub const CONFIG_FILE: &str = "uncomplicated.toml";
 
 /// Paths excluded from analysis in addition to `.gitignore`d files.
+/// Paths excluded from analysis in addition to `.gitignore`d files (SonarJS / sonar-go defaults).
 pub const DEFAULT_EXCLUSIONS: &[&str] = &[
+    "**/.git/**",
     "**/node_modules/**",
     "**/bower_components/**",
-    "**/vendor/**",
     "**/dist/**",
-    "**/build/**",
-    "**/coverage/**",
-    "**/.git/**",
-    "**/*.min.js",
-    "**/*.bundle.js",
+    "**/vendor/**",
+    "**/external/**",
+    "**/contrib/**",
     "**/*.d.ts",
-    "**/*.pb.go",
-    "**/*_generated.go",
-    "**/zz_generated*.go",
+    "**/testdata/**",
 ];
 
-/// Files treated as test code (rules are scoped to main or test code, like Sonar's `sonar.tests`).
+/// Files treated as test code when no test globs are configured (SonarJS's file-name heuristic,
+/// and Go's `_test.go` convention). Rules are scoped to main or test code.
 pub const DEFAULT_TESTS: &[&str] = &[
     "**/*.test.*",
     "**/*.spec.*",
     "**/*.cy.*",
+    "**/*.e2e.*",
+    "**/*.mock.*",
     "**/__tests__/**",
     "**/__mocks__/**",
-    "**/test/**",
-    "**/tests/**",
-    "**/e2e/**",
     "**/*_test.go",
-    "**/testdata/**",
 ];
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -70,6 +66,8 @@ pub struct Analysis {
     /// Skip files larger than this many bytes (minified/generated code).
     pub max_file_size: u64,
     pub respect_gitignore: bool,
+    /// Skip concatenated bundles (`/*! ... */ !function(...)` prologue), like SonarJS.
+    pub detect_bundles: bool,
 }
 
 impl Default for Analysis {
@@ -81,8 +79,9 @@ impl Default for Analysis {
             inclusions: Vec::new(),
             profile: "sonar-way".into(),
             nosonar: true,
-            max_file_size: 2 * 1024 * 1024,
+            max_file_size: 1000 * 1024,
             respect_gitignore: true,
+            detect_bundles: true,
         }
     }
 }

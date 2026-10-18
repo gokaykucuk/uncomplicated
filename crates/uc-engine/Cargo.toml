@@ -18,3 +18,4 @@ toml.workspace = true
 xxhash-rust.workspace = true
 bitcode.workspace = true
 memchr.workspace = true
+regex.workspace = true

@@ -121,6 +121,9 @@ pub struct RuleMeta {
     pub tags: Vec<String>,
     pub scope: Scope,
     pub effort: Effort,
+    /// ESLint rule name the upstream rule is known as (used for `eslint-disable` directives).
+    #[serde(default)]
+    pub eslint: Option<String>,
     /// Default parameter values as documented upstream (informational).
     #[serde(default)]
     pub params: FxHashMap<String, String>,

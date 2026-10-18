@@ -42,18 +42,83 @@ fn parse<'a>(alloc: &'a Allocator, src: &'a str, st: SourceType) -> ParserReturn
     Parser::new(alloc, src, st).with_options(options).with_config(TokensParserConfig).parse()
 }
 
-/// Analyzes one JS/TS file.
+/// Analyzes one JS/TS file (or the `<script>` blocks of a `.vue` / `.html` file).
 pub fn analyze(path: &str, src: &str, is_test: bool, rules: &JsRules, opts: &FileOptions) -> FileResult {
+    let embedded = embedded_scripts(path, src);
+    let (src, lang) = match &embedded {
+        Some((s, l)) => (s.as_str(), *l),
+        None => (src, lang_of(path)),
+    };
     ALLOC.with_borrow_mut(|alloc| {
         alloc.reset();
-        analyze_in(alloc, path, src, is_test, rules, opts)
+        analyze_in(alloc, path, src, lang, embedded.is_some(), is_test, rules, opts)
     })
 }
 
-fn analyze_in(alloc: &Allocator, path: &str, src: &str, is_test: bool, rules: &JsRules, opts: &FileOptions) -> FileResult {
-    let lang = lang_of(path);
+/// For `.vue` and `.html` files: the source with everything outside `<script>` blocks blanked
+/// (newlines kept, so positions map 1:1), and the script language.
+fn embedded_scripts(path: &str, src: &str) -> Option<(String, Lang)> {
+    let lower_path = path.to_ascii_lowercase();
+    let vue = lower_path.ends_with(".vue");
+    if !vue && !lower_path.ends_with(".html") && !lower_path.ends_with(".htm") {
+        return None;
+    }
+    let bytes = src.as_bytes();
+    let lower = src.to_ascii_lowercase();
+    let mut out: Vec<u8> = bytes.iter().map(|&b| if b == b'\n' || b == b'\r' { b } else { b' ' }).collect();
+    let mut lang = Lang::Js;
+    let mut from = 0;
+    while let Some(i) = lower[from..].find("<script") {
+        let tag_start = from + i;
+        let Some(gt) = lower[tag_start..].find('>') else { break };
+        let attrs = &lower[tag_start + 7..tag_start + gt];
+        let content_start = tag_start + gt + 1;
+        let Some(end) = lower[content_start..].find("</script") else { break };
+        let content_end = content_start + end;
+        from = content_end + 8;
+        if attrs.contains("src=") {
+            continue;
+        }
+        let ty = attr_value(attrs, "type");
+        if ty.as_deref().is_some_and(|t| !matches!(t, "text/javascript" | "module" | "application/javascript" | "text/babel" | "jsx" | "text/jsx")) {
+            continue;
+        }
+        if matches!(attr_value(attrs, "lang").as_deref(), Some("ts" | "tsx")) {
+            lang = Lang::Ts;
+        }
+        out[content_start..content_end].copy_from_slice(&bytes[content_start..content_end]);
+    }
+    let _ = vue;
+    Some((String::from_utf8(out).unwrap_or_default(), lang))
+}
+
+fn attr_value(attrs: &str, name: &str) -> Option<String> {
+    let i = attrs.find(&format!("{name}="))? + name.len() + 1;
+    let rest = &attrs[i..];
+    let (q, rest) = match rest.chars().next()? {
+        c @ ('"' | '\'') => (c, &rest[1..]),
+        _ => (' ', rest),
+    };
+    Some(rest.split(q).next()?.trim().to_string())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn analyze_in(
+    alloc: &Allocator,
+    path: &str,
+    src: &str,
+    lang: Lang,
+    embedded: bool,
+    is_test: bool,
+    rules: &JsRules,
+    opts: &FileOptions,
+) -> FileResult {
     let mut result = FileResult { path: path.to_string(), lang: Some(lang), is_test, ..FileResult::default() };
-    let mut st = source_type(path, lang);
+    let mut st = if embedded {
+        if lang == Lang::Ts { SourceType::ts() } else { SourceType::mjs().with_jsx(true) }
+    } else {
+        source_type(path, lang)
+    };
     let mut ret = parse(alloc, src, st);
     if (ret.fatal_error || !ret.diagnostics.is_empty()) && lang == Lang::Js && st.is_module() {
         // Retry as a classic script (e.g. `with` statements, octal literals, legacy code).
@@ -100,7 +165,7 @@ fn analyze_in(alloc: &Allocator, path: &str, src: &str, is_test: bool, rules: &J
         result.cpd = cpd::tokens(&ctx);
     }
 
-    let nosonar = if opts.nosonar { nosonar_lines(&ctx) } else { Vec::new() };
+    let sup = if opts.nosonar { Suppressions::new(&ctx) } else { Suppressions::default() };
     let mut issues = ctx.issues.into_inner();
     issues.sort_by_key(|i| (i.span.start, i.span.end, i.rule));
     issues.dedup_by(|a, b| a.rule == b.rule && a.span == b.span && a.message == b.message);
@@ -108,7 +173,8 @@ fn analyze_in(alloc: &Allocator, path: &str, src: &str, is_test: bool, rules: &J
         .into_iter()
         .filter_map(|i| {
             let loc = lines.location(i.span);
-            if nosonar.binary_search(&loc.line).is_ok() {
+            let eslint = rules.rules.iter().find(|r| r.key == i.rule).and_then(|r| r.meta.eslint.as_deref());
+            if sup.suppressed(i.rule, eslint, i.span.start, loc.line) {
                 return None;
             }
             Some(FileIssue {
@@ -146,14 +212,83 @@ fn run_rules(ctx: &Ctx<'_, '_>, rules: &JsRules, lang: Lang, is_test: bool) {
     }
 }
 
-/// Sorted 1-based lines carrying a `NOSONAR` comment.
-fn nosonar_lines(ctx: &Ctx<'_, '_>) -> Vec<u32> {
-    let mut out: Vec<u32> = ctx
-        .comments()
-        .iter()
-        .filter(|c| ctx.comment_text(c).contains("NOSONAR"))
-        .map(|c| ctx.line(c.span.start))
-        .collect();
-    out.sort_unstable();
-    out
+/// `NOSONAR` comments and ESLint directive comments (`eslint-disable`, `eslint-disable-line`,
+/// `eslint-disable-next-line`), which SonarJS honors because it runs on ESLint.
+#[derive(Default)]
+struct Suppressions {
+    nosonar: Vec<u32>,
+    /// Byte ranges, with the rules they apply to (`None` = all rules).
+    ranges: Vec<(u32, u32, Option<Vec<String>>)>,
+    lines: Vec<(u32, Option<Vec<String>>)>,
+}
+
+fn directive(text: &str) -> Option<(&str, Option<Vec<String>>)> {
+    let text = text.trim().trim_start_matches('*').trim();
+    let text = text.split(" -- ").next().unwrap_or(text).trim();
+    let (word, rest) = text.split_once(char::is_whitespace).unwrap_or((text, ""));
+    if !matches!(word, "eslint-disable" | "eslint-enable" | "eslint-disable-line" | "eslint-disable-next-line") {
+        return None;
+    }
+    let rules: Vec<String> = rest.split(',').map(|r| r.trim().to_string()).filter(|r| !r.is_empty()).collect();
+    Some((word, (!rules.is_empty()).then_some(rules)))
+}
+
+impl Suppressions {
+    fn new(ctx: &Ctx<'_, '_>) -> Self {
+        let mut s = Self::default();
+        let mut open: Vec<(u32, Option<Vec<String>>)> = Vec::new();
+        for c in ctx.comments() {
+            let text = ctx.comment_text(c);
+            if text.contains("NOSONAR") {
+                s.nosonar.push(ctx.line(c.span.start));
+            }
+            let Some((word, rules)) = directive(text) else { continue };
+            let line = ctx.line(c.span.start);
+            match word {
+                "eslint-disable" if c.is_block() => open.push((c.span.end, rules)),
+                "eslint-enable" if c.is_block() => {
+                    let end = c.span.start;
+                    let mut keep = Vec::new();
+                    for (start, r) in open.drain(..) {
+                        let closes = match (&rules, &r) {
+                            (None, _) => true,
+                            (Some(en), Some(dis)) => dis.iter().all(|d| en.contains(d)),
+                            (Some(_), None) => false,
+                        };
+                        if closes {
+                            s.ranges.push((start, end, r));
+                        } else {
+                            keep.push((start, r));
+                        }
+                    }
+                    open = keep;
+                }
+                "eslint-disable-line" => s.lines.push((line, rules)),
+                "eslint-disable-next-line" => s.lines.push((ctx.line(c.span.end) + 1, rules)),
+                _ => {}
+            }
+        }
+        for (start, r) in open {
+            s.ranges.push((start, u32::MAX, r));
+        }
+        s.nosonar.sort_unstable();
+        s
+    }
+
+    fn matches(rules: &Option<Vec<String>>, key: &str, eslint: Option<&str>) -> bool {
+        match rules {
+            None => true,
+            Some(list) => list.iter().any(|r| {
+                r == key
+                    || r.rsplit('/').next() == Some(key)
+                    || eslint.is_some_and(|e| r == e || r.rsplit_once('/').is_some_and(|(_, n)| n == e))
+            }),
+        }
+    }
+
+    fn suppressed(&self, key: &str, eslint: Option<&str>, offset: u32, line: u32) -> bool {
+        self.nosonar.binary_search(&line).is_ok()
+            || self.lines.iter().any(|(l, r)| *l == line && Self::matches(r, key, eslint))
+            || self.ranges.iter().any(|(s, e, r)| offset >= *s && offset < *e && Self::matches(r, key, eslint))
+    }
 }

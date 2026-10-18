@@ -19,7 +19,8 @@
   },
   "params": {
    "format": "'^[_a-z][a-zA-Z0-9]*$'"
-  }
+  },
+  "eslint": "function-name"
  },
  {
   "key": "S101",
@@ -42,7 +43,8 @@
   },
   "params": {
    "format": "String.raw`^\\$?[A-Z][a-zA-Z0-9]*$`"
-  }
+  },
+  "eslint": "class-name"
  },
  {
   "key": "S103",
@@ -63,7 +65,8 @@
   "params": {
    "code": "180",
    "tabWidth": "1"
-  }
+  },
+  "eslint": "max-len"
  },
  {
   "key": "S104",
@@ -85,7 +88,8 @@
   },
   "params": {
    "maximum": "1000"
-  }
+  },
+  "eslint": "max-lines"
  },
  {
   "key": "S105",
@@ -102,7 +106,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "no-tab"
  },
  {
   "key": "S106",
@@ -125,7 +130,8 @@
   },
   "params": {
    "allow": "["
-  }
+  },
+  "eslint": "no-console"
  },
  {
   "key": "S107",
@@ -148,7 +154,8 @@
   },
   "params": {
    "max": "7"
-  }
+  },
+  "eslint": "max-params"
  },
  {
   "key": "S108",
@@ -171,7 +178,8 @@
   },
   "params": {
    "allowEmptyCatch": "true"
-  }
+  },
+  "eslint": "no-empty"
  },
  {
   "key": "S109",
@@ -198,7 +206,8 @@
    "ignoreEnums": "true",
    "ignoreNumericLiteralTypes": "true",
    "ignoreReadonlyClassProperties": "true"
-  }
+  },
+  "eslint": "no-magic-numbers"
  },
  {
   "key": "S113",
@@ -215,7 +224,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "eol-last"
  },
  {
   "key": "S117",
@@ -237,7 +247,8 @@
   },
   "params": {
    "format": "'^[_$A-Za-z][$A-Za-z0-9]*$|^[_$A-Z][_$A-Z0-9]+$'"
-  }
+  },
+  "eslint": "variable-name"
  },
  {
   "key": "S121",
@@ -256,7 +267,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "curly"
  },
  {
   "key": "S122",
@@ -273,7 +285,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "max-statements-per-line"
  },
  {
   "key": "S124",
@@ -295,7 +308,8 @@
    "regularExpression": "''",
    "message": "'The regular expression matches this comment.'",
    "flags": "''"
-  }
+  },
+  "eslint": "comment-regex"
  },
  {
   "key": "S125",
@@ -315,7 +329,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-commented-code"
  },
  {
   "key": "S126",
@@ -332,7 +347,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "elseif-without-else"
  },
  {
   "key": "S128",
@@ -352,7 +368,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-fallthrough"
  },
  {
   "key": "S131",
@@ -372,7 +389,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "switch-without-default"
  },
  {
   "key": "S134",
@@ -394,7 +412,8 @@
   },
   "params": {
    "maximumNestingLevel": "3"
-  }
+  },
+  "eslint": "nested-control-flow"
  },
  {
   "key": "S135",
@@ -414,7 +433,8 @@
   "effort": {
    "offset": null,
    "factor": 20
-  }
+  },
+  "eslint": "too-many-break-or-continue-in-loop"
  },
  {
   "key": "S138",
@@ -436,7 +456,8 @@
   },
   "params": {
    "maximum": "200"
-  }
+  },
+  "eslint": "max-lines-per-function"
  },
  {
   "key": "S139",
@@ -456,7 +477,8 @@
   },
   "params": {
    "ignorePattern": "String.raw`^\\s*[^\\s]+$`"
-  }
+  },
+  "eslint": "line-comment-position"
  },
  {
   "key": "S878",
@@ -473,7 +495,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-sequences"
  },
  {
   "key": "S881",
@@ -490,7 +513,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-nested-incdec"
  },
  {
   "key": "S888",
@@ -510,7 +534,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "no-equals-in-for-termination"
  },
  {
   "key": "S905",
@@ -536,7 +561,8 @@
    "allowTernary": "true",
    "allowTaggedTemplates": "true",
    "enforceForJSX": "true"
-  }
+  },
+  "eslint": "no-unused-expressions"
  },
  {
   "key": "S909",
@@ -555,7 +581,8 @@
   "scope": "Main",
   "effort": {
    "const": 60
-  }
+  },
+  "eslint": "no-continue"
  },
  {
   "key": "S930",
@@ -573,7 +600,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-extra-arguments"
  },
  {
   "key": "S1066",
@@ -592,7 +620,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-collapsible-if"
  },
  {
   "key": "S1067",
@@ -615,7 +644,8 @@
   },
   "params": {
    "max": "3"
-  }
+  },
+  "eslint": "expression-complexity"
  },
  {
   "key": "S1068",
@@ -635,7 +665,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-unused-private-class-members"
  },
  {
   "key": "S1077",
@@ -656,7 +687,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "alt-text"
  },
  {
   "key": "S1082",
@@ -676,7 +708,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "mouse-events-a11y"
  },
  {
   "key": "S1090",
@@ -696,7 +729,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "iframe-has-title"
  },
  {
   "key": "S1101",
@@ -716,7 +750,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "links-identical-texts-different-targets"
  },
  {
   "key": "S1105",
@@ -736,7 +771,8 @@
   },
   "params": {
    "allowSingleLine": "true"
-  }
+  },
+  "eslint": "brace-style"
  },
  {
   "key": "S1110",
@@ -753,7 +789,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-redundant-parentheses"
  },
  {
   "key": "S1116",
@@ -770,7 +807,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "no-extra-semi"
  },
  {
   "key": "S1117",
@@ -793,7 +831,8 @@
   },
   "params": {
    "hoist": "'all'"
-  }
+  },
+  "eslint": "no-shadow"
  },
  {
   "key": "S1119",
@@ -813,7 +852,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "no-labels"
  },
  {
   "key": "S1121",
@@ -833,7 +873,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-nested-assignment"
  },
  {
   "key": "S1125",
@@ -853,7 +894,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-redundant-boolean"
  },
  {
   "key": "S1126",
@@ -872,7 +914,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "prefer-single-boolean-return"
  },
  {
   "key": "S1128",
@@ -893,7 +936,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "unused-import"
  },
  {
   "key": "S1131",
@@ -910,7 +954,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-trailing-spaces"
  },
  {
   "key": "S1134",
@@ -930,7 +975,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "fixme-tag"
  },
  {
   "key": "S1135",
@@ -950,7 +996,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "todo-tag"
  },
  {
   "key": "S1143",
@@ -970,7 +1017,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "no-unsafe-finally"
  },
  {
   "key": "S1154",
@@ -989,7 +1037,8 @@
   "scope": "Main",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "useless-string-operation"
  },
  {
   "key": "S1172",
@@ -1008,7 +1057,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-unused-function-argument"
  },
  {
   "key": "S1186",
@@ -1030,7 +1080,8 @@
   },
   "params": {
    "allow": "['arrowFunctions', 'constructors', 'private-constructors']"
-  }
+  },
+  "eslint": "no-empty-function"
  },
  {
   "key": "S1192",
@@ -1054,7 +1105,8 @@
   "params": {
    "threshold": "3",
    "ignoreStrings": "'application/json'"
-  }
+  },
+  "eslint": "no-duplicate-string"
  },
  {
   "key": "S1199",
@@ -1074,7 +1126,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-lone-blocks"
  },
  {
   "key": "S1219",
@@ -1093,7 +1146,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-case-label-in-switch"
  },
  {
   "key": "S1226",
@@ -1110,7 +1164,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-parameter-reassignment"
  },
  {
   "key": "S1244",
@@ -1127,7 +1182,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-floating-point-equality"
  },
  {
   "key": "S1264",
@@ -1147,7 +1203,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-while"
  },
  {
   "key": "S1291",
@@ -1166,7 +1223,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-sonar-comments"
  },
  {
   "key": "S1301",
@@ -1187,7 +1245,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-small-switch"
  },
  {
   "key": "S1313",
@@ -1206,7 +1265,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "no-hardcoded-ip"
  },
  {
   "key": "S1314",
@@ -1225,7 +1285,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-octal"
  },
  {
   "key": "S1321",
@@ -1241,7 +1302,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "no-with"
  },
  {
   "key": "S1438",
@@ -1258,7 +1320,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "semi"
  },
  {
   "key": "S1439",
@@ -1278,7 +1341,8 @@
   "scope": "Main",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "label-position"
  },
  {
   "key": "S1440",
@@ -1297,7 +1361,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "eqeqeq"
  },
  {
   "key": "S1441",
@@ -1318,7 +1383,8 @@
   "params": {
    "avoidEscape": "true",
    "allowTemplateLiterals": "'always'"
-  }
+  },
+  "eslint": "quotes"
  },
  {
   "key": "S1442",
@@ -1334,7 +1400,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-alert"
  },
  {
   "key": "S1444",
@@ -1352,7 +1419,8 @@
   "scope": "Main",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "public-static-readonly"
  },
  {
   "key": "S1451",
@@ -1375,7 +1443,8 @@
   "params": {
    "headerFormat": "''",
    "isRegularExpression": "false"
-  }
+  },
+  "eslint": "file-header"
  },
  {
   "key": "S1472",
@@ -1394,7 +1463,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "call-argument-line"
  },
  {
   "key": "S1479",
@@ -1414,7 +1484,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "max-switch-cases"
  },
  {
   "key": "S1481",
@@ -1433,7 +1504,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-unused-vars"
  },
  {
   "key": "S1488",
@@ -1453,7 +1525,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "prefer-immediate-return"
  },
  {
   "key": "S1515",
@@ -1472,7 +1545,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "function-inside-loop"
  },
  {
   "key": "S1516",
@@ -1491,7 +1565,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-multi-str"
  },
  {
   "key": "S1523",
@@ -1511,7 +1586,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "code-eval"
  },
  {
   "key": "S1525",
@@ -1528,7 +1604,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-debugger"
  },
  {
   "key": "S1526",
@@ -1547,7 +1624,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-variable-usage-before-declaration"
  },
  {
   "key": "S1527",
@@ -1566,7 +1644,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "future-reserved-words"
  },
  {
   "key": "S1528",
@@ -1585,7 +1664,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "array-constructor"
  },
  {
   "key": "S1529",
@@ -1604,7 +1684,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "bitwise-operators"
  },
  {
   "key": "S1530",
@@ -1624,7 +1705,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-function-declaration-in-block"
  },
  {
   "key": "S1533",
@@ -1643,7 +1725,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-primitive-wrappers"
  },
  {
   "key": "S1534",
@@ -1664,7 +1747,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-dupe-keys"
  },
  {
   "key": "S1535",
@@ -1681,7 +1765,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "for-in"
  },
  {
   "key": "S1536",
@@ -1697,7 +1782,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-dupe-args"
  },
  {
   "key": "S1537",
@@ -1714,7 +1800,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "comma-dangle"
  },
  {
   "key": "S1539",
@@ -1734,7 +1821,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "strict"
  },
  {
   "key": "S1541",
@@ -1757,7 +1845,8 @@
   },
   "params": {
    "threshold": "10"
-  }
+  },
+  "eslint": "cyclomatic-complexity"
  },
  {
   "key": "S1607",
@@ -1785,7 +1874,8 @@
   "scope": "Tests",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-skipped-tests"
  },
  {
   "key": "S1656",
@@ -1804,7 +1894,8 @@
   "scope": "Main",
   "effort": {
    "const": 3
-  }
+  },
+  "eslint": "no-self-assign"
  },
  {
   "key": "S1751",
@@ -1825,7 +1916,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-unreachable-loop"
  },
  {
   "key": "S1763",
@@ -1845,7 +1937,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-unreachable"
  },
  {
   "key": "S1764",
@@ -1864,7 +1957,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "no-identical-expressions"
  },
  {
   "key": "S1774",
@@ -1883,7 +1977,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-ternary"
  },
  {
   "key": "S1788",
@@ -1902,7 +1997,8 @@
   "scope": "Main",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "default-param-last"
  },
  {
   "key": "S1821",
@@ -1921,7 +2017,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-nested-switch"
  },
  {
   "key": "S1848",
@@ -1938,7 +2035,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "constructor-for-side-effects"
  },
  {
   "key": "S1854",
@@ -1959,7 +2057,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-dead-store"
  },
  {
   "key": "S1862",
@@ -1979,7 +2078,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-identical-conditions"
  },
  {
   "key": "S1871",
@@ -1999,7 +2099,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-duplicated-branches"
  },
  {
   "key": "S1874",
@@ -2020,7 +2121,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "deprecation"
  },
  {
   "key": "S1940",
@@ -2040,7 +2142,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "no-inverted-boolean-check"
  },
  {
   "key": "S1994",
@@ -2060,7 +2163,8 @@
   "scope": "Main",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "misplaced-loop-counter"
  },
  {
   "key": "S2004",
@@ -2083,7 +2187,8 @@
   },
   "params": {
    "threshold": "DEFAULT_THRESHOLD"
-  }
+  },
+  "eslint": "no-nested-functions"
  },
  {
   "key": "S2068",
@@ -2104,7 +2209,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "no-hardcoded-passwords"
  },
  {
   "key": "S2077",
@@ -2127,7 +2233,8 @@
   "scope": "Main",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "sql-queries"
  },
  {
   "key": "S2092",
@@ -2149,7 +2256,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "insecure-cookie"
  },
  {
   "key": "S2094",
@@ -2175,7 +2283,8 @@
    "allowEmpty": "false",
    "allowStaticOnly": "true",
    "allowWithDecorator": "true"
-  }
+  },
+  "eslint": "no-extraneous-class"
  },
  {
   "key": "S2123",
@@ -2194,7 +2303,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-useless-increment"
  },
  {
   "key": "S2137",
@@ -2213,7 +2323,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-globals-shadowing"
  },
  {
   "key": "S2138",
@@ -2232,7 +2343,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "no-undefined-assignment"
  },
  {
   "key": "S2187",
@@ -2262,7 +2374,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-empty-test-file"
  },
  {
   "key": "S2189",
@@ -2278,7 +2391,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "no-infinite-loop"
  },
  {
   "key": "S2201",
@@ -2297,7 +2411,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-ignored-return"
  },
  {
   "key": "S2208",
@@ -2317,7 +2432,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-wildcard-import"
  },
  {
   "key": "S2234",
@@ -2336,7 +2452,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "arguments-order"
  },
  {
   "key": "S2245",
@@ -2357,7 +2474,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "pseudo-random"
  },
  {
   "key": "S2251",
@@ -2374,7 +2492,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "for-loop-increment-sign"
  },
  {
   "key": "S2259",
@@ -2393,7 +2512,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "null-dereference"
  },
  {
   "key": "S2260",
@@ -2433,7 +2553,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "no-selector-parameter"
  },
  {
   "key": "S2310",
@@ -2450,7 +2571,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "updated-loop-counter"
  },
  {
   "key": "S2376",
@@ -2472,7 +2594,8 @@
   },
   "params": {
    "getWithoutSet": "false"
-  }
+  },
+  "eslint": "accessor-pairs"
  },
  {
   "key": "S2392",
@@ -2492,7 +2615,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "block-scoped-var"
  },
  {
   "key": "S2424",
@@ -2511,7 +2635,8 @@
   "scope": "Main",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "no-built-in-override"
  },
  {
   "key": "S2427",
@@ -2530,7 +2655,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "radix"
  },
  {
   "key": "S2428",
@@ -2548,7 +2674,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "prefer-object-literal"
  },
  {
   "key": "S2430",
@@ -2573,7 +2700,8 @@
    "newIsCap": "true",
    "capIsNew": "false",
    "properties": "false"
-  }
+  },
+  "eslint": "new-cap"
  },
  {
   "key": "S2432",
@@ -2591,7 +2719,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-setter-return"
  },
  {
   "key": "S2486",
@@ -2612,7 +2741,8 @@
   "scope": "Main",
   "effort": {
    "const": 60
-  }
+  },
+  "eslint": "no-ignored-exceptions"
  },
  {
   "key": "S2589",
@@ -2633,7 +2763,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-gratuitous-expressions"
  },
  {
   "key": "S2598",
@@ -2653,7 +2784,8 @@
   "scope": "Main",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "file-uploads"
  },
  {
   "key": "S2612",
@@ -2673,7 +2805,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "file-permissions"
  },
  {
   "key": "S2639",
@@ -2692,7 +2825,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "no-empty-character-class"
  },
  {
   "key": "S2681",
@@ -2712,7 +2846,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-unenclosed-multiline-block"
  },
  {
   "key": "S2685",
@@ -2731,7 +2866,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "no-caller"
  },
  {
   "key": "S2688",
@@ -2748,7 +2884,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "use-isnan"
  },
  {
   "key": "S2692",
@@ -2768,7 +2905,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "index-of-compare-to-positive-number"
  },
  {
   "key": "S2699",
@@ -2800,7 +2938,8 @@
   "scope": "Tests",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "assertions-in-tests"
  },
  {
   "key": "S2703",
@@ -2818,7 +2957,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "no-implicit-global"
  },
  {
   "key": "S2737",
@@ -2841,7 +2981,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-useless-catch"
  },
  {
   "key": "S2755",
@@ -2860,7 +3001,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "xml-parser-xxe"
  },
  {
   "key": "S2757",
@@ -2877,7 +3019,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "non-existent-operator"
  },
  {
   "key": "S2814",
@@ -2899,7 +3042,8 @@
   "params": {
    "builtinGlobals": "false",
    "ignoreDeclarationMerge": "true"
-  }
+  },
+  "eslint": "no-redeclare"
  },
  {
   "key": "S2817",
@@ -2918,7 +3062,8 @@
   "scope": "Main",
   "effort": {
    "const": 120
-  }
+  },
+  "eslint": "web-sql-database"
  },
  {
   "key": "S2819",
@@ -2939,7 +3084,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "post-message"
  },
  {
   "key": "S2870",
@@ -2958,7 +3104,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-array-delete"
  },
  {
   "key": "S2871",
@@ -2978,7 +3125,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-alphabetical-sort"
  },
  {
   "key": "S2925",
@@ -3001,7 +3149,8 @@
   "scope": "Tests",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "no-fixed-wait-in-tests"
  },
  {
   "key": "S2933",
@@ -3020,7 +3169,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "prefer-readonly"
  },
  {
   "key": "S2966",
@@ -3038,7 +3188,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "no-non-null-assertion"
  },
  {
   "key": "S2970",
@@ -3063,7 +3214,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-incomplete-assertions"
  },
  {
   "key": "S2990",
@@ -3082,7 +3234,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-global-this"
  },
  {
   "key": "S2999",
@@ -3104,7 +3257,8 @@
   },
   "params": {
    "considerJSDoc": "false"
-  }
+  },
+  "eslint": "new-operator-misuse"
  },
  {
   "key": "S3001",
@@ -3121,7 +3275,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-delete-var"
  },
  {
   "key": "S3003",
@@ -3140,7 +3295,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "strings-comparison"
  },
  {
   "key": "S3257",
@@ -3159,7 +3315,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-inferrable-types"
  },
  {
   "key": "S3317",
@@ -3180,7 +3337,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "file-name-differ-from-class"
  },
  {
   "key": "S3330",
@@ -3202,7 +3360,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "cookie-no-httponly"
  },
  {
   "key": "S3353",
@@ -3225,7 +3384,8 @@
   "params": {
    "destructuring": "'all'",
    "ignoreReadBeforeAssign": "true"
-  }
+  },
+  "eslint": "prefer-const"
  },
  {
   "key": "S3358",
@@ -3245,7 +3405,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-nested-conditional"
  },
  {
   "key": "S3402",
@@ -3265,7 +3426,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "no-incorrect-string-concat"
  },
  {
   "key": "S3403",
@@ -3283,7 +3445,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "different-types-comparison"
  },
  {
   "key": "S3415",
@@ -3305,7 +3468,8 @@
   "scope": "Tests",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "inverted-assertion-arguments"
  },
  {
   "key": "S3498",
@@ -3325,7 +3489,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "object-shorthand"
  },
  {
   "key": "S3499",
@@ -3345,7 +3510,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "shorthand-property-grouping"
  },
  {
   "key": "S3500",
@@ -3363,7 +3529,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "updated-const-var"
  },
  {
   "key": "S3504",
@@ -3384,7 +3551,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-var"
  },
  {
   "key": "S3512",
@@ -3404,7 +3572,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-template"
  },
  {
   "key": "S3513",
@@ -3424,7 +3593,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "arguments-usage"
  },
  {
   "key": "S3514",
@@ -3444,7 +3614,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "destructuring-assignment-syntax"
  },
  {
   "key": "S3516",
@@ -3464,7 +3635,8 @@
   "effort": {
    "offset": null,
    "factor": 2
-  }
+  },
+  "eslint": "no-invariant-returns"
  },
  {
   "key": "S3523",
@@ -3480,7 +3652,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-new-func"
  },
  {
   "key": "S3524",
@@ -3504,7 +3677,8 @@
   "params": {
    "requireParameterParentheses": "false",
    "requireBodyBraces": "false"
-  }
+  },
+  "eslint": "arrow-function-convention"
  },
  {
   "key": "S3525",
@@ -3524,7 +3698,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "class-prototype"
  },
  {
   "key": "S3531",
@@ -3544,7 +3719,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "generator-without-yield"
  },
  {
   "key": "S3533",
@@ -3566,7 +3742,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-require-or-define"
  },
  {
   "key": "S3579",
@@ -3586,7 +3763,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-associative-arrays"
  },
  {
   "key": "S3616",
@@ -3603,7 +3781,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "comma-or-logical-or-case"
  },
  {
   "key": "S3626",
@@ -3624,7 +3803,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-redundant-jump"
  },
  {
   "key": "S3686",
@@ -3640,7 +3820,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "inconsistent-function-call"
  },
  {
   "key": "S3696",
@@ -3660,7 +3841,8 @@
   "scope": "Main",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "no-throw-literal"
  },
  {
   "key": "S3699",
@@ -3677,7 +3859,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-use-of-empty-return-value"
  },
  {
   "key": "S3723",
@@ -3694,7 +3877,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "enforce-trailing-comma"
  },
  {
   "key": "S3735",
@@ -3715,7 +3899,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "void-use"
  },
  {
   "key": "S3757",
@@ -3733,7 +3918,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "operation-returning-nan"
  },
  {
   "key": "S3758",
@@ -3751,7 +3937,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "values-not-convertible-to-numbers"
  },
  {
   "key": "S3760",
@@ -3770,7 +3957,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "non-number-in-arithmetic-expression"
  },
  {
   "key": "S3776",
@@ -3791,7 +3979,8 @@
   "effort": {
    "offset": 5,
    "factor": 1
-  }
+  },
+  "eslint": "cognitive-complexity"
  },
  {
   "key": "S3782",
@@ -3809,7 +3998,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "argument-type"
  },
  {
   "key": "S3785",
@@ -3827,7 +4017,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "in-operator-type-error"
  },
  {
   "key": "S3786",
@@ -3846,7 +4037,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-template-curly-in-string"
  },
  {
   "key": "S3796",
@@ -3864,7 +4056,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "array-callback-without-return"
  },
  {
   "key": "S3798",
@@ -3880,7 +4073,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "declarations-in-global-scope"
  },
  {
   "key": "S3799",
@@ -3900,7 +4094,8 @@
   },
   "params": {
    "allowObjectPatternsAsParameters": "true"
-  }
+  },
+  "eslint": "no-empty-pattern"
  },
  {
   "key": "S3800",
@@ -3920,7 +4115,8 @@
   "scope": "Main",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "function-return-type"
  },
  {
   "key": "S3801",
@@ -3941,7 +4137,8 @@
   "scope": "Main",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "no-inconsistent-returns"
  },
  {
   "key": "S3812",
@@ -3958,7 +4155,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-unsafe-negation"
  },
  {
   "key": "S3827",
@@ -3974,7 +4172,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-reference-error"
  },
  {
   "key": "S3834",
@@ -3992,7 +4191,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-new-native-nonconstructor"
  },
  {
   "key": "S3854",
@@ -4009,7 +4209,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "super-invocation"
  },
  {
   "key": "S3863",
@@ -4029,7 +4230,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-duplicates"
  },
  {
   "key": "S3923",
@@ -4046,7 +4248,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "no-all-duplicated-branches"
  },
  {
   "key": "S3972",
@@ -4066,7 +4269,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-same-line-conditional"
  },
  {
   "key": "S3973",
@@ -4083,7 +4287,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "conditional-indentation"
  },
  {
   "key": "S3981",
@@ -4102,7 +4307,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "no-collection-size-mischeck"
  },
  {
   "key": "S3984",
@@ -4121,7 +4327,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "no-unthrown-error"
  },
  {
   "key": "S4023",
@@ -4140,7 +4347,8 @@
   },
   "params": {
    "allowSingleExtends": "true"
-  }
+  },
+  "eslint": "no-empty-interface"
  },
  {
   "key": "S4030",
@@ -4161,7 +4369,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "no-unused-collection"
  },
  {
   "key": "S4036",
@@ -4181,7 +4390,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "no-os-command-from-path"
  },
  {
   "key": "S4043",
@@ -4201,7 +4411,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-misleading-array-reverse"
  },
  {
   "key": "S4084",
@@ -4221,7 +4432,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "media-has-caption"
  },
  {
   "key": "S4123",
@@ -4240,7 +4452,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "await-thenable"
  },
  {
   "key": "S4124",
@@ -4256,7 +4469,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-misused-new"
  },
  {
   "key": "S4125",
@@ -4272,7 +4486,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "valid-typeof"
  },
  {
   "key": "S4136",
@@ -4290,7 +4505,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "adjacent-overload-signatures"
  },
  {
   "key": "S4137",
@@ -4312,7 +4528,8 @@
   "params": {
    "assertionStyle": "'as'",
    "objectLiteralTypeAssertions": "'allow'"
-  }
+  },
+  "eslint": "consistent-type-assertions"
  },
  {
   "key": "S4138",
@@ -4331,7 +4548,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-for-of"
  },
  {
   "key": "S4139",
@@ -4350,7 +4568,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-for-in-iterable"
  },
  {
   "key": "S4140",
@@ -4369,7 +4588,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-sparse-arrays"
  },
  {
   "key": "S4143",
@@ -4388,7 +4608,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-element-overwrite"
  },
  {
   "key": "S4144",
@@ -4410,7 +4631,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "no-identical-functions"
  },
  {
   "key": "S4156",
@@ -4428,7 +4650,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-namespace-keyword"
  },
  {
   "key": "S4157",
@@ -4447,7 +4670,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "no-unnecessary-type-arguments"
  },
  {
   "key": "S4158",
@@ -4464,7 +4688,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "no-empty-collection"
  },
  {
   "key": "S4165",
@@ -4484,7 +4709,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-redundant-assignments"
  },
  {
   "key": "S4204",
@@ -4502,7 +4728,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-explicit-any"
  },
  {
   "key": "S4275",
@@ -4524,7 +4751,8 @@
   },
   "params": {
    "allowImplicit": "false"
-  }
+  },
+  "eslint": "no-accessor-field-mismatch"
  },
  {
   "key": "S4322",
@@ -4542,7 +4770,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "prefer-type-guard"
  },
  {
   "key": "S4323",
@@ -4560,7 +4789,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "use-type-alias"
  },
  {
   "key": "S4324",
@@ -4579,7 +4809,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "no-return-type-any"
  },
  {
   "key": "S4325",
@@ -4598,7 +4829,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-unnecessary-type-assertion"
  },
  {
   "key": "S4326",
@@ -4618,7 +4850,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-return-await"
  },
  {
   "key": "S4327",
@@ -4639,7 +4872,8 @@
   },
   "params": {
    "allowDestructuring": "true"
-  }
+  },
+  "eslint": "no-this-alias"
  },
  {
   "key": "S4328",
@@ -4655,7 +4889,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "no-implicit-dependencies"
  },
  {
   "key": "S4335",
@@ -4674,7 +4909,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-useless-intersection"
  },
  {
   "key": "S4423",
@@ -4695,7 +4931,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "weak-ssl"
  },
  {
   "key": "S4426",
@@ -4716,7 +4953,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "no-weak-keys"
  },
  {
   "key": "S4502",
@@ -4737,7 +4975,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "csrf"
  },
  {
   "key": "S4507",
@@ -4761,7 +5000,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "production-debug"
  },
  {
   "key": "S4524",
@@ -4780,7 +5020,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-default-last"
  },
  {
   "key": "S4619",
@@ -4800,7 +5041,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-in-misuse"
  },
  {
   "key": "S4621",
@@ -4816,7 +5058,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-duplicate-in-composite"
  },
  {
   "key": "S4622",
@@ -4837,7 +5080,8 @@
   },
   "params": {
    "threshold": "3"
-  }
+  },
+  "eslint": "max-union-size"
  },
  {
   "key": "S4623",
@@ -4856,7 +5100,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-undefined-argument"
  },
  {
   "key": "S4624",
@@ -4878,7 +5123,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-nested-template-literals"
  },
  {
   "key": "S4634",
@@ -4899,7 +5145,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-promise-shorthand"
  },
  {
   "key": "S4721",
@@ -4919,7 +5166,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "os-command"
  },
  {
   "key": "S4782",
@@ -4938,7 +5186,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-redundant-optional"
  },
  {
   "key": "S4790",
@@ -4959,7 +5208,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "hashing"
  },
  {
   "key": "S4798",
@@ -4975,7 +5225,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "bool-param-default"
  },
  {
   "key": "S4822",
@@ -4995,7 +5246,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-try-promise"
  },
  {
   "key": "S4830",
@@ -5017,7 +5269,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "unverified-certificate"
  },
  {
   "key": "S5042",
@@ -5037,7 +5290,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-unsafe-unzip"
  },
  {
   "key": "S5122",
@@ -5058,7 +5312,8 @@
   "scope": "Main",
   "effort": {
    "const": 240
-  }
+  },
+  "eslint": "cors"
  },
  {
   "key": "S5148",
@@ -5079,7 +5334,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "link-with-target-blank"
  },
  {
   "key": "S5247",
@@ -5100,7 +5356,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "disabled-auto-escaping"
  },
  {
   "key": "S5254",
@@ -5120,7 +5377,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "html-has-lang"
  },
  {
   "key": "S5256",
@@ -5140,7 +5398,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "table-header"
  },
  {
   "key": "S5257",
@@ -5160,7 +5419,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "no-table-as-layout"
  },
  {
   "key": "S5260",
@@ -5180,7 +5440,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "table-header-reference"
  },
  {
   "key": "S5264",
@@ -5201,7 +5462,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "object-alt-content"
  },
  {
   "key": "S5332",
@@ -5222,7 +5484,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "no-clear-text-protocols"
  },
  {
   "key": "S5443",
@@ -5242,7 +5505,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "publicly-writable-directories"
  },
  {
   "key": "S5527",
@@ -5264,7 +5528,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "unverified-hostname"
  },
  {
   "key": "S5542",
@@ -5285,7 +5550,8 @@
   "scope": "Main",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "encryption-secure-mode"
  },
  {
   "key": "S5547",
@@ -5306,7 +5572,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "no-weak-cipher"
  },
  {
   "key": "S5604",
@@ -5327,7 +5594,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-intrusive-permissions"
  },
  {
   "key": "S5659",
@@ -5348,7 +5616,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "insecure-jwt-token"
  },
  {
   "key": "S5689",
@@ -5369,7 +5638,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "x-powered-by"
  },
  {
   "key": "S5691",
@@ -5390,7 +5660,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "hidden-files"
  },
  {
   "key": "S5693",
@@ -5415,7 +5686,8 @@
   "params": {
    "fileUploadSizeLimit": "8000000",
    "standardSizeLimit": "2000000"
-  }
+  },
+  "eslint": "content-length"
  },
  {
   "key": "S5725",
@@ -5436,7 +5708,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "disabled-resource-integrity"
  },
  {
   "key": "S5728",
@@ -5456,7 +5729,8 @@
   "scope": "Main",
   "effort": {
    "const": 60
-  }
+  },
+  "eslint": "content-security-policy"
  },
  {
   "key": "S5730",
@@ -5476,7 +5750,8 @@
   "scope": "Main",
   "effort": {
    "const": 60
-  }
+  },
+  "eslint": "no-mixed-content"
  },
  {
   "key": "S5732",
@@ -5497,7 +5772,8 @@
   "scope": "Main",
   "effort": {
    "const": 60
-  }
+  },
+  "eslint": "frame-ancestors"
  },
  {
   "key": "S5734",
@@ -5517,7 +5793,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-mime-sniff"
  },
  {
   "key": "S5736",
@@ -5538,7 +5815,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-referrer-policy"
  },
  {
   "key": "S5739",
@@ -5560,7 +5838,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "strict-transport-security"
  },
  {
   "key": "S5757",
@@ -5581,7 +5860,8 @@
   "scope": "Main",
   "effort": {
    "const": 60
-  }
+  },
+  "eslint": "confidential-information-logging"
  },
  {
   "key": "S5759",
@@ -5602,7 +5882,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-ip-forward"
  },
  {
   "key": "S5842",
@@ -5621,7 +5902,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "empty-string-repetition"
  },
  {
   "key": "S5843",
@@ -5646,7 +5928,8 @@
   },
   "params": {
    "threshold": "20"
-  }
+  },
+  "eslint": "regex-complexity"
  },
  {
   "key": "S5845",
@@ -5675,7 +5958,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-incompatible-assertion-types"
  },
  {
   "key": "S5850",
@@ -5695,7 +5979,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "anchor-precedence"
  },
  {
   "key": "S5852",
@@ -5717,7 +6002,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "slow-regex"
  },
  {
   "key": "S5856",
@@ -5736,7 +6022,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "no-invalid-regexp"
  },
  {
   "key": "S5860",
@@ -5756,7 +6043,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "unused-named-groups"
  },
  {
   "key": "S5863",
@@ -5776,7 +6064,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-same-argument-assert"
  },
  {
   "key": "S5867",
@@ -5796,7 +6085,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "unicode-aware-regex"
  },
  {
   "key": "S5868",
@@ -5816,7 +6106,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-misleading-character-class"
  },
  {
   "key": "S5869",
@@ -5836,7 +6127,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "duplicates-in-character-class"
  },
  {
   "key": "S5876",
@@ -5855,7 +6147,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "session-regeneration"
  },
  {
   "key": "S5906",
@@ -5879,7 +6172,8 @@
   "scope": "Tests",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "prefer-specific-assertions"
  },
  {
   "key": "S5914",
@@ -5908,7 +6202,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-trivial-assertions"
  },
  {
   "key": "S5958",
@@ -5930,7 +6225,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "test-check-exception"
  },
  {
   "key": "S5973",
@@ -5952,7 +6248,8 @@
   "scope": "Tests",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "stable-tests"
  },
  {
   "key": "S5976",
@@ -5977,7 +6274,8 @@
   "scope": "Tests",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "parameterized-tests"
  },
  {
   "key": "S6019",
@@ -5997,7 +6295,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "no-empty-after-reluctant"
  },
  {
   "key": "S6035",
@@ -6017,7 +6316,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "single-character-alternation"
  },
  {
   "key": "S6079",
@@ -6038,7 +6338,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-code-after-done"
  },
  {
   "key": "S6080",
@@ -6057,7 +6358,8 @@
   "scope": "Tests",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "disabled-timeout"
  },
  {
   "key": "S6092",
@@ -6078,7 +6380,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "chai-determinate-assertion"
  },
  {
   "key": "S6249",
@@ -6100,7 +6403,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "aws-s3-bucket-insecure-http"
  },
  {
   "key": "S6252",
@@ -6120,7 +6424,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "aws-s3-bucket-versioning"
  },
  {
   "key": "S6265",
@@ -6141,7 +6446,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "aws-s3-bucket-granted-access"
  },
  {
   "key": "S6268",
@@ -6161,7 +6467,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "no-angular-bypass-sanitization"
  },
  {
   "key": "S6270",
@@ -6182,7 +6489,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "aws-iam-public-access"
  },
  {
   "key": "S6275",
@@ -6204,7 +6512,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "aws-ec2-unencrypted-ebs-volume"
  },
  {
   "key": "S6281",
@@ -6225,7 +6534,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "aws-s3-bucket-public-access"
  },
  {
   "key": "S6302",
@@ -6247,7 +6557,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "aws-iam-all-privileges"
  },
  {
   "key": "S6303",
@@ -6269,7 +6580,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "aws-rds-unencrypted-databases"
  },
  {
   "key": "S6304",
@@ -6290,7 +6602,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "aws-iam-all-resources-accessible"
  },
  {
   "key": "S6308",
@@ -6312,7 +6625,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "aws-opensearchservice-domain"
  },
  {
   "key": "S6317",
@@ -6332,7 +6646,8 @@
   "scope": "Main",
   "effort": {
    "const": 60
-  }
+  },
+  "eslint": "aws-iam-privilege-escalation"
  },
  {
   "key": "S6319",
@@ -6354,7 +6669,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "aws-sagemaker-unencrypted-notebook"
  },
  {
   "key": "S6321",
@@ -6374,7 +6690,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "aws-restricted-ip-admin-access"
  },
  {
   "key": "S6323",
@@ -6394,7 +6711,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-empty-alternatives"
  },
  {
   "key": "S6324",
@@ -6414,7 +6732,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-control-regex"
  },
  {
   "key": "S6325",
@@ -6434,7 +6753,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "prefer-regex-literals"
  },
  {
   "key": "S6326",
@@ -6455,7 +6775,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-regex-spaces"
  },
  {
   "key": "S6327",
@@ -6477,7 +6798,8 @@
   "scope": "Main",
   "effort": {
    "const": 45
-  }
+  },
+  "eslint": "aws-sns-unencrypted-topics"
  },
  {
   "key": "S6328",
@@ -6497,7 +6819,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "existing-groups"
  },
  {
   "key": "S6329",
@@ -6518,7 +6841,8 @@
   "scope": "Main",
   "effort": {
    "const": 30
-  }
+  },
+  "eslint": "aws-ec2-rds-dms-public"
  },
  {
   "key": "S6330",
@@ -6540,7 +6864,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "aws-sqs-unencrypted-queue"
  },
  {
   "key": "S6331",
@@ -6560,7 +6885,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-empty-group"
  },
  {
   "key": "S6332",
@@ -6582,7 +6908,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "aws-efs-unencrypted"
  },
  {
   "key": "S6333",
@@ -6603,7 +6930,8 @@
   "scope": "Main",
   "effort": {
    "const": 15
-  }
+  },
+  "eslint": "aws-apigateway-public-api"
  },
  {
   "key": "S6351",
@@ -6622,7 +6950,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "stateful-regex"
  },
  {
   "key": "S6353",
@@ -6643,7 +6972,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "concise-regex"
  },
  {
   "key": "S6397",
@@ -6664,7 +6994,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "single-char-in-character-classes"
  },
  {
   "key": "S6418",
@@ -6689,7 +7020,8 @@
   "params": {
    "secretWords": "'api[_.-]?key,auth,credential,secret,token'",
    "randomnessSensibility": "5"
-  }
+  },
+  "eslint": "no-hardcoded-secrets"
  },
  {
   "key": "S6426",
@@ -6713,7 +7045,8 @@
   "scope": "Tests",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-exclusive-tests"
  },
  {
   "key": "S6435",
@@ -6732,7 +7065,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "require-render-return"
  },
  {
   "key": "S6437",
@@ -6752,7 +7086,8 @@
   "scope": "Main",
   "effort": {
    "const": 60
-  }
+  },
+  "eslint": "hardcoded-secret-signatures"
  },
  {
   "key": "S6438",
@@ -6772,7 +7107,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "jsx-no-comment-textnodes"
  },
  {
   "key": "S6439",
@@ -6792,7 +7128,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "jsx-no-leaked-render"
  },
  {
   "key": "S6440",
@@ -6811,7 +7148,8 @@
   "scope": "Main",
   "effort": {
    "const": 10
-  }
+  },
+  "eslint": "rules-of-hooks"
  },
  {
   "key": "S6441",
@@ -6831,7 +7169,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-unused-class-component-methods"
  },
  {
   "key": "S6442",
@@ -6850,7 +7189,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-hook-setter-in-body"
  },
  {
   "key": "S6443",
@@ -6869,7 +7209,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-useless-react-setstate"
  },
  {
   "key": "S6477",
@@ -6890,7 +7231,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "jsx-key"
  },
  {
   "key": "S6478",
@@ -6915,7 +7257,8 @@
   "params": {
    "allowAsProps": "false",
    "propNamePattern": "'{render*,*Enhancer,*Renderer}'"
-  }
+  },
+  "eslint": "no-unstable-nested-components"
  },
  {
   "key": "S6479",
@@ -6936,7 +7279,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-array-index-key"
  },
  {
   "key": "S6480",
@@ -6961,7 +7305,8 @@
   "params": {
    "ignoreRefs": "true",
    "ignoreDOMComponents": "true"
-  }
+  },
+  "eslint": "jsx-no-bind"
  },
  {
   "key": "S6481",
@@ -6982,7 +7327,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "jsx-no-constructed-context-values"
  },
  {
   "key": "S6486",
@@ -7003,7 +7349,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-uniq-key"
  },
  {
   "key": "S6509",
@@ -7022,7 +7369,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-extra-boolean-cast"
  },
  {
   "key": "S6522",
@@ -7043,7 +7391,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-import-assign"
  },
  {
   "key": "S6523",
@@ -7063,7 +7412,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-unsafe-optional-chaining"
  },
  {
   "key": "S6534",
@@ -7084,7 +7434,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-loss-of-precision"
  },
  {
   "key": "S6535",
@@ -7103,7 +7454,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "unnecessary-character-escapes"
  },
  {
   "key": "S6544",
@@ -7131,7 +7483,8 @@
   "params": {
    "checksVoidReturn": "{",
    "ignoreIIFE": "true"
-  }
+  },
+  "eslint": "no-misused-promises"
  },
  {
   "key": "S6550",
@@ -7152,7 +7505,8 @@
   },
   "params": {
    "allowBitwiseExpressions": "false"
-  }
+  },
+  "eslint": "prefer-literal-enum-member"
  },
  {
   "key": "S6551",
@@ -7173,7 +7527,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-base-to-string"
  },
  {
   "key": "S6557",
@@ -7194,7 +7549,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-string-starts-ends-with"
  },
  {
   "key": "S6564",
@@ -7210,7 +7566,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "redundant-type-aliases"
  },
  {
   "key": "S6565",
@@ -7229,7 +7586,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-return-this-type"
  },
  {
   "key": "S6568",
@@ -7248,7 +7606,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-confusing-non-null-assertion"
  },
  {
   "key": "S6569",
@@ -7264,7 +7623,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-unnecessary-type-constraint"
  },
  {
   "key": "S6571",
@@ -7283,7 +7643,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-redundant-type-constituents"
  },
  {
   "key": "S6572",
@@ -7299,7 +7660,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-enum-initializers"
  },
  {
   "key": "S6578",
@@ -7315,7 +7677,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-duplicate-enum-values"
  },
  {
   "key": "S6582",
@@ -7336,7 +7699,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-optional-chain"
  },
  {
   "key": "S6583",
@@ -7355,7 +7719,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-mixed-enums"
  },
  {
   "key": "S6590",
@@ -7373,7 +7738,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-as-const"
  },
  {
   "key": "S6594",
@@ -7394,7 +7760,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-regexp-exec"
  },
  {
   "key": "S6598",
@@ -7413,7 +7780,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-function-type"
  },
  {
   "key": "S6606",
@@ -7440,7 +7808,8 @@
    "ignoreMixedLogicalExpressions": "true",
    "ignoreTernaryTests": "false",
    "ignorePrimitives": "true"
-  }
+  },
+  "eslint": "prefer-nullish-coalescing"
  },
  {
   "key": "S6627",
@@ -7459,7 +7828,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-internal-api-use"
  },
  {
   "key": "S6635",
@@ -7476,7 +7846,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-constructor-return"
  },
  {
   "key": "S6637",
@@ -7495,7 +7866,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-extra-bind"
  },
  {
   "key": "S6638",
@@ -7512,7 +7884,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-constant-binary-expression"
  },
  {
   "key": "S6643",
@@ -7529,7 +7902,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-extend-native"
  },
  {
   "key": "S6644",
@@ -7551,7 +7925,8 @@
   },
   "params": {
    "defaultAssignment": "false"
-  }
+  },
+  "eslint": "no-unneeded-ternary"
  },
  {
   "key": "S6645",
@@ -7569,7 +7944,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-undef-init"
  },
  {
   "key": "S6647",
@@ -7589,7 +7965,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-useless-constructor"
  },
  {
   "key": "S6650",
@@ -7608,7 +7985,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-useless-rename"
  },
  {
   "key": "S6653",
@@ -7627,7 +8005,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-object-has-own"
  },
  {
   "key": "S6654",
@@ -7646,7 +8025,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-proto"
  },
  {
   "key": "S6657",
@@ -7663,7 +8043,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-octal-escape"
  },
  {
   "key": "S6660",
@@ -7682,7 +8063,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-lonely-if"
  },
  {
   "key": "S6661",
@@ -7702,7 +8084,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-object-spread"
  },
  {
   "key": "S6666",
@@ -7721,7 +8104,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-spread"
  },
  {
   "key": "S6671",
@@ -7744,7 +8128,8 @@
   "params": {
    "allowThrowingAny": "true",
    "allowThrowingUnknown": "true"
-  }
+  },
+  "eslint": "prefer-promise-reject-errors"
  },
  {
   "key": "S6676",
@@ -7763,7 +8148,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-useless-call"
  },
  {
   "key": "S6679",
@@ -7780,7 +8166,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-self-compare"
  },
  {
   "key": "S6746",
@@ -7799,7 +8186,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-direct-mutation-state"
  },
  {
   "key": "S6747",
@@ -7819,7 +8207,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-unknown-property"
  },
  {
   "key": "S6748",
@@ -7838,7 +8227,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-children-prop"
  },
  {
   "key": "S6749",
@@ -7861,7 +8251,8 @@
   },
   "params": {
    "allowExpressions": "true"
-  }
+  },
+  "eslint": "jsx-no-useless-fragment"
  },
  {
   "key": "S6750",
@@ -7880,7 +8271,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-render-return-value"
  },
  {
   "key": "S6754",
@@ -7903,7 +8295,8 @@
   },
   "params": {
    "allowDestructuredState": "true"
-  }
+  },
+  "eslint": "hook-use-state"
  },
  {
   "key": "S6756",
@@ -7922,7 +8315,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-access-state-in-setstate"
  },
  {
   "key": "S6757",
@@ -7941,7 +8335,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-this-in-sfc"
  },
  {
   "key": "S6759",
@@ -7960,7 +8355,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-read-only-props"
  },
  {
   "key": "S6761",
@@ -7979,7 +8375,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-danger-with-children"
  },
  {
   "key": "S6763",
@@ -7999,7 +8396,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-redundant-should-component-update"
  },
  {
   "key": "S6766",
@@ -8022,7 +8420,8 @@
   },
   "params": {
    "forbid": "['>', '}']"
-  }
+  },
+  "eslint": "no-unescaped-entities"
  },
  {
   "key": "S6767",
@@ -8043,7 +8442,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-unused-prop-types"
  },
  {
   "key": "S6770",
@@ -8063,7 +8463,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "jsx-pascal-case"
  },
  {
   "key": "S6772",
@@ -8082,7 +8483,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "jsx-child-element-spacing"
  },
  {
   "key": "S6774",
@@ -8101,7 +8503,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prop-types"
  },
  {
   "key": "S6775",
@@ -8121,7 +8524,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "default-props-match-prop-types"
  },
  {
   "key": "S6788",
@@ -8141,7 +8545,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-find-dom-node"
  },
  {
   "key": "S6789",
@@ -8160,7 +8565,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-is-mounted"
  },
  {
   "key": "S6790",
@@ -8180,7 +8586,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-string-refs"
  },
  {
   "key": "S6791",
@@ -8202,7 +8609,8 @@
   },
   "params": {
    "checkAliases": "true"
-  }
+  },
+  "eslint": "no-unsafe"
  },
  {
   "key": "S6793",
@@ -8222,7 +8630,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "aria-proptypes"
  },
  {
   "key": "S6807",
@@ -8242,7 +8651,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "role-has-required-aria-props"
  },
  {
   "key": "S6811",
@@ -8262,7 +8672,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "role-supports-aria-props"
  },
  {
   "key": "S6819",
@@ -8282,7 +8693,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-tag-over-role"
  },
  {
   "key": "S6821",
@@ -8306,7 +8718,8 @@
   "params": {
    "allowedInvalidRoles": "['text']",
    "ignoreNonDOM": "true"
-  }
+  },
+  "eslint": "aria-role"
  },
  {
   "key": "S6822",
@@ -8327,7 +8740,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-redundant-roles"
  },
  {
   "key": "S6823",
@@ -8347,7 +8761,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "aria-activedescendant-has-tabindex"
  },
  {
   "key": "S6824",
@@ -8367,7 +8782,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "aria-unsupported-elements"
  },
  {
   "key": "S6825",
@@ -8387,7 +8803,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-aria-hidden-on-focusable"
  },
  {
   "key": "S6827",
@@ -8407,7 +8824,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "anchor-has-content"
  },
  {
   "key": "S6836",
@@ -8424,7 +8842,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-case-declarations"
  },
  {
   "key": "S6840",
@@ -8444,7 +8863,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "autocomplete-valid"
  },
  {
   "key": "S6841",
@@ -8464,7 +8884,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "tabindex-no-positive"
  },
  {
   "key": "S6842",
@@ -8484,7 +8905,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-noninteractive-element-to-interactive-role"
  },
  {
   "key": "S6843",
@@ -8504,7 +8926,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-interactive-element-to-noninteractive-role"
  },
  {
   "key": "S6844",
@@ -8524,7 +8947,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "anchor-is-valid"
  },
  {
   "key": "S6845",
@@ -8544,7 +8968,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-noninteractive-tabindex"
  },
  {
   "key": "S6846",
@@ -8564,7 +8989,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-access-key"
  },
  {
   "key": "S6847",
@@ -8584,7 +9010,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-noninteractive-element-interactions"
  },
  {
   "key": "S6848",
@@ -8604,7 +9031,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-static-element-interactions"
  },
  {
   "key": "S6850",
@@ -8624,7 +9052,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "heading-has-content"
  },
  {
   "key": "S6851",
@@ -8644,7 +9073,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "img-redundant-alt"
  },
  {
   "key": "S6852",
@@ -8664,7 +9094,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "interactive-supports-focus"
  },
  {
   "key": "S6853",
@@ -8684,7 +9115,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "label-has-associated-control"
  },
  {
   "key": "S6859",
@@ -8704,7 +9136,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-absolute-path"
  },
  {
   "key": "S6861",
@@ -8721,7 +9154,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-mutable-exports"
  },
  {
   "key": "S6957",
@@ -8740,7 +9174,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-deprecated-react"
  },
  {
   "key": "S6958",
@@ -8757,7 +9192,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-literal-call"
  },
  {
   "key": "S6959",
@@ -8776,7 +9212,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "reduce-initial-value"
  },
  {
   "key": "S7059",
@@ -8796,7 +9233,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-async-constructor"
  },
  {
   "key": "S7060",
@@ -8815,7 +9253,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-self-import"
  },
  {
   "key": "S7503",
@@ -8834,7 +9273,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "require-await"
  },
  {
   "key": "S7639",
@@ -8853,7 +9293,8 @@
   "scope": "Main",
   "effort": {
    "const": 60
-  }
+  },
+  "eslint": "review-blockchain-mnemonic"
  },
  {
   "key": "S7641",
@@ -8872,7 +9313,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "contextual-lifecycle"
  },
  {
   "key": "S7647",
@@ -8891,7 +9333,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-empty-lifecycle-method"
  },
  {
   "key": "S7648",
@@ -8909,7 +9352,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-standalone"
  },
  {
   "key": "S7649",
@@ -8928,7 +9372,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-input-rename"
  },
  {
   "key": "S7650",
@@ -8947,7 +9392,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-inputs-metadata-property"
  },
  {
   "key": "S7651",
@@ -8965,7 +9411,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-output-native"
  },
  {
   "key": "S7652",
@@ -8984,7 +9431,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-output-on-prefix"
  },
  {
   "key": "S7653",
@@ -9003,7 +9451,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-output-rename"
  },
  {
   "key": "S7654",
@@ -9022,7 +9471,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-outputs-metadata-property"
  },
  {
   "key": "S7655",
@@ -9043,7 +9493,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "use-lifecycle-interface"
  },
  {
   "key": "S7656",
@@ -9062,7 +9513,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "use-pipe-transform-interface"
  },
  {
   "key": "S7718",
@@ -9083,7 +9535,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "catch-error-name"
  },
  {
   "key": "S7719",
@@ -9104,7 +9557,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "consistent-date-clone"
  },
  {
   "key": "S7720",
@@ -9125,7 +9579,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "consistent-empty-array-spread"
  },
  {
   "key": "S7721",
@@ -9150,7 +9605,8 @@
   },
   "params": {
    "checkArrowFunctions": "false"
-  }
+  },
+  "eslint": "consistent-function-scoping"
  },
  {
   "key": "S7722",
@@ -9170,7 +9626,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "error-message"
  },
  {
   "key": "S7723",
@@ -9189,7 +9646,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "new-for-builtins"
  },
  {
   "key": "S7724",
@@ -9210,7 +9668,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-abusive-eslint-disable"
  },
  {
   "key": "S7725",
@@ -9229,7 +9688,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-accessor-recursion"
  },
  {
   "key": "S7726",
@@ -9250,7 +9710,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-anonymous-default-export"
  },
  {
   "key": "S7727",
@@ -9273,7 +9734,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-array-callback-reference"
  },
  {
   "key": "S7728",
@@ -9295,7 +9757,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-array-for-each"
  },
  {
   "key": "S7729",
@@ -9316,7 +9779,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-array-method-this-argument"
  },
  {
   "key": "S7730",
@@ -9337,7 +9801,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-await-expression-member"
  },
  {
   "key": "S7731",
@@ -9357,7 +9822,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-for-loop"
  },
  {
   "key": "S7732",
@@ -9376,7 +9842,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-instanceof-builtins"
  },
  {
   "key": "S7733",
@@ -9397,7 +9864,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-invalid-fetch-options"
  },
  {
   "key": "S7734",
@@ -9418,7 +9886,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-named-default"
  },
  {
   "key": "S7735",
@@ -9438,7 +9907,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-negated-condition"
  },
  {
   "key": "S7736",
@@ -9458,7 +9928,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-negation-in-equality-check"
  },
  {
   "key": "S7737",
@@ -9479,7 +9950,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-object-as-default-parameter"
  },
  {
   "key": "S7738",
@@ -9500,7 +9972,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-single-promise-in-promise-methods"
  },
  {
   "key": "S7739",
@@ -9521,7 +9994,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-thenable"
  },
  {
   "key": "S7740",
@@ -9542,7 +10016,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-this-assignment"
  },
  {
   "key": "S7741",
@@ -9563,7 +10038,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-typeof-undefined"
  },
  {
   "key": "S7742",
@@ -9585,7 +10061,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-unnecessary-polyfills"
  },
  {
   "key": "S7743",
@@ -9606,7 +10083,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-unreadable-iife"
  },
  {
   "key": "S7744",
@@ -9627,7 +10105,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-useless-fallback-in-spread"
  },
  {
   "key": "S7745",
@@ -9647,7 +10126,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-useless-length-check"
  },
  {
   "key": "S7746",
@@ -9669,7 +10149,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-useless-promise-resolve-reject"
  },
  {
   "key": "S7747",
@@ -9690,7 +10171,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-useless-spread"
  },
  {
   "key": "S7748",
@@ -9711,7 +10193,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-zero-fractions"
  },
  {
   "key": "S7749",
@@ -9736,7 +10219,8 @@
   "params": {
    "onlyIfContainsSeparator": "true",
    "number": "{ minimumDigits: 0, groupLength: 3 }"
-  }
+  },
+  "eslint": "numeric-separators-style"
  },
  {
   "key": "S7750",
@@ -9758,7 +10242,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-array-find"
  },
  {
   "key": "S7751",
@@ -9779,7 +10264,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-array-flat"
  },
  {
   "key": "S7752",
@@ -9800,7 +10286,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-array-flat-map"
  },
  {
   "key": "S7753",
@@ -9822,7 +10309,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-array-index-of"
  },
  {
   "key": "S7754",
@@ -9843,7 +10331,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-array-some"
  },
  {
   "key": "S7755",
@@ -9866,7 +10355,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-at"
  },
  {
   "key": "S7756",
@@ -9888,7 +10378,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-blob-reading-methods"
  },
  {
   "key": "S7757",
@@ -9909,7 +10400,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-class-fields"
  },
  {
   "key": "S7758",
@@ -9930,7 +10422,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-code-point"
  },
  {
   "key": "S7759",
@@ -9951,7 +10444,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-date-now"
  },
  {
   "key": "S7760",
@@ -9972,7 +10466,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-default-parameters"
  },
  {
   "key": "S7761",
@@ -9994,7 +10489,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "dom-node-dataset"
  },
  {
   "key": "S7762",
@@ -10016,7 +10512,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-dom-node-remove"
  },
  {
   "key": "S7763",
@@ -10037,7 +10534,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-export-from"
  },
  {
   "key": "S7764",
@@ -10057,7 +10555,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-global-this"
  },
  {
   "key": "S7765",
@@ -10078,7 +10577,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-includes"
  },
  {
   "key": "S7766",
@@ -10100,7 +10600,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-math-min-max"
  },
  {
   "key": "S7767",
@@ -10120,7 +10621,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-math-trunc"
  },
  {
   "key": "S7768",
@@ -10142,7 +10644,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-modern-dom-apis"
  },
  {
   "key": "S7769",
@@ -10163,7 +10666,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-modern-math-apis"
  },
  {
   "key": "S7770",
@@ -10184,7 +10688,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-native-coercion-functions"
  },
  {
   "key": "S7771",
@@ -10206,7 +10711,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-negative-index"
  },
  {
   "key": "S7772",
@@ -10228,7 +10734,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-node-protocol"
  },
  {
   "key": "S7773",
@@ -10249,7 +10756,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-number-properties"
  },
  {
   "key": "S7774",
@@ -10271,7 +10779,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-prototype-methods"
  },
  {
   "key": "S7775",
@@ -10290,7 +10799,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-regexp-test"
  },
  {
   "key": "S7776",
@@ -10312,7 +10822,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-set-has"
  },
  {
   "key": "S7777",
@@ -10333,7 +10844,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-set-size"
  },
  {
   "key": "S7778",
@@ -10355,7 +10867,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-single-call"
  },
  {
   "key": "S7780",
@@ -10376,7 +10889,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-string-raw"
  },
  {
   "key": "S7781",
@@ -10397,7 +10911,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-string-replace-all"
  },
  {
   "key": "S7783",
@@ -10418,7 +10933,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-string-trim-start-end"
  },
  {
   "key": "S7784",
@@ -10439,7 +10955,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-structured-clone"
  },
  {
   "key": "S7785",
@@ -10463,7 +10980,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-top-level-await"
  },
  {
   "key": "S7786",
@@ -10485,7 +11003,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-type-error"
  },
  {
   "key": "S7787",
@@ -10507,7 +11026,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "require-module-specifiers"
  },
  {
   "key": "S7790",
@@ -10526,7 +11046,8 @@
   "scope": "Main",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "dynamically-constructed-templates"
  },
  {
   "key": "S8441",
@@ -10543,7 +11064,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-session-cookies-on-static-assets"
  },
  {
   "key": "S8479",
@@ -10563,7 +11085,8 @@
   "scope": "Main",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "dompurify-unsafe-config"
  },
  {
   "key": "S8754",
@@ -10589,7 +11112,8 @@
   "scope": "Tests",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-duplicate-test-title"
  },
  {
   "key": "S8780",
@@ -10616,7 +11140,8 @@
   "scope": "Tests",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "async-test-assertions"
  },
  {
   "key": "S8781",
@@ -10645,7 +11170,8 @@
   "scope": "Tests",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "no-empty-test-title"
  },
  {
   "key": "S8782",
@@ -10667,7 +11193,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "hooks-before-test-cases"
  },
  {
   "key": "S8783",
@@ -10688,7 +11215,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-forced-browser-interaction"
  },
  {
   "key": "S8784",
@@ -10719,7 +11247,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "assertions-in-test-cases"
  },
  {
   "key": "S8785",
@@ -10742,7 +11271,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "synchronous-suite-callback"
  },
  {
   "key": "S8786",
@@ -10762,7 +11292,8 @@
   "scope": "Main",
   "effort": {
    "const": 20
-  }
+  },
+  "eslint": "super-linear-regex"
  },
  {
   "key": "S8907",
@@ -10784,7 +11315,8 @@
   "scope": "Main",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "prefer-native-lodash-alternative"
  },
  {
   "key": "S8927",
@@ -10804,7 +11336,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-default-utility-imports"
  },
  {
   "key": "S8932",
@@ -10824,7 +11357,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "memoize-cache-key"
  },
  {
   "key": "S8950",
@@ -10843,7 +11377,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-required-prop-with-default"
  },
  {
   "key": "S8951",
@@ -10862,7 +11397,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-mutating-props"
  },
  {
   "key": "S8957",
@@ -10881,7 +11417,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "require-prop-types"
  },
  {
   "key": "S8959",
@@ -10904,7 +11441,8 @@
   "scope": "Tests",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "no-debug-commands-in-ui-tests"
  },
  {
   "key": "S8960",
@@ -10927,7 +11465,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-mixed-completion-style"
  },
  {
   "key": "S8961",
@@ -10946,7 +11485,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "require-explicit-emits"
  },
  {
   "key": "S8962",
@@ -10964,7 +11504,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "require-typed-ref"
  },
  {
   "key": "S8967",
@@ -10986,7 +11527,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-interpolation-in-inline-snapshots"
  },
  {
   "key": "S8968",
@@ -11010,7 +11552,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "explicit-test-skip"
  },
  {
   "key": "S8980",
@@ -11033,7 +11576,8 @@
   },
   "params": {
    "isStrict": "false"
-  }
+  },
+  "eslint": "no-unnecessary-act"
  },
  {
   "key": "S8981",
@@ -11053,7 +11597,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-global-regexp-flag-in-query"
  },
  {
   "key": "S8982",
@@ -11072,7 +11617,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "require-v-for-key"
  },
  {
   "key": "S8984",
@@ -11091,7 +11637,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "valid-v-for"
  },
  {
   "key": "S8985",
@@ -11111,7 +11658,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-wait-for-side-effects"
  },
  {
   "key": "S8987",
@@ -11130,7 +11678,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-use-v-if-with-v-for"
  },
  {
   "key": "S8988",
@@ -11149,7 +11698,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-side-effects-in-computed-properties"
  },
  {
   "key": "S8990",
@@ -11169,7 +11719,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-promise-in-fire-event"
  },
  {
   "key": "S8998",
@@ -11192,7 +11743,8 @@
   "scope": "Tests",
   "effort": {
    "const": 0
-  }
+  },
+  "eslint": "no-empty-parameterized-test-dataset"
  },
  {
   "key": "S9011",
@@ -11212,7 +11764,8 @@
   "scope": "Main",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "button-has-type"
  },
  {
   "key": "S9012",
@@ -11232,7 +11785,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-wait-for-snapshot"
  },
  {
   "key": "S9019",
@@ -11251,7 +11805,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-ref-as-operand"
  },
  {
   "key": "S9020",
@@ -11271,7 +11826,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-find-by"
  },
  {
   "key": "S9025",
@@ -11290,7 +11846,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-async-in-computed-properties"
  },
  {
   "key": "S9026",
@@ -11310,7 +11867,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "await-async-queries"
  },
  {
   "key": "S9027",
@@ -11330,7 +11888,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "testing-library-query-assertion"
  },
  {
   "key": "S9072",
@@ -11355,7 +11914,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "synchronous-exception-assertions"
  },
  {
   "key": "S9073",
@@ -11378,7 +11938,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "composite-assertions"
  },
  {
   "key": "S9078",
@@ -11401,7 +11962,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-duplicate-parameterized-test-case"
  },
  {
   "key": "S9107",
@@ -11420,7 +11982,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "require-prop-type-constructor"
  },
  {
   "key": "S9114",
@@ -11441,7 +12004,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-debounce-throttle-in-render"
  },
  {
   "key": "S9115",
@@ -11461,7 +12025,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "await-async-events"
  },
  {
   "key": "S9128",
@@ -11480,7 +12045,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-dupe-keys"
  },
  {
   "key": "S9135",
@@ -11500,7 +12066,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "avoid-mutating-nested-properties-of-shallow-clones"
  },
  {
   "key": "S9144",
@@ -11521,7 +12088,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-native-jquery-alternative"
  },
  {
   "key": "S9145",
@@ -11540,7 +12108,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-vue-class-component"
  },
  {
   "key": "S9150",
@@ -11559,7 +12128,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-vue-mixins"
  },
  {
   "key": "S9153",
@@ -11579,7 +12149,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "testing-library-prefer-query-by-disappearance"
  },
  {
   "key": "S9162",
@@ -11599,7 +12170,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-cypress-should"
  },
  {
   "key": "S9163",
@@ -11618,7 +12190,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-mutate-reactive-state-in-updated-hook"
  },
  {
   "key": "S9169",
@@ -11638,7 +12211,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "vitest-mock-at-module-scope"
  },
  {
   "key": "S9332",
@@ -11659,7 +12233,8 @@
   "scope": "Tests",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-networkidle-wait"
  },
  {
   "key": "S9333",
@@ -11679,7 +12254,8 @@
   "scope": "Tests",
   "effort": {
    "const": 2
-  }
+  },
+  "eslint": "no-await-sync-queries"
  },
  {
   "key": "S9339",
@@ -11700,7 +12276,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "prefer-native-axios-alternative"
  },
  {
   "key": "S9379",
@@ -11720,7 +12297,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-autofocus"
  },
  {
   "key": "S9380",
@@ -11740,7 +12318,8 @@
   "scope": "Main",
   "effort": {
    "const": 1
-  }
+  },
+  "eslint": "scope"
  },
  {
   "key": "S9381",
@@ -11762,7 +12341,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-nesting"
  },
  {
   "key": "S9382",
@@ -11784,7 +12364,8 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-await-in-loop"
  },
  {
   "key": "S9383",
@@ -11806,6 +12387,7 @@
   "scope": "Main",
   "effort": {
    "const": 5
-  }
+  },
+  "eslint": "no-floating-promises"
  }
 ]

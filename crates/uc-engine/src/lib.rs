@@ -6,6 +6,7 @@ pub mod config;
 pub mod coverage;
 pub mod cpd;
 pub mod discover;
+pub mod filter;
 pub mod gate;
 pub mod measures;
 pub mod report;
@@ -58,6 +59,8 @@ pub struct Analysis {
     pub js_rules: usize,
     pub go_rules: usize,
     pub cached_files: usize,
+    /// Files skipped as bundles, minified or generated code.
+    pub skipped_files: usize,
     pub bytes: u64,
     pub warnings: Vec<String>,
 }
@@ -102,13 +105,11 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
     let root = opts.root.canonicalize().map_err(|e| format!("{}: {e}", opts.root.display()))?;
     let mut warnings = Vec::new();
 
-    let all_profile = cfg.analysis.profile == "all";
-    let js_rules = uc_js::JsRules::new(|m| {
-        rule_params(&cfg.rules, &m.key, !m.deprecated && (all_profile || m.sonar_way))
-    });
-    let go_rules = uc_go::GoRules::new(|m| {
-        rule_params(&cfg.go_rules, &m.key, !m.deprecated && (all_profile || m.sonar_way))
-    });
+    // Profiles: "sonar-way" (default), "all", or "none" (only rules enabled explicitly).
+    let profile = cfg.analysis.profile.as_str();
+    let default_on = |m: &RuleMeta| !m.deprecated && (profile == "all" || (profile != "none" && m.sonar_way));
+    let js_rules = uc_js::JsRules::new(|m| rule_params(&cfg.rules, &m.key, default_on(m)));
+    let go_rules = uc_go::GoRules::new(|m| rule_params(&cfg.go_rules, &m.key, default_on(m)));
 
     let files = discover::discover(&root, &opts.paths, cfg)?;
     let t_disc = t0.elapsed();
@@ -132,6 +133,15 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
                 Ok(s) => s,
                 Err(e) => String::from_utf8_lossy(e.as_bytes()).into_owned(),
             };
+            let skip = match f.lang {
+                FileLang::Js => {
+                    (cfg.analysis.detect_bundles && filter::is_bundle(&src)) || filter::is_minified(&f.rel, &src)
+                }
+                FileLang::Go => filter::is_generated_go(&src),
+            };
+            if skip {
+                return None;
+            }
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| match f.lang {
                 FileLang::Js => uc_js::analyze(&f.rel, &src, f.is_test, &js_rules, &js_opts),
                 FileLang::Go => uc_go::analyze(&f.rel, &src, f.is_test, &go_rules, &go_opts),
@@ -149,6 +159,7 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
     let t_an = t1.elapsed();
     let cached_files = analyzed.iter().filter(|f| f.cached).count();
     let bytes = files.iter().map(|f| f.size).sum();
+    let skipped_files = files.len() - analyzed.len();
 
     // Duplication.
     let t2 = Instant::now();
@@ -218,6 +229,7 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
         js_rules: js_rules.len(),
         go_rules: go_rules.len(),
         cached_files,
+        skipped_files,
         bytes,
         warnings,
     })

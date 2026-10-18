@@ -40,7 +40,7 @@ pub fn globset(patterns: &[String]) -> Result<GlobSet, String> {
 pub fn lang_of(path: &str) -> Option<FileLang> {
     let ext = path.rsplit_once('.')?.1;
     match ext {
-        "js" | "jsx" | "mjs" | "cjs" | "ts" | "tsx" | "mts" | "cts" => Some(FileLang::Js),
+        "js" | "jsx" | "mjs" | "cjs" | "ts" | "tsx" | "mts" | "cts" | "vue" | "html" | "htm" => Some(FileLang::Js),
         "go" => Some(FileLang::Go),
         _ => None,
     }
