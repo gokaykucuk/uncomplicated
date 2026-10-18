@@ -26,11 +26,34 @@ thread_local! {
     });
 }
 
+/// Parses Go source. Go 1.26's `new(expr)` isn't in the tree-sitter grammar yet: when a file
+/// fails to parse, retry with `new(` respelled `nex(` (same length, so positions are unchanged;
+/// rules read text from the original source).
+fn parse(src: &str) -> Option<tree_sitter::Tree> {
+    let tree = PARSER.with_borrow_mut(|p| p.parse(src, None))?;
+    if !tree.root_node().has_error() || !src.contains("new(") {
+        return Some(tree);
+    }
+    let mut bytes = src.as_bytes().to_vec();
+    let mut i = 0;
+    while let Some(j) = memchr::memmem::find(&bytes[i..], b"new(") {
+        let at = i + j;
+        let prev = at.checked_sub(1).map(|k| bytes[k]);
+        if !prev.is_some_and(|c| c.is_ascii_alphanumeric() || c == b'_' || c == b'.') {
+            bytes[at + 2] = b'x';
+        }
+        i = at + 4;
+    }
+    let alt = String::from_utf8(bytes).ok()?;
+    let retry = PARSER.with_borrow_mut(|p| p.parse(&alt, None))?;
+    Some(if retry.root_node().has_error() { tree } else { retry })
+}
+
 /// Analyzes one Go file.
 pub fn analyze(path: &str, src: &str, is_test: bool, rules: &GoRules, opts: &FileOptions) -> FileResult {
     let mut result = FileResult { path: path.to_string(), lang: Some(Lang::Go), is_test, ..FileResult::default() };
     let lines = LineIndex::new(src);
-    let Some(tree) = PARSER.with_borrow_mut(|p| p.parse(src, None)) else {
+    let Some(tree) = parse(src) else {
         result.parse_error = Some("parse failed".into());
         result.metrics.lines = lines.line_count();
         return result;
