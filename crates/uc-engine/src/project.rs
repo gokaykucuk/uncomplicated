@@ -48,6 +48,7 @@ impl Projects {
         let (has_pkg, has_ts) = (pkg.is_file(), ts.is_file());
         let info = if has_pkg || has_ts {
             let mut info = (*inherited).clone();
+            info.has_package_json |= has_pkg;
             if has_pkg && let Some((deps, ty, node)) = read_package_json(&pkg) {
                 info.deps.extend(deps);
                 info.module_type = ty;

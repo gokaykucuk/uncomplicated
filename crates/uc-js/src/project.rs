@@ -9,6 +9,8 @@ use serde_json::Value;
 
 #[derive(Debug, Clone, Default)]
 pub struct ProjectInfo {
+    /// True if a `package.json` encloses the file.
+    pub has_package_json: bool,
     /// Package name → version range, from dependencies/devDependencies/peerDependencies of every
     /// `package.json` between the file and the project root.
     pub deps: FxHashMap<String, String>,

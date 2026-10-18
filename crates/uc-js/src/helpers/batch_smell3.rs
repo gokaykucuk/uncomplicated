@@ -441,11 +441,9 @@ pub fn es_version_allows(ctx: &Ctx<'_, '_>, required: u32, downlevelable: bool) 
     detected_es_year(ctx).is_none_or(|y| y >= required)
 }
 
-/// A `package.json` encloses the file (approximation: one with dependencies, `type` or
-/// `engines.node`).
+/// A `package.json` encloses the file.
 pub fn has_package_json(ctx: &Ctx<'_, '_>) -> bool {
-    let p = ctx.file.project;
-    !p.deps.is_empty() || p.module_type.is_some() || p.engines_node.is_some()
+    ctx.file.project.has_package_json
 }
 /// Globals predefined by SonarJS (its default ESLint environments and `sonar.javascript.globals`).
 /// Sorted, for binary search.
