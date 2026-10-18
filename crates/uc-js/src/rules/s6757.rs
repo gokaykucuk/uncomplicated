@@ -71,7 +71,8 @@ impl JsRule for Rule {
         if bound_to_class_member(ctx, node.id()) {
             return;
         }
-        ctx.report(
+        report_react(
+            ctx,
             node.kind().span(),
             "Stateless functional components should not use `this`",
         );
@@ -88,6 +89,7 @@ mod tests {
             "S6757",
             "a.jsx",
             r#"
+import React from "react";
 function FunctionalComponent() {
   const value = this.props.value; // Noncompliant {{Stateless functional components should not use `this`}}
   return <div>{value}</div>;

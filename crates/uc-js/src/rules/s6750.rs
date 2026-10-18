@@ -1,4 +1,5 @@
 //! The return value of "ReactDOM.render" should not be used
+use crate::helpers::batch_react::*;
 use crate::prelude::*;
 
 pub struct Rule;
@@ -39,7 +40,8 @@ impl JsRule for Rule {
             _ => false,
         };
         if used {
-            ctx.report(
+            report_react(
+                ctx,
                 m.span,
                 "Do not depend on the return value from ReactDOM.render",
             );
@@ -57,6 +59,7 @@ mod tests {
             "S6750",
             "a.jsx",
             r#"
+import React from "react";
 const inst = ReactDOM.render(<App />, root); // Noncompliant {{Do not depend on the return value from ReactDOM.render}}
 ReactDOM.render(<App />, root);
 const f = () => ReactDOM.render(<App />, root); // Noncompliant

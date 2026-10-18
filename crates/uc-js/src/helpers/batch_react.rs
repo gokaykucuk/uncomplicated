@@ -1047,10 +1047,13 @@ const OBJECT_PROTOTYPE: &[&str] = &[
 ];
 
 impl PropUsages {
-    fn destructure(&mut self, p: &ObjectPattern<'_>, parents: &[String]) {
+    fn destructure(&mut self, ctx: &Ctx<'_, '_>, p: &ObjectPattern<'_>, parents: &[String]) {
         if p.rest.is_some() {
             self.escaped = true;
         }
+        // Upstream quirk: after a nested pattern, later entries of the same pattern are merged
+        // into the component's list, dropping names already recorded.
+        let mut stale = false;
         for bp in &p.properties {
             if bp.computed {
                 self.escaped = true;
@@ -1061,16 +1064,23 @@ impl PropUsages {
             };
             let mut names = parents.to_vec();
             names.push(name.to_string());
-            self.list.push(PropUsage {
-                names: names.clone(),
-                span: bp.span,
-            });
-            let inner = match &bp.value {
-                BindingPattern::AssignmentPattern(a) => &a.left,
-                v => v,
-            };
-            if let BindingPattern::ObjectPattern(o) = inner {
-                self.destructure(o, &names);
+            if !(stale && self.list.iter().any(|u| u.names == names)) {
+                self.list.push(PropUsage {
+                    names: names.clone(),
+                    span: bp.span,
+                });
+            }
+            match &bp.value {
+                BindingPattern::ObjectPattern(o) => {
+                    self.destructure(ctx, o, &names);
+                    stale = true;
+                }
+                BindingPattern::BindingIdentifier(id) => {
+                    if let Some(sym) = id.symbol_id.get() {
+                        self.track_var(ctx, sym, &names);
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -1107,12 +1117,36 @@ impl PropUsages {
                 AstKind::StaticMemberExpression(m) if m.object.span() == mspan => cur = parent,
                 AstKind::ComputedMemberExpression(m) if m.object.span() == mspan => cur = parent,
                 AstKind::VariableDeclarator(v) => {
-                    if let BindingPattern::ObjectPattern(o) = &v.id {
-                        self.destructure(o, &names);
+                    match &v.id {
+                        BindingPattern::ObjectPattern(o) => self.destructure(ctx, o, &names),
+                        BindingPattern::BindingIdentifier(id) => {
+                            if let Some(sym) = id.symbol_id.get() {
+                                self.track_var(ctx, sym, &names);
+                            }
+                        }
+                        _ => {}
                     }
                     return;
                 }
                 _ => return,
+            }
+        }
+    }
+
+    /// `propVariables` of upstream: a variable holding `props.a.b` (`names`); member accesses on it
+    /// are usages of nested props.
+    fn track_var(&mut self, ctx: &Ctx<'_, '_>, sym: SymbolId, names: &[String]) {
+        if names.len() > 6 {
+            return;
+        }
+        for r in ctx.scoping().get_resolved_references(sym) {
+            let id = r.node_id();
+            let parent = ctx.parent(id);
+            let my = ctx.node(id).kind().span();
+            if let AstKind::StaticMemberExpression(m) = parent.kind()
+                && m.object.span() == my
+            {
+                self.member_chain(ctx, parent.id(), names);
             }
         }
     }
@@ -1142,7 +1176,7 @@ impl PropUsages {
                     if v.init.as_ref().is_some_and(|i| strip_ts(i).span() == my) =>
                 {
                     match &v.id {
-                        BindingPattern::ObjectPattern(o) => self.destructure(o, &[]),
+                        BindingPattern::ObjectPattern(o) => self.destructure(ctx, o, &[]),
                         _ => self.escaped = true,
                     }
                 }
@@ -1170,7 +1204,7 @@ pub fn prop_usages(ctx: &Ctx<'_, '_>, comp: &ComponentInfo<'_>) -> PropUsages {
             p => p,
         };
         match pattern {
-            BindingPattern::ObjectPattern(o) => u.destructure(o, &[]),
+            BindingPattern::ObjectPattern(o) => u.destructure(ctx, o, &[]),
             BindingPattern::BindingIdentifier(id) if id.name == "props" => {
                 if let Some(sym) = id.symbol_id.get() {
                     u.track_symbol(ctx, sym, comp.node);
@@ -1214,7 +1248,7 @@ pub fn prop_usages(ctx: &Ctx<'_, '_>, comp: &ComponentInfo<'_>) -> PropUsages {
                         }
                     }
                     AstKind::VariableDeclarator(v) => match &v.id {
-                        BindingPattern::ObjectPattern(o) => u.destructure(o, &[]),
+                        BindingPattern::ObjectPattern(o) => u.destructure(ctx, o, &[]),
                         _ => u.escaped = true,
                     },
                     _ => u.escaped = true,
@@ -1225,18 +1259,56 @@ pub fn prop_usages(ctx: &Ctx<'_, '_>, comp: &ComponentInfo<'_>) -> PropUsages {
             {
                 u.escaped = true;
             }
-            AstKind::FormalParameter(p) => {
-                // `nextProps` / `prevProps` / `props` parameters of lifecycle methods.
-                if let BindingPattern::BindingIdentifier(id) = &p.pattern
-                    && matches!(id.name.as_str(), "props" | "nextProps" | "prevProps")
-                {
-                    u.escaped = true;
+            AstKind::IdentifierReference(id)
+                if matches!(id.name.as_str(), "props" | "nextProps" | "prevProps")
+                    && parent_es6_component(ctx, n.id()).map(|c| c.id()) == Some(comp.node) =>
+            {
+                let parent = ctx.parent(n.id());
+                let tracked = in_lifecycle_or_constructor(ctx, n.id());
+                match parent.kind() {
+                    AstKind::StaticMemberExpression(pm) if tracked && pm.object.span() == sp => {
+                        u.member_chain(ctx, parent.id(), &[])
+                    }
+                    AstKind::VariableDeclarator(v)
+                        if tracked && v.init.as_ref().is_some_and(|i| strip_ts(i).span() == sp) =>
+                    {
+                        match &v.id {
+                            BindingPattern::ObjectPattern(o) => u.destructure(ctx, o, &[]),
+                            _ => u.escaped = true,
+                        }
+                    }
+                    AstKind::CallExpression(c) if matches!(c.callee, Expression::Super(_)) => {}
+                    _ => u.escaped = true,
                 }
             }
             _ => {}
         }
     }
     u
+}
+
+const PROPS_LIFECYCLE: &[&str] = &[
+    "componentWillReceiveProps",
+    "shouldComponentUpdate",
+    "componentWillUpdate",
+    "componentDidUpdate",
+    "getDerivedStateFromProps",
+    "getSnapshotBeforeUpdate",
+    "UNSAFE_componentWillReceiveProps",
+    "UNSAFE_componentWillUpdate",
+];
+
+fn in_lifecycle_or_constructor(ctx: &Ctx<'_, '_>, id: NodeId) -> bool {
+    ancestors(ctx, id).any(|a| match a.kind() {
+        AstKind::MethodDefinition(m) => {
+            m.kind == MethodDefinitionKind::Constructor
+                || property_key_name(&m.key).is_some_and(|k| PROPS_LIFECYCLE.contains(&k))
+        }
+        AstKind::PropertyDefinition(p) => {
+            property_key_name(&p.key).is_some_and(|k| PROPS_LIFECYCLE.contains(&k))
+        }
+        _ => false,
+    })
 }
 
 fn scan_spreads(ctx: &Ctx<'_, '_>, func: NodeId, span: Span, u: &mut PropUsages) {
@@ -1438,6 +1510,81 @@ pub fn file_uses_react(ctx: &Ctx<'_, '_>) -> bool {
     if ctx.nodes().contains(AstType::JSXElement) || ctx.nodes().contains(AstType::JSXFragment) {
         return true;
     }
+    ctx.nodes().program().body.iter().any(|s| match s {
+        Statement::ImportDeclaration(d) => reactish(&d.source.value),
+        Statement::VariableDeclaration(v) => v.declarations.iter().any(|d| {
+            d.init
+                .as_ref()
+                .and_then(require_module)
+                .is_some_and(reactish)
+        }),
+        _ => false,
+    })
+}
+
+/// True if the file belongs to another JSX framework (Vue, Preact, Solid, Stencil, ...): Sonar only
+/// runs React rules on projects depending on React.
+pub fn non_react_jsx_framework(ctx: &Ctx<'_, '_>) -> bool {
+    let other = |m: &str| {
+        matches!(
+            m,
+            "vue"
+                | "preact"
+                | "solid-js"
+                | "@stencil/core"
+                | "inferno"
+                | "@builder.io/qwik"
+                | "mithril"
+                | "hyperapp"
+        ) || [
+            "@vue/",
+            "preact/",
+            "solid-js/",
+            "hono/jsx",
+            "@builder.io/qwik/",
+        ]
+        .iter()
+        .any(|p| m.starts_with(p))
+    };
+    let imports_other = ctx.nodes().program().body.iter().any(|s| match s {
+        Statement::ImportDeclaration(d) => other(&d.source.value),
+        Statement::VariableDeclaration(v) => v
+            .declarations
+            .iter()
+            .any(|d| d.init.as_ref().and_then(require_module).is_some_and(other)),
+        _ => false,
+    });
+    imports_other
+        || (ctx.src.contains("@jsx")
+            && ctx.comments().iter().any(|c| {
+                let t = ctx.comment_text(c);
+                (t.contains("@jsxImportSource") && !t.contains("react")) || t.contains("@jsx h")
+            }))
+}
+
+/// Reports unless the file belongs to another JSX framework (rules requiring the React dependency).
+pub fn report_react(ctx: &Ctx<'_, '_>, span: Span, msg: impl Into<String>) {
+    if likely_react(ctx) {
+        ctx.report(span, msg);
+    }
+}
+
+/// The file imports React (or mentions `React.`) and does not use another JSX framework.
+pub fn likely_react(ctx: &Ctx<'_, '_>) -> bool {
+    (imports_react(ctx) || ctx.src.contains("React.")) && !non_react_jsx_framework(ctx)
+}
+
+/// Strict evidence that the file is React code: an import or require of `react*`, `next*` or
+/// `@testing-library/react*`.
+pub fn imports_react(ctx: &Ctx<'_, '_>) -> bool {
+    let reactish = |m: &str| {
+        m == "react"
+            || m.starts_with("react-")
+            || m.starts_with("react/")
+            || m == "next"
+            || m.starts_with("next/")
+            || m.starts_with("@testing-library/react")
+    };
     ctx.nodes().program().body.iter().any(|s| match s {
         Statement::ImportDeclaration(d) => reactish(&d.source.value),
         Statement::VariableDeclaration(v) => v.declarations.iter().any(|d| {

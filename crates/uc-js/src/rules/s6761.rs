@@ -64,7 +64,7 @@ impl JsRule for Rule {
                     || jsx_has_prop(ctx, &el.opening_element, "children");
                 if has_children && jsx_has_prop(ctx, &el.opening_element, "dangerouslySetInnerHTML")
                 {
-                    ctx.report(el.span, MSG);
+                    report_react(ctx, el.span, MSG);
                 }
             }
             AstKind::CallExpression(c) => {
@@ -85,7 +85,7 @@ impl JsRule for Rule {
                 let has_children =
                     c.arguments.len() > 2 || object_has_prop(ctx, props, "children", 0);
                 if has_children && object_has_prop(ctx, props, "dangerouslySetInnerHTML", 0) {
-                    ctx.report(c.span, MSG);
+                    report_react(ctx, c.span, MSG);
                 }
             }
             _ => {}

@@ -92,7 +92,7 @@ impl JsRule for Rule {
         let mut report = |span: Span| {
             if !reported.contains(&span) {
                 reported.push(span);
-                ctx.report(span, MSG);
+                report_react(ctx, span, MSG);
             }
         };
         let mut i = node.id().index() + 1;

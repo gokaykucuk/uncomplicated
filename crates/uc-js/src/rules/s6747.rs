@@ -998,6 +998,13 @@ fn is_valid_data_attribute(name: &str) -> bool {
             .is_some_and(|p| p.eq_ignore_ascii_case("data-xml"))
 }
 
+/// Sonar only runs this rule on React projects; without the manifest, require a React import.
+fn report(ctx: &Ctx<'_, '_>, span: Span, msg: String) {
+    if imports_react(ctx) && !non_react_jsx_framework(ctx) {
+        ctx.report(span, msg);
+    }
+}
+
 fn uses_stencil(ctx: &Ctx<'_, '_>) -> bool {
     ctx.nodes().program().body.iter().any(|s| {
         matches!(s, Statement::ImportDeclaration(d) if d.source.value == "@stencil/core" && !d.import_kind.is_type())
@@ -1019,7 +1026,7 @@ impl JsRule for Rule {
         }
         // jsx-a11y/aria-props, on every element.
         if actual.starts_with("aria-") && !ARIA_QUERY.contains(&actual) {
-            ctx.report(attr.span, aria_message(actual));
+            report(ctx, attr.span, aria_message(actual));
             return;
         }
         if self.ignore.iter().any(|i| i == actual) || FRAMEWORK_PROPS.contains(&actual) {
@@ -1052,7 +1059,8 @@ impl JsRule for Rule {
         }
         if let Some((_, allowed)) = ATTRIBUTE_TAGS_MAP.iter().find(|(k, _)| *k == name) {
             if !allowed.contains(&tag) {
-                ctx.report(
+                report(
+                    ctx,
                     attr.span,
                     format!(
                         "Invalid property '{actual}' found on tag '{tag}', but it is only allowed on: {}",
@@ -1064,11 +1072,12 @@ impl JsRule for Rule {
         }
         match standard_name(name) {
             Some(std) if std == name => {}
-            Some(std) => ctx.report(
+            Some(std) => report(
+                ctx,
                 attr.span,
                 format!("Unknown property '{actual}' found, use '{std}' instead"),
             ),
-            None => ctx.report(attr.span, format!("Unknown property '{actual}' found")),
+            None => report(ctx, attr.span, format!("Unknown property '{actual}' found")),
         }
     }
 }
@@ -1083,6 +1092,7 @@ mod tests {
             "S6747",
             "a.jsx",
             r#"
+import React from "react";
 const a = <div class="x" />; // Noncompliant {{Unknown property 'class' found, use 'className' instead}}
 const b = <div onclick={f} />; // Noncompliant {{Unknown property 'onclick' found, use 'onClick' instead}}
 const c = <div className="x" onClick={f} data-foo="1" aria-label="x" />;

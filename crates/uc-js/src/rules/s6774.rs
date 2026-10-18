@@ -36,7 +36,8 @@ impl JsRule for Rule {
             if declared.contains(&u.names[0].as_str()) {
                 continue;
             }
-            ctx.report(
+            report_react(
+                ctx,
                 u.span,
                 format!("'{}' is missing in props validation", u.names.join(".")),
             );

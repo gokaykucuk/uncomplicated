@@ -100,7 +100,11 @@ impl JsRule for Rule {
         if ignored_in_constructor(ctx, node.id(), start) {
             return;
         }
-        ctx.report(report_span, "Do not mutate state directly. Use setState().");
+        report_react(
+            ctx,
+            report_span,
+            "Do not mutate state directly. Use setState().",
+        );
     }
 }
 

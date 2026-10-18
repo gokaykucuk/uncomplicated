@@ -12,16 +12,22 @@ impl Rule {
 
 const MSG: &str = "Convert the conditional to a boolean to avoid leaked value";
 
-fn uses_react_native(ctx: &Ctx<'_, '_>) -> bool {
+/// Upstream sets its react-native flag when the import is visited, so only imports placed
+/// before the expression count.
+fn uses_react_native(ctx: &Ctx<'_, '_>, pos: u32) -> bool {
     let program = ctx.nodes().program();
-    program.body.iter().any(|s| match s {
-        Statement::ImportDeclaration(d) => d.source.value == "react-native",
-        Statement::VariableDeclaration(v) => v
-            .declarations
-            .iter()
-            .any(|d| d.init.as_ref().and_then(require_module) == Some("react-native")),
-        _ => false,
-    })
+    program
+        .body
+        .iter()
+        .take_while(|s| s.span().start < pos)
+        .any(|s| match s {
+            Statement::ImportDeclaration(d) => d.source.value == "react-native",
+            Statement::VariableDeclaration(v) => v
+                .declarations
+                .iter()
+                .any(|d| d.init.as_ref().and_then(require_module) == Some("react-native")),
+            _ => false,
+        })
 }
 
 fn check(ctx: &Ctx<'_, '_>, e: &Expression<'_>, rn: &mut Option<bool>) {
@@ -34,9 +40,9 @@ fn check(ctx: &Ctx<'_, '_>, e: &Expression<'_>, rn: &mut Option<bool>) {
     let t = type_of(ctx, e);
     let leaks = t.all(|t| matches!(t, Ty::Number | Ty::BigInt))
         || (t.all(|t| matches!(t, Ty::String))
-            && *rn.get_or_insert_with(|| uses_react_native(ctx)));
+            && *rn.get_or_insert_with(|| uses_react_native(ctx, e.span().start)));
     if leaks {
-        ctx.report(e.span(), MSG);
+        report_react(ctx, e.span(), MSG);
     }
 }
 
@@ -70,6 +76,7 @@ mod tests {
             "S6439",
             "a.tsx",
             r#"
+import React from "react";
 const C1 = (count, collection) => {
   count = 1;
   return <div>{count && <List elements={collection} />}</div>;
@@ -97,6 +104,7 @@ const N5 = (n: number) => <div>{n > 0 && <List />}</div>;
             "S6439",
             "a.tsx",
             r#"
+import React from "react";
 import { Text } from 'react-native';
 const C = (s: string) => <Text>{s && <List />}</Text>; // Noncompliant
 "#,

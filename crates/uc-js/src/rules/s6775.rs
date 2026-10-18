@@ -35,6 +35,16 @@ impl JsRule for Rule {
                 Some(k) => k,
                 None => return,
             },
+            // Context-typed class components (third type argument) are not inferred upstream.
+            None if comp.class.is_some_and(|c| {
+                c.heritage
+                    .as_ref()
+                    .and_then(|h| h.type_arguments.as_ref())
+                    .is_some_and(|a| a.params.len() > 2)
+            }) =>
+            {
+                return;
+            }
             None => match ts_props_type(ctx, &comp).and_then(|t| ts_props(ctx, t, 0)) {
                 Some(k) => k,
                 None => return,
@@ -46,14 +56,16 @@ impl JsRule for Rule {
         for d in defaults {
             match declared.iter().find(|p| p.name == d.name) {
                 Some(p) if !p.required => {}
-                Some(_) => ctx.report(
+                Some(_) => report_react(
+                    ctx,
                     d.span,
                     format!(
                         "defaultProp \"{}\" defined for isRequired propType.",
                         d.name
                     ),
                 ),
-                None => ctx.report(
+                None => report_react(
+                    ctx,
                     d.span,
                     format!(
                         "defaultProp \"{}\" has no corresponding propTypes declaration.",
@@ -75,6 +87,7 @@ mod tests {
             "S6775",
             "a.jsx",
             r#"
+import React from "react";
 function Hello(props) { return <div>{props.name}</div>; }
 Hello.propTypes = {
   name: PropTypes.string.isRequired,
@@ -102,6 +115,7 @@ NoTypes.defaultProps = { a: 1 };
             "S6775",
             "a.tsx",
             r#"
+import React from "react";
 interface Props { a: string; b?: string; }
 function Foo(props: Props) { return <div>{props.a}</div>; }
 Foo.defaultProps = {

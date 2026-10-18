@@ -37,7 +37,8 @@ impl JsRule for Rule {
                 _ => None,
             }
         });
-        ctx.report(
+        report_react(
+            ctx,
             c.span,
             format!(
                 "{} does not need shouldComponentUpdate when extending React.PureComponent.",

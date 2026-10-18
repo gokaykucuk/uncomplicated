@@ -155,7 +155,8 @@ fn check(ctx: &Ctx<'_, '_>, name: &str, span: Span) {
         let new = new
             .map(|n| format!(", use {n} instead"))
             .unwrap_or_default();
-        ctx.report(
+        report_react(
+            ctx,
             span,
             format!("{old} is deprecated since React {version}{new}"),
         );

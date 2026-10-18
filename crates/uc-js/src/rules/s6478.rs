@@ -257,7 +257,7 @@ impl JsRule for Rule {
             AstKind::CallExpression(c) => c.span,
             _ => function_report_span(ctx, node),
         };
-        ctx.report(span, MSG);
+        report_react(ctx, span, MSG);
     }
 }
 

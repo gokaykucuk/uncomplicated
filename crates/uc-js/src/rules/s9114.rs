@@ -275,7 +275,7 @@ impl JsRule for Rule {
                 "This {k} function is recreated on every render, which resets its timer and defeats {purpose}. Initialize it in the constructor or as an instance property."
             )
         };
-        ctx.report(report_span, msg);
+        report_react(ctx, report_span, msg);
     }
 }
 

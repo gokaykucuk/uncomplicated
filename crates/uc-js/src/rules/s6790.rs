@@ -35,7 +35,8 @@ impl JsRule for Rule {
             _ => false,
         };
         if is_string {
-            ctx.report(
+            report_react(
+                ctx,
                 a.span,
                 "Using string literals in ref attributes is deprecated.",
             );
@@ -53,6 +54,7 @@ mod tests {
             "S6790",
             "a.jsx",
             r#"
+import React from "react";
 const a = <div ref="hello" />; // Noncompliant {{Using string literals in ref attributes is deprecated.}}
 const b = <div ref={"hello"} />; // Noncompliant
 const c = <div ref={`hello`} />;

@@ -80,8 +80,17 @@ impl JsRule for Rule {
             AstKind::Class(c) if c.is_declaration() && is_es6_component(c) => {
                 for el in &c.body.body {
                     let (key, computed, is_static) = match el {
-                        ClassElement::MethodDefinition(m) => (&m.key, m.computed, m.r#static),
-                        ClassElement::PropertyDefinition(p) => (&p.key, p.computed, p.r#static),
+                        // Abstract members are TS-only nodes upstream (not collected).
+                        ClassElement::MethodDefinition(m)
+                            if m.r#type == MethodDefinitionType::MethodDefinition =>
+                        {
+                            (&m.key, m.computed, m.r#static)
+                        }
+                        ClassElement::PropertyDefinition(p)
+                            if p.r#type == PropertyDefinitionType::PropertyDefinition =>
+                        {
+                            (&p.key, p.computed, p.r#static)
+                        }
                         _ => continue,
                     };
                     if !is_static && let Some(n) = key_name(key, computed) {
@@ -177,7 +186,7 @@ impl JsRule for Rule {
                     "Remove this property or method or refactor this component, as \"{name}\" is not used inside component body"
                 ),
             };
-            ctx.report(sp, msg);
+            report_react(ctx, sp, msg);
         }
     }
 }

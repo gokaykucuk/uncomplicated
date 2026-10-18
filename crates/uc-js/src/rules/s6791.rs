@@ -34,7 +34,8 @@ impl Rule {
             }
             if UNSAFE.contains(&name) || (self.check_aliases && ALIASES.contains(&name)) {
                 seen.push(name);
-                ctx.report(
+                report_react(
+                    ctx,
                     span,
                     format!("{name} is unsafe for use in async rendering."),
                 );

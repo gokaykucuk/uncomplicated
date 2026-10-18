@@ -301,7 +301,10 @@ impl JsRule for Rule {
         let AstKind::CallExpression(call) = node.kind() else {
             return;
         };
-        if !is_hook_callee(&call.callee) || !file_uses_react(ctx) {
+        if !is_hook_callee(&call.callee)
+            || !(imports_react(ctx)
+                || (ctx.src.contains("React.") && !non_react_jsx_framework(ctx)))
+        {
             return;
         }
         let hook = &call.callee;
@@ -332,7 +335,8 @@ impl JsRule for Rule {
             && ancestors(ctx, node.id())
                 .any(|a| matches!(a.kind(), AstKind::TryStatement(_) | AstKind::CatchClause(_)))
         {
-            ctx.report(
+            report_react(
+                ctx,
                 span,
                 format!("React Hook \"{name}\" cannot be called in a try/catch block."),
             );
@@ -341,21 +345,26 @@ impl JsRule for Rule {
         let in_do_while =
             ancestors(ctx, node.id()).any(|a| matches!(a.kind(), AstKind::DoWhileStatement(_)));
         if (fl.cycled || in_do_while) && !is_use {
-            ctx.report(
+            report_react(
+                ctx,
                 span,
-                format!("React Hook \"{name}\" may be executed more than once. Possibly because it is called in a loop. {ORDER}"),
+                format!(
+                    "React Hook \"{name}\" may be executed more than once. Possibly because it is called in a loop. {ORDER}"
+                ),
             );
         }
 
         if class_field {
-            ctx.report(
+            report_react(
+                ctx,
                 span,
                 format!("React Hook \"{name}\" cannot be called in a class component. {WHERE}"),
             );
             return;
         }
         let Some(func) = func else {
-            ctx.report(
+            report_react(
+                ctx,
                 span,
                 format!("React Hook \"{name}\" cannot be called at the top level. {WHERE}"),
             );
@@ -373,7 +382,8 @@ impl JsRule for Rule {
                 _ => false,
             };
             if is_async {
-                ctx.report(
+                report_react(
+                    ctx,
                     span,
                     format!("React Hook \"{name}\" cannot be called in an async function."),
                 );
@@ -389,7 +399,8 @@ impl JsRule for Rule {
                 } else {
                     ""
                 };
-                ctx.report(
+                report_react(
+                    ctx,
                     span,
                     format!("React Hook \"{name}\" is called conditionally. {ORDER}{suffix}"),
                 );
@@ -406,7 +417,8 @@ impl JsRule for Rule {
             _ => false,
         };
         if is_class_member {
-            ctx.report(
+            report_react(
+                ctx,
                 span,
                 format!("React Hook \"{name}\" cannot be called in a class component. {WHERE}"),
             );
@@ -414,7 +426,8 @@ impl JsRule for Rule {
             if is_typed_as_fc(ctx, func) {
                 return;
             }
-            ctx.report(
+            report_react(
+                ctx,
                 span,
                 format!(
                     "React Hook \"{name}\" is called in function \"{}\" that is neither a React function component nor a custom React Hook function. React component names must start with an uppercase letter. React Hook names must start with the word \"use\".",
@@ -422,7 +435,8 @@ impl JsRule for Rule {
                 ),
             );
         } else if !is_use && is_inside_component_or_hook(ctx, func) {
-            ctx.report(
+            report_react(
+                ctx,
                 span,
                 format!("React Hook \"{name}\" cannot be called inside a callback. {WHERE}"),
             );

@@ -86,12 +86,12 @@ impl JsRule for Rule {
             AstKind::VariableDeclarator(v) => match &v.id {
                 BindingPattern::ArrayPattern(p) => p,
                 _ => {
-                    ctx.report(call.span, MSG);
+                    report_react(ctx, call.span, MSG);
                     return;
                 }
             },
             _ => {
-                ctx.report(call.span, MSG);
+                report_react(ctx, call.span, MSG);
                 return;
             }
         };
@@ -122,7 +122,7 @@ impl JsRule for Rule {
                 _ => false,
             };
         if !ok {
-            ctx.report(pattern.span, MSG);
+            report_react(ctx, pattern.span, MSG);
         }
     }
 }

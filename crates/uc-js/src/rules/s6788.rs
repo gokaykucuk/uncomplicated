@@ -1,4 +1,5 @@
 //! React's "findDOMNode" should not be used
+use crate::helpers::batch_react::*;
 use crate::prelude::*;
 
 pub struct Rule;
@@ -24,7 +25,8 @@ impl JsRule for Rule {
             _ => false,
         };
         if hit {
-            ctx.report(
+            report_react(
+                ctx,
                 c.callee.span(),
                 "Do not use findDOMNode. It doesn't work with function components and is deprecated in StrictMode.",
             );
@@ -42,6 +44,7 @@ mod tests {
             "S6788",
             "a.jsx",
             r#"
+import React from "react";
 class MyComponent extends Component {
   componentDidMount() {
     findDOMNode(this).scrollIntoView(); // Noncompliant {{Do not use findDOMNode. It doesn't work with function components and is deprecated in StrictMode.}}
@@ -51,5 +54,18 @@ class MyComponent extends Component {
 }
 "#,
         );
+    }
+
+    #[test]
+    fn non_react_files() {
+        check(
+            "S6788",
+            "a.jsx",
+            r#"
+import { h } from 'vue';
+findDOMNode(this);
+"#,
+        );
+        check("S6788", "b.js", "findDOMNode(this);\n");
     }
 }

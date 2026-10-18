@@ -33,18 +33,27 @@ fn is_ts_skipped(t: &TSSignature<'_>) -> bool {
 }
 
 /// The TS type is referenced only by this component (a shared props type may be used elsewhere).
-fn single_use(ctx: &Ctx<'_, '_>, t: &TSType<'_>) -> bool {
-    match t {
-        TSType::TSTypeReference(r) => match &r.type_name {
-            TSTypeName::IdentifierReference(id) => ctx
-                .scoping()
-                .get_reference(id.reference_id())
-                .symbol_id()
-                .is_some_and(|s| ctx.scoping().get_resolved_references(s).count() == 1),
-            _ => false,
-        },
-        _ => true,
+/// The TS type is only referenced from within this component (a props type shared by several
+/// components may be used by the others).
+fn single_use(ctx: &Ctx<'_, '_>, t: &TSType<'_>, comp: &ComponentInfo<'_>) -> bool {
+    let TSType::TSTypeReference(r) = t else {
+        return true;
+    };
+    let TSTypeName::IdentifierReference(id) = &r.type_name else {
+        return false;
+    };
+    let Some(sym) = ctx.scoping().get_reference(id.reference_id()).symbol_id() else {
+        return false;
+    };
+    // The component's own extent, including `const Foo: FC<Props> = ...`.
+    let mut extent = ctx.node(comp.node).kind().span();
+    if let AstKind::VariableDeclarator(v) = estree_parent(ctx, comp.node).kind() {
+        extent = v.span;
     }
+    ctx.scoping().get_resolved_references(sym).all(|r| {
+        let sp = ctx.node(r.node_id()).kind().span();
+        extent.start <= sp.start && sp.end <= extent.end
+    })
 }
 
 fn ts_members<'a>(ctx: &Ctx<'a, '_>, t: &'a TSType<'a>) -> Option<&'a [TSSignature<'a>]> {
@@ -81,6 +90,23 @@ impl JsRule for Rule {
         let Some(comp) = component_info(ctx, node) else {
             return;
         };
+        if comp
+            .class
+            .is_some_and(|c| c.r#abstract || !c.decorators.is_empty())
+        {
+            return;
+        }
+        // Function components without a props parameter.
+        if let Some(f) = comp.func {
+            let has_param = match ctx.node(f).kind() {
+                AstKind::Function(f) => !f.params.items.is_empty(),
+                AstKind::ArrowFunctionExpression(a) => !a.params.items.is_empty(),
+                _ => false,
+            };
+            if !has_param {
+                return;
+            }
+        }
         let (declared, skip): (Vec<DeclaredProp<'a>>, Vec<Span>) =
             match component_static(ctx, &comp, "propTypes") {
                 Some(None) => return,
@@ -99,7 +125,7 @@ impl JsRule for Rule {
                     let Some(t) = ts_props_type(ctx, &comp) else {
                         return;
                     };
-                    if !single_use(ctx, t) {
+                    if !single_use(ctx, t, &comp) {
                         return;
                     }
                     let Some(keys) = ts_props(ctx, t, 0) else {
@@ -132,7 +158,8 @@ impl JsRule for Rule {
                 .iter()
                 .any(|u| u.names.last().is_some_and(|n| n == d.name));
             if !used {
-                ctx.report(
+                report_react(
+                    ctx,
                     d.key_span,
                     format!("'{}' PropType is defined but prop is never used", d.name),
                 );
@@ -151,6 +178,7 @@ mod tests {
             "S6767",
             "a.tsx",
             r#"
+import React from "react";
 interface Props {
   used: string;
   unused: number; // Noncompliant {{'unused' PropType is defined but prop is never used}}
@@ -177,6 +205,7 @@ function S2({ b }: Shared) { return <div>{b}</div>; }
             "S6767",
             "a.jsx",
             r#"
+import React from "react";
 function Hello(props) {
   return <div>{props.name}</div>;
 }
