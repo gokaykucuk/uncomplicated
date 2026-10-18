@@ -196,6 +196,12 @@ impl JsRule for Rule {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
+        // The upstream rule needs a TypeScript program (absent for HTML / Vue scripts).
+        if !helpers::batch_smell3::has_type_services(ctx)
+            || !helpers::batch_smell3::es_version_allows(ctx, 2020, true)
+        {
+            return;
+        }
         let AstKind::LogicalExpression(l) = node.kind() else {
             return;
         };

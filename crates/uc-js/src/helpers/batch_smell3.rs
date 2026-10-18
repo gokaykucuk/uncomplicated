@@ -344,3 +344,444 @@ pub fn certainly_not_thenable(t: &Ty) -> bool {
         )
     })
 }
+
+// ---- project context -------------------------------------------------------------------------
+
+/// SonarJS's `detectedEsYear` (`esLibToYear` of the program's `lib`): `None` means no restriction
+/// (`esnext`). The `lib` is the tsconfig's when set, otherwise `es<max(target, node version)>`.
+pub fn detected_es_year(ctx: &Ctx<'_, '_>) -> Option<u32> {
+    let p = ctx.file.project;
+    if !p.ts_lib.is_empty() {
+        if p.ts_lib.iter().any(|l| l.starts_with("esnext")) {
+            return None;
+        }
+        return p.ts_lib.iter().filter_map(|l| lib_year(l)).max();
+    }
+    let mut years = Vec::new();
+    if let Some(t) = &p.ts_target {
+        match t.as_str() {
+            "es3" | "es5" => years.push(2020),
+            t => years.extend(lib_year(t).filter(|y| (2015..=2030).contains(y))),
+        }
+    }
+    let node = p
+        .deps
+        .get("@types/node")
+        .and_then(|v| max_node_major(v))
+        .or_else(|| p.engines_node.as_deref().and_then(max_node_major));
+    if let Some(major) = node {
+        years.push(node_to_es(major));
+    }
+    years.into_iter().max()
+}
+
+/// `es2020`, `es2015.promise` → year.
+fn lib_year(lib: &str) -> Option<u32> {
+    let rest = lib.strip_prefix("es")?;
+    let digits = rest.get(..4)?;
+    if !digits.bytes().all(|b| b.is_ascii_digit()) || rest.len() > 4 && !rest[4..].starts_with('.')
+    {
+        return None;
+    }
+    digits.parse().ok()
+}
+
+/// Highest plausible Node.js major mentioned in a version range (SonarJS `parseMaxNodeMajor`).
+fn max_node_major(v: &str) -> Option<u32> {
+    let v = v.trim();
+    if v.is_empty() || v == "*" || v == "latest" {
+        return None;
+    }
+    let mut best = None;
+    let mut rest = v;
+    while let Some(i) = rest.find(|c: char| c.is_ascii_digit()) {
+        let s = &rest[i..];
+        let end = s.find(|c: char| !c.is_ascii_digit()).unwrap_or(s.len());
+        if let Ok(n) = s[..end].parse::<u32>()
+            && (8..100).contains(&n)
+        {
+            best = best.max(Some(n));
+        }
+        // Skip the rest of a dotted version (`18.2.0` counts once).
+        let mut j = end;
+        while s[j..].starts_with('.') && s[j + 1..].starts_with(|c: char| c.is_ascii_digit()) {
+            j += 1;
+            j += s[j..]
+                .find(|c: char| !c.is_ascii_digit())
+                .unwrap_or(s.len() - j);
+        }
+        rest = &s[j..];
+    }
+    best
+}
+
+fn node_to_es(major: u32) -> u32 {
+    const NODE_TO_ES: [(u32, u32); 8] = [
+        (22, 2024),
+        (20, 2023),
+        (18, 2022),
+        (16, 2021),
+        (14, 2020),
+        (12, 2019),
+        (10, 2018),
+        (8, 2017),
+    ];
+    NODE_TO_ES
+        .iter()
+        .find(|(n, _)| major >= *n)
+        .map_or(2017, |(_, y)| *y)
+}
+
+/// SonarJS `filter-ecma-version`: a rule requiring ES `required` runs unless the detected ES
+/// year is lower. `downlevelable` rules (syntax TypeScript compiles down) always run on TS files.
+pub fn es_version_allows(ctx: &Ctx<'_, '_>, required: u32, downlevelable: bool) -> bool {
+    if ctx.is_ts() && downlevelable {
+        return true;
+    }
+    detected_es_year(ctx).is_none_or(|y| y >= required)
+}
+
+/// A `package.json` encloses the file (approximation: one with dependencies, `type` or
+/// `engines.node`).
+pub fn has_package_json(ctx: &Ctx<'_, '_>) -> bool {
+    let p = ctx.file.project;
+    !p.deps.is_empty() || p.module_type.is_some() || p.engines_node.is_some()
+}
+/// Globals predefined by SonarJS (its default ESLint environments and `sonar.javascript.globals`).
+/// Sorted, for binary search.
+#[rustfmt::skip]
+pub static SONAR_GLOBALS: &[&str] = &[
+    "$", "$$", "$A", "$F", "$H", "$R", "$break", "$continue", "$w", "AI", "AICreateMonitor",
+    "AITextSession", "AbortController", "AbortPaymentEvent", "AbortSignal",
+    "AbsoluteOrientationSensor", "Abstract", "AbstractRange", "Accelerometer", "Accounts",
+    "AccountsClient", "AccountsCommon", "AccountsServer", "AggregateError", "Ajax", "AnalyserNode",
+    "Animation", "AnimationEffect", "AnimationEvent", "AnimationPlaybackEvent", "AnimationTimeline",
+    "App", "Application", "Array", "ArrayBuffer", "Assets", "AsyncDisposableStack", "Atomics",
+    "Attr", "Audio", "AudioBuffer", "AudioBufferSourceNode", "AudioContext", "AudioData",
+    "AudioDecoder", "AudioDestinationNode", "AudioEncoder", "AudioListener", "AudioNode",
+    "AudioParam", "AudioParamMap", "AudioPlaybackStats", "AudioProcessingEvent",
+    "AudioScheduledSourceNode", "AudioSession", "AudioSinkInfo", "AudioWorklet", "AudioWorkletNode",
+    "AuthenticatorAssertionResponse", "AuthenticatorAttestationResponse", "AuthenticatorResponse",
+    "Autocompleter", "Automation", "Backbone", "BackgroundFetchEvent", "BackgroundFetchManager",
+    "BackgroundFetchRecord", "BackgroundFetchRegistration", "BackgroundFetchUpdateUIEvent",
+    "BarProp", "BarcodeDetector", "BaseAudioContext", "BatteryManager", "BeforeUnloadEvent",
+    "BigInt", "BigInt64Array", "BigUint64Array", "BiquadFilterNode", "Blaze", "Blob", "BlobEvent",
+    "Bluetooth", "BluetoothCharacteristicProperties", "BluetoothDevice",
+    "BluetoothRemoteGATTCharacteristic", "BluetoothRemoteGATTDescriptor",
+    "BluetoothRemoteGATTServer", "BluetoothRemoteGATTService", "BluetoothUUID", "Boolean",
+    "BroadcastChannel", "BrowserCaptureMediaStreamTrack", "Buffer", "Builder", "BulkWriteResult",
+    "By", "ByteLengthQueuingStrategy", "CDATASection", "CSPViolationReportBody", "CSS",
+    "CSSAnimation", "CSSConditionRule", "CSSContainerRule", "CSSCounterStyleRule",
+    "CSSFontFaceDescriptors", "CSSFontFaceRule", "CSSFontFeatureValuesRule",
+    "CSSFontPaletteValuesRule", "CSSFunctionDeclarations", "CSSFunctionDescriptors",
+    "CSSFunctionRule", "CSSGroupingRule", "CSSImageValue", "CSSImportRule", "CSSKeyframeRule",
+    "CSSKeyframesRule", "CSSKeywordValue", "CSSLayerBlockRule", "CSSLayerStatementRule",
+    "CSSMarginRule", "CSSMathClamp", "CSSMathInvert", "CSSMathMax", "CSSMathMin", "CSSMathNegate",
+    "CSSMathProduct", "CSSMathSum", "CSSMathValue", "CSSMatrixComponent", "CSSMediaRule",
+    "CSSNamespaceRule", "CSSNestedDeclarations", "CSSNumericArray", "CSSNumericValue",
+    "CSSPageDescriptors", "CSSPageRule", "CSSPerspective", "CSSPositionTryDescriptors",
+    "CSSPositionTryRule", "CSSPositionValue", "CSSPropertyRule", "CSSPseudoElement", "CSSRotate",
+    "CSSRule", "CSSRuleList", "CSSScale", "CSSScopeRule", "CSSSkew", "CSSSkewX", "CSSSkewY",
+    "CSSStartingStyleRule", "CSSStyleDeclaration", "CSSStyleProperties", "CSSStyleRule",
+    "CSSStyleSheet", "CSSStyleValue", "CSSSupportsRule", "CSSTransformComponent",
+    "CSSTransformValue", "CSSTransition", "CSSTranslate", "CSSUnitValue", "CSSUnparsedValue",
+    "CSSVariableReferenceValue", "CSSViewTransitionRule", "Cache", "CacheStorage",
+    "CanMakePaymentEvent", "CanvasCaptureMediaStream", "CanvasCaptureMediaStreamTrack",
+    "CanvasGradient", "CanvasPattern", "CanvasRenderingContext2D", "CaptureController",
+    "CaretPosition", "ChannelMergerNode", "ChannelSplitterNode", "ChapterInformation",
+    "CharacterBoundsUpdateEvent", "CharacterData", "Class", "Client", "Clients", "Clipboard",
+    "ClipboardChangeEvent", "ClipboardEvent", "ClipboardItem", "CloseEvent", "CloseWatcher",
+    "CommandEvent", "Comment", "CompositionEvent", "CompressionStream", "ConstantSourceNode",
+    "ContentVisibilityAutoStateChangeEvent", "Control", "ConvolverNode", "CookieChangeEvent",
+    "CookieDeprecationLabel", "CookieStore", "CookieStoreManager", "Cordova",
+    "CountQueuingStrategy", "CrashReportContext", "CreateMonitor", "Credential",
+    "CredentialsContainer", "CropTarget", "Crypto", "CryptoKey", "CustomElementRegistry",
+    "CustomEvent", "CustomStateSet", "DDP", "DDPRateLimiter", "DDPServer", "DOMError",
+    "DOMException", "DOMImplementation", "DOMMatrix", "DOMMatrixReadOnly", "DOMParser", "DOMPoint",
+    "DOMPointReadOnly", "DOMQuad", "DOMRect", "DOMRectList", "DOMRectReadOnly", "DOMStringList",
+    "DOMStringMap", "DOMTokenList", "DartObject", "DataTransfer", "DataTransferItem",
+    "DataTransferItemList", "DataView", "Date", "DecompressionStream", "DedicatedWorkerGlobalScope",
+    "DelayNode", "DelegatedInkTrailPresenter", "Deps", "DeviceMotionEvent",
+    "DeviceMotionEventAcceleration", "DeviceMotionEventRotationRate", "DeviceOrientationEvent",
+    "DevicePosture", "DigitalCredential", "DisposableStack", "Document", "DocumentFragment",
+    "DocumentPictureInPicture", "DocumentPictureInPictureEvent", "DocumentTimeline", "DocumentType",
+    "DragEvent", "Draggable", "Draggables", "Droppables", "DynamicsCompressorNode", "EJSON",
+    "EditContext", "Effect", "Element", "ElementInternals", "Email", "EncodedAudioChunk",
+    "EncodedVideoChunk", "Enumerable", "Error", "ErrorEvent", "EvalError", "Event", "EventCounts",
+    "EventSource", "EventTarget", "ExtendableCookieChangeEvent", "ExtendableEvent",
+    "ExtendableMessageEvent", "External", "EyeDropper", "FeaturePolicy", "FederatedCredential",
+    "Fence", "FencedFrameConfig", "FetchEvent", "FetchLaterResult", "Field", "File", "FileList",
+    "FileReader", "FileReaderSync", "FileSystem", "FileSystemDirectoryEntry",
+    "FileSystemDirectoryHandle", "FileSystemDirectoryReader", "FileSystemEntry",
+    "FileSystemFileEntry", "FileSystemFileHandle", "FileSystemHandle", "FileSystemObserver",
+    "FileSystemSyncAccessHandle", "FileSystemWritableFileStream", "FinalizationRegistry",
+    "Float16Array", "Float32Array", "Float64Array", "FocusEvent", "FontData", "FontFace",
+    "FontFaceSet", "FontFaceSetLoadEvent", "Form", "FormData", "FormDataEvent", "FragmentDirective",
+    "Function", "GM", "GM_addElement", "GM_addStyle", "GM_addValueChangeListener", "GM_cookie",
+    "GM_deleteValue", "GM_deleteValues", "GM_download", "GM_getResourceText", "GM_getResourceURL",
+    "GM_getTab", "GM_getTabs", "GM_getValue", "GM_getValues", "GM_info", "GM_listValues", "GM_log",
+    "GM_notification", "GM_openInTab", "GM_registerMenuCommand", "GM_removeValueChangeListener",
+    "GM_saveTab", "GM_setClipboard", "GM_setValue", "GM_setValues", "GM_unregisterMenuCommand",
+    "GM_xmlhttpRequest", "GPU", "GPUAdapter", "GPUAdapterInfo", "GPUBindGroup",
+    "GPUBindGroupLayout", "GPUBuffer", "GPUBufferUsage", "GPUCanvasContext", "GPUColorWrite",
+    "GPUCommandBuffer", "GPUCommandEncoder", "GPUCompilationInfo", "GPUCompilationMessage",
+    "GPUComputePassEncoder", "GPUComputePipeline", "GPUDevice", "GPUDeviceLostInfo", "GPUError",
+    "GPUExternalTexture", "GPUInternalError", "GPUMapMode", "GPUOutOfMemoryError",
+    "GPUPipelineError", "GPUPipelineLayout", "GPUQuerySet", "GPUQueue", "GPURenderBundle",
+    "GPURenderBundleEncoder", "GPURenderPassEncoder", "GPURenderPipeline", "GPUSampler",
+    "GPUShaderModule", "GPUShaderStage", "GPUSupportedFeatures", "GPUSupportedLimits", "GPUTexture",
+    "GPUTextureUsage", "GPUTextureView", "GPUUncapturedErrorEvent", "GPUValidationError",
+    "GainNode", "Gamepad", "GamepadAxisMoveEvent", "GamepadButton", "GamepadButtonEvent",
+    "GamepadEvent", "GamepadHapticActuator", "GamepadPose", "Geolocation", "GeolocationCoordinates",
+    "GeolocationPosition", "GeolocationPositionError", "GravitySensor", "Gyroscope", "HID",
+    "HIDConnectionEvent", "HIDDevice", "HIDInputReportEvent", "HTMLAllCollection",
+    "HTMLAnchorElement", "HTMLAreaElement", "HTMLAudioElement", "HTMLBRElement", "HTMLBaseElement",
+    "HTMLBodyElement", "HTMLButtonElement", "HTMLCameraElement", "HTMLCanvasElement",
+    "HTMLCollection", "HTMLDListElement", "HTMLDataElement", "HTMLDataListElement",
+    "HTMLDetailsElement", "HTMLDialogElement", "HTMLDirectoryElement", "HTMLDivElement",
+    "HTMLDocument", "HTMLElement", "HTMLEmbedElement", "HTMLFencedFrameElement",
+    "HTMLFieldSetElement", "HTMLFontElement", "HTMLFormControlsCollection", "HTMLFormElement",
+    "HTMLFrameElement", "HTMLFrameSetElement", "HTMLGeolocationElement", "HTMLHRElement",
+    "HTMLHeadElement", "HTMLHeadingElement", "HTMLHtmlElement", "HTMLIFrameElement",
+    "HTMLImageElement", "HTMLInputElement", "HTMLLIElement", "HTMLLabelElement",
+    "HTMLLegendElement", "HTMLLinkElement", "HTMLMapElement", "HTMLMarqueeElement",
+    "HTMLMediaElement", "HTMLMenuElement", "HTMLMetaElement", "HTMLMeterElement",
+    "HTMLMicrophoneElement", "HTMLModElement", "HTMLOListElement", "HTMLObjectElement",
+    "HTMLOptGroupElement", "HTMLOptionElement", "HTMLOptionsCollection", "HTMLOutputElement",
+    "HTMLParagraphElement", "HTMLParamElement", "HTMLPictureElement", "HTMLPreElement",
+    "HTMLProgressElement", "HTMLQuoteElement", "HTMLScriptElement", "HTMLSelectElement",
+    "HTMLSelectedContentElement", "HTMLSlotElement", "HTMLSourceElement", "HTMLSpanElement",
+    "HTMLStyleElement", "HTMLTableCaptionElement", "HTMLTableCellElement", "HTMLTableColElement",
+    "HTMLTableElement", "HTMLTableRowElement", "HTMLTableSectionElement", "HTMLTemplateElement",
+    "HTMLTextAreaElement", "HTMLTimeElement", "HTMLTitleElement", "HTMLTrackElement",
+    "HTMLUListElement", "HTMLUnknownElement", "HTMLUserMediaElement", "HTMLVideoElement", "HTTP",
+    "Hash", "HashChangeEvent", "Headers", "Highlight", "HighlightRegistry", "History", "IDBCursor",
+    "IDBCursorWithValue", "IDBDatabase", "IDBFactory", "IDBIndex", "IDBKeyRange", "IDBObjectStore",
+    "IDBOpenDBRequest", "IDBRecord", "IDBRequest", "IDBTransaction", "IDBVersionChangeEvent",
+    "IIRFilterNode", "ISODate", "IdentityCredential", "IdentityCredentialError", "IdentityProvider",
+    "IdleDeadline", "IdleDetector", "Image", "ImageBitmap", "ImageBitmapRenderingContext",
+    "ImageCapture", "ImageData", "ImageDecoder", "ImageTrack", "ImageTrackList", "Infinity", "Ink",
+    "InputDeviceCapabilities", "InputDeviceInfo", "InputEvent", "Insertion", "InstallEvent",
+    "Int16Array", "Int32Array", "Int8Array", "IntegrityViolationReportBody",
+    "InteractionContentfulPaint", "InterestEvent", "IntersectionObserver",
+    "IntersectionObserverEntry", "Intl", "Iterator", "JSAdapter", "JSON", "Java", "JavaImporter",
+    "Keyboard", "KeyboardEvent", "KeyboardLayoutMap", "KeyframeEffect", "LanguageDetector",
+    "LanguageModel", "LargestContentfulPaint", "LaunchParams", "LaunchQueue", "LayoutShift",
+    "LayoutShiftAttribution", "Library", "LinearAccelerationSensor", "Location", "Lock",
+    "LockManager", "Log", "MIDIAccess", "MIDIConnectionEvent", "MIDIInput", "MIDIInputMap",
+    "MIDIMessageEvent", "MIDIOutput", "MIDIOutputMap", "MIDIPort", "Map", "Match", "Math",
+    "MathMLAnchorElement", "MathMLElement", "MediaCapabilities", "MediaCapabilitiesInfo",
+    "MediaDeviceInfo", "MediaDevices", "MediaElementAudioSourceNode", "MediaEncryptedEvent",
+    "MediaError", "MediaKeyError", "MediaKeyMessageEvent", "MediaKeySession", "MediaKeyStatusMap",
+    "MediaKeySystemAccess", "MediaKeys", "MediaList", "MediaMetadata", "MediaQueryList",
+    "MediaQueryListEvent", "MediaRecorder", "MediaRecorderErrorEvent", "MediaSession",
+    "MediaSource", "MediaSourceHandle", "MediaStream", "MediaStreamAudioDestinationNode",
+    "MediaStreamAudioSourceNode", "MediaStreamEvent", "MediaStreamTrack",
+    "MediaStreamTrackAudioSourceNode", "MediaStreamTrackAudioStats", "MediaStreamTrackEvent",
+    "MediaStreamTrackGenerator", "MediaStreamTrackProcessor", "MediaStreamTrackVideoStats",
+    "MessageChannel", "MessageEvent", "MessagePort", "Meteor", "MimeType", "MimeTypeArray",
+    "ModelContext", "ModelGenericSession", "ModelManager", "Mongo", "MongoInternals", "MouseEvent",
+    "MutationEvent", "MutationObserver", "MutationRecord", "NaN", "NamedNodeMap", "NavigateEvent",
+    "Navigation", "NavigationActivation", "NavigationCurrentEntryChangeEvent",
+    "NavigationDestination", "NavigationHistoryEntry", "NavigationPrecommitController",
+    "NavigationPreloadManager", "NavigationTransition", "Navigator", "NavigatorLogin",
+    "NavigatorManagedData", "NavigatorUAData", "NetworkInformation", "Node", "NodeFilter",
+    "NodeIterator", "NodeList", "NodeRange", "NotRestoredReasonDetails", "NotRestoredReasons",
+    "Notification", "NotificationEvent", "NotifyPaintEvent", "Npm", "Number", "NumberInt",
+    "NumberLong", "OTPCredential", "ObjC", "Object", "ObjectId", "ObjectRange", "ObjectSpecifier",
+    "Observable", "OfflineAudioCompletionEvent", "OfflineAudioContext", "OffscreenCanvas",
+    "OffscreenCanvasRenderingContext2D", "OpaqueRange", "OpenLayers", "Option", "OrientationSensor",
+    "Origin", "OscillatorNode", "OverconstrainedError", "PERSISTENT", "Package", "Packages",
+    "PageRevealEvent", "PageSwapEvent", "PageTransitionEvent", "PannerNode", "PasswordCredential",
+    "Path", "Path2D", "PaymentAddress", "PaymentManager", "PaymentMethodChangeEvent",
+    "PaymentRequest", "PaymentRequestEvent", "PaymentRequestUpdateEvent", "PaymentResponse",
+    "Performance", "PerformanceElementTiming", "PerformanceEntry", "PerformanceEventTiming",
+    "PerformanceLongAnimationFrameTiming", "PerformanceLongTaskTiming", "PerformanceMark",
+    "PerformanceMarkConditional", "PerformanceMeasure", "PerformanceNavigation",
+    "PerformanceNavigationTiming", "PerformanceObserver", "PerformanceObserverEntryList",
+    "PerformancePaintTiming", "PerformanceResourceTiming", "PerformanceScriptTiming",
+    "PerformanceServerTiming", "PerformanceSoftNavigation", "PerformanceTiming",
+    "PerformanceTimingConfidence", "PeriodicSyncEvent", "PeriodicSyncManager", "PeriodicWave",
+    "PeriodicalExecuter", "PermissionStatus", "Permissions", "PermissionsPolicy",
+    "PictureInPictureEvent", "PictureInPictureWindow", "PlanCache", "Plugin", "PluginArray",
+    "PointerEvent", "PopStateEvent", "Position", "Presentation", "PresentationAvailability",
+    "PresentationConnection", "PresentationConnectionAvailableEvent",
+    "PresentationConnectionCloseEvent", "PresentationConnectionList", "PresentationReceiver",
+    "PresentationRequest", "PressureObserver", "PressureRecord", "ProcessingInstruction",
+    "Profiler", "Progress", "ProgressEvent", "Promise", "PromiseRejectionEvent",
+    "ProtectedAudience", "Prototype", "Proxy", "PublicKeyCredential", "PushEvent", "PushManager",
+    "PushMessageData", "PushSubscription", "PushSubscriptionChangeEvent", "PushSubscriptionOptions",
+    "QUnit", "QuotaExceededError", "RTCCertificate", "RTCDTMFSender", "RTCDTMFToneChangeEvent",
+    "RTCDataChannel", "RTCDataChannelEvent", "RTCDtlsTransport", "RTCEncodedAudioFrame",
+    "RTCEncodedVideoFrame", "RTCError", "RTCErrorEvent", "RTCIceCandidate", "RTCIceCandidatePair",
+    "RTCIceTransport", "RTCPeerConnection", "RTCPeerConnectionIceErrorEvent",
+    "RTCPeerConnectionIceEvent", "RTCRtpReceiver", "RTCRtpScriptTransform",
+    "RTCRtpScriptTransformer", "RTCRtpSender", "RTCRtpTransceiver", "RTCSctpTransport",
+    "RTCSessionDescription", "RTCStatsReport", "RTCTrackEvent", "RTCTransformEvent",
+    "RadioNodeList", "Random", "Range", "RangeError", "ReactiveDict", "ReactiveVar",
+    "ReadableByteStreamController", "ReadableStream", "ReadableStreamBYOBReader",
+    "ReadableStreamBYOBRequest", "ReadableStreamDefaultController", "ReadableStreamDefaultReader",
+    "Ref", "ReferenceError", "Reflect", "RegExp", "RelativeOrientationSensor", "RemotePlayback",
+    "ReportBody", "ReportingObserver", "Request", "ResizeObserver", "ResizeObserverEntry",
+    "ResizeObserverSize", "Response", "RestrictionTarget", "Router", "SVGAElement", "SVGAngle",
+    "SVGAnimateElement", "SVGAnimateMotionElement", "SVGAnimateTransformElement",
+    "SVGAnimatedAngle", "SVGAnimatedBoolean", "SVGAnimatedEnumeration", "SVGAnimatedInteger",
+    "SVGAnimatedLength", "SVGAnimatedLengthList", "SVGAnimatedNumber", "SVGAnimatedNumberList",
+    "SVGAnimatedPreserveAspectRatio", "SVGAnimatedRect", "SVGAnimatedString",
+    "SVGAnimatedTransformList", "SVGAnimationElement", "SVGCircleElement", "SVGClipPathElement",
+    "SVGComponentTransferFunctionElement", "SVGDefsElement", "SVGDescElement", "SVGElement",
+    "SVGEllipseElement", "SVGFEBlendElement", "SVGFEColorMatrixElement",
+    "SVGFEComponentTransferElement", "SVGFECompositeElement", "SVGFEConvolveMatrixElement",
+    "SVGFEDiffuseLightingElement", "SVGFEDisplacementMapElement", "SVGFEDistantLightElement",
+    "SVGFEDropShadowElement", "SVGFEFloodElement", "SVGFEFuncAElement", "SVGFEFuncBElement",
+    "SVGFEFuncGElement", "SVGFEFuncRElement", "SVGFEGaussianBlurElement", "SVGFEImageElement",
+    "SVGFEMergeElement", "SVGFEMergeNodeElement", "SVGFEMorphologyElement", "SVGFEOffsetElement",
+    "SVGFEPointLightElement", "SVGFESpecularLightingElement", "SVGFESpotLightElement",
+    "SVGFETileElement", "SVGFETurbulenceElement", "SVGFilterElement", "SVGForeignObjectElement",
+    "SVGGElement", "SVGGeometryElement", "SVGGradientElement", "SVGGraphicsElement",
+    "SVGImageElement", "SVGLength", "SVGLengthList", "SVGLineElement", "SVGLinearGradientElement",
+    "SVGMPathElement", "SVGMarkerElement", "SVGMaskElement", "SVGMatrix", "SVGMetadataElement",
+    "SVGNumber", "SVGNumberList", "SVGPathElement", "SVGPatternElement", "SVGPoint", "SVGPointList",
+    "SVGPolygonElement", "SVGPolylineElement", "SVGPreserveAspectRatio", "SVGRadialGradientElement",
+    "SVGRect", "SVGRectElement", "SVGSVGElement", "SVGScriptElement", "SVGSetElement",
+    "SVGStopElement", "SVGStringList", "SVGStyleElement", "SVGSwitchElement", "SVGSymbolElement",
+    "SVGTSpanElement", "SVGTextContentElement", "SVGTextElement", "SVGTextPathElement",
+    "SVGTextPositioningElement", "SVGTitleElement", "SVGTransform", "SVGTransformList",
+    "SVGUnitTypes", "SVGUseElement", "SVGViewElement", "Sanitizer", "Scheduler", "Scheduling",
+    "Screen", "ScreenDetailed", "ScreenDetails", "ScreenOrientation", "ScriptProcessorNode",
+    "Scriptaculous", "ScrollTimeline", "SecurityPolicyViolationEvent", "Selection", "Selector",
+    "Sensor", "SensorErrorEvent", "Serial", "SerialPort", "ServiceConfiguration", "ServiceWorker",
+    "ServiceWorkerContainer", "ServiceWorkerGlobalScope", "ServiceWorkerRegistration", "Session",
+    "Set", "ShadowRoot", "SharedArrayBuffer", "SharedStorage", "SharedStorageAppendMethod",
+    "SharedStorageClearMethod", "SharedStorageDeleteMethod", "SharedStorageModifierMethod",
+    "SharedStorageSetMethod", "SharedStorageWorklet", "SharedWorker", "ShellString", "SnapEvent",
+    "Sortable", "SortableObserver", "Sound", "SourceBuffer", "SourceBufferList", "Spacebars",
+    "SpeechGrammar", "SpeechGrammarList", "SpeechRecognition", "SpeechRecognitionAlternative",
+    "SpeechRecognitionErrorEvent", "SpeechRecognitionEvent", "SpeechRecognitionPhrase",
+    "SpeechRecognitionResult", "SpeechRecognitionResultList", "SpeechSynthesis",
+    "SpeechSynthesisErrorEvent", "SpeechSynthesisEvent", "SpeechSynthesisUtterance",
+    "SpeechSynthesisVoice", "StaticRange", "StereoPannerNode", "Storage", "StorageBucket",
+    "StorageBucketManager", "StorageEvent", "StorageManager", "String", "StylePropertyMap",
+    "StylePropertyMapReadOnly", "StyleSheet", "StyleSheetList", "SubmitEvent", "Subscriber",
+    "SubtleCrypto", "Summarizer", "SuppressedError", "Symbol", "SyncEvent", "SyncManager",
+    "SyntaxError", "TEMPORARY", "TaskAttributionTiming", "TaskController",
+    "TaskPriorityChangeEvent", "TaskSignal", "Template", "Temporal", "Text", "TextDecoder",
+    "TextDecoderStream", "TextEncoder", "TextEncoderStream", "TextEvent", "TextFormat",
+    "TextFormatUpdateEvent", "TextMetrics", "TextTrack", "TextTrackCue", "TextTrackCueList",
+    "TextTrackList", "TextUpdateEvent", "TimeEvent", "TimeRanges", "TimelineTrigger",
+    "TimelineTriggerRange", "TimelineTriggerRangeList", "Tinytest", "Toggle", "ToggleEvent",
+    "Touch", "TouchEvent", "TouchList", "TrackEvent", "Tracker", "TransformStream",
+    "TransformStreamDefaultController", "TransitionEvent", "Translator", "TreeWalker",
+    "TrustedHTML", "TrustedParserOptions", "TrustedScript", "TrustedScriptURL", "TrustedTypePolicy",
+    "TrustedTypePolicyFactory", "Try", "TypeError", "UI", "UIEvent", "URIError", "URL",
+    "URLPattern", "URLSearchParams", "USB", "USBAlternateInterface", "USBConfiguration",
+    "USBConnectionEvent", "USBDevice", "USBEndpoint", "USBInTransferResult", "USBInterface",
+    "USBIsochronousInTransferPacket", "USBIsochronousInTransferResult",
+    "USBIsochronousOutTransferPacket", "USBIsochronousOutTransferResult", "USBOutTransferResult",
+    "UUID", "Uint16Array", "Uint32Array", "Uint8Array", "Uint8ClampedArray", "UserActivation",
+    "Utils", "VTTCue", "VTTRegion", "ValidityState", "VideoColorSpace", "VideoDecoder",
+    "VideoEncoder", "VideoFrame", "VideoPlaybackQuality", "ViewTimeline", "ViewTransition",
+    "ViewTransitionTypeSet", "Viewport", "VirtualKeyboard", "VirtualKeyboardGeometryChangeEvent",
+    "VisibilityStateEntry", "VisualViewport", "WGSLLanguageFeatures", "WakeLock",
+    "WakeLockSentinel", "WaveShaperNode", "WeakMap", "WeakRef", "WeakSet", "WebApp",
+    "WebAppInternals", "WebAssembly", "WebGL2RenderingContext", "WebGLActiveInfo", "WebGLBuffer",
+    "WebGLContextEvent", "WebGLFramebuffer", "WebGLObject", "WebGLProgram", "WebGLQuery",
+    "WebGLRenderbuffer", "WebGLRenderingContext", "WebGLSampler", "WebGLShader",
+    "WebGLShaderPrecisionFormat", "WebGLSync", "WebGLTexture", "WebGLTransformFeedback",
+    "WebGLUniformLocation", "WebGLVertexArrayObject", "WebMCPEvent", "WebPage", "WebSocket",
+    "WebSocketError", "WebSocketStream", "WebTransport", "WebTransportBidirectionalStream",
+    "WebTransportDatagramDuplexStream", "WebTransportDatagramsWritable", "WebTransportError",
+    "WebTransportReceiveStream", "WebTransportSendGroup", "WebTransportSendStream", "WheelEvent",
+    "Window", "WindowClient", "WindowControlsOverlay", "WindowControlsOverlayGeometryChangeEvent",
+    "Worker", "WorkerGlobalScope", "WorkerLocation", "WorkerNavigator", "Worklet", "WritableStream",
+    "WritableStreamDefaultController", "WritableStreamDefaultWriter", "WriteResult", "XMLDocument",
+    "XMLHttpRequest", "XMLHttpRequestEventTarget", "XMLHttpRequestUpload", "XMLSerializer",
+    "XPathEvaluator", "XPathExpression", "XPathResult", "XRAnchor", "XRAnchorSet",
+    "XRBoundedReferenceSpace", "XRCPUDepthInformation", "XRCamera", "XRCompositionLayer",
+    "XRCubeLayer", "XRCylinderLayer", "XRDOMOverlayState", "XRDepthInformation", "XREquirectLayer",
+    "XRFrame", "XRHand", "XRHitTestResult", "XRHitTestSource", "XRInputSource",
+    "XRInputSourceArray", "XRInputSourceEvent", "XRInputSourcesChangeEvent", "XRJointPose",
+    "XRJointSpace", "XRLayer", "XRLayerEvent", "XRLightEstimate", "XRLightProbe", "XRPlane",
+    "XRPlaneSet", "XRPose", "XRProjectionLayer", "XRQuadLayer", "XRRay", "XRReferenceSpace",
+    "XRReferenceSpaceEvent", "XRRenderState", "XRRigidTransform", "XRSession", "XRSessionEvent",
+    "XRSpace", "XRSubImage", "XRSystem", "XRTransientInputHitTestResult",
+    "XRTransientInputHitTestSource", "XRView", "XRViewerPose", "XRViewport",
+    "XRVisibilityMaskChangeEvent", "XRWebGLBinding", "XRWebGLDepthInformation", "XRWebGLLayer",
+    "XRWebGLSubImage", "XSLTProcessor", "_", "__DIR__", "__FILE__", "__LINE__", "__dirname",
+    "__filename", "_isWindows", "_rand", "addEventListener", "advanceClock", "after", "afterAll",
+    "afterEach", "ai", "alert", "andThen", "angular", "asyncTest", "atob", "atom", "before",
+    "beforeAll", "beforeEach", "blur", "browser", "btoa", "by", "caches", "cancelAnimationFrame",
+    "cancelIdleCallback", "casper", "cat", "cd", "check", "chmod", "chrome", "clearImmediate",
+    "clearInterval", "clearTimeout", "click", "clientInformation", "clients", "cloneInto", "close",
+    "closed", "cmd", "com", "config", "confirm", "connect", "console", "context", "cookieStore",
+    "cp", "crashReport", "createImageBitmap", "createObjectIn", "credentialless",
+    "crossOriginIsolated", "crypto", "currentPath", "currentRouteName", "currentURL",
+    "customElements", "d3", "db", "decodeURI", "decodeURIComponent", "deepEqual", "define", "delay",
+    "describe", "devicePixelRatio", "dijit", "dirs", "dispatchEvent", "document",
+    "documentPictureInPicture", "dojo", "dojox", "echo", "edu", "element", "encodeURI",
+    "encodeURIComponent", "env", "equal", "error", "errorCode", "escape", "eval", "event", "exec",
+    "exit", "expect", "expectAsync", "exportFunction", "exports", "external", "fail",
+    "fakeClearInterval", "fakeClearTimeout", "fakeSetInterval", "fakeSetTimeout", "fdescribe",
+    "fence", "fetch", "fetchLater", "fillIn", "find", "findAll", "findWithAssert", "fit", "focus",
+    "fonts", "frameElement", "frames", "getComputedStyle", "getHostName", "getMemInfo",
+    "getScreenDetails", "getSelection", "global", "globalThis", "goog", "google", "grep", "head",
+    "history", "hostname", "importScripts", "indexedDB", "innerHeight", "innerWidth", "isFinite",
+    "isNaN", "isSecureContext", "it", "jQuery", "jasmine", "java", "javafx", "javax", "jest",
+    "keyEvent", "launchQueue", "length", "listFiles", "ln", "load", "loadWithNewGlobal",
+    "localStorage", "location", "locationbar", "ls", "matchMedia", "md5sumFile", "menubar", "mkdir",
+    "mocha", "model", "module", "moment", "moveBy", "moveTo", "mv", "name", "navigation",
+    "navigator", "notDeepEqual", "notEqual", "notOk", "notPropEqual", "notStrictEqual",
+    "offscreenBuffering", "ok", "onabort", "onabortpayment", "onactivate", "onafterprint",
+    "onanimationcancel", "onanimationend", "onanimationiteration", "onanimationstart",
+    "onappinstalled", "onauxclick", "onbackgroundfetchabort", "onbackgroundfetchclick",
+    "onbackgroundfetchfail", "onbackgroundfetchsuccess", "onbeforeinput", "onbeforeinstallprompt",
+    "onbeforematch", "onbeforeprint", "onbeforetoggle", "onbeforeunload", "onbeforexrselect",
+    "onblur", "oncancel", "oncanmakepayment", "oncanplay", "oncanplaythrough", "onchange",
+    "onclick", "onclose", "oncommand", "oncontentvisibilityautostatechange", "oncontextlost",
+    "oncontextmenu", "oncontextrestored", "oncookiechange", "oncopy", "oncuechange", "oncut",
+    "ondblclick", "ondevicemotion", "ondeviceorientation", "ondeviceorientationabsolute", "ondrag",
+    "ondragend", "ondragenter", "ondragleave", "ondragover", "ondragstart", "ondrop",
+    "ondurationchange", "onemptied", "onended", "onerror", "onfetch", "onfocus", "onformdata",
+    "ongamepadconnected", "ongamepaddisconnected", "ongotpointercapture", "onhashchange", "oninput",
+    "oninstall", "oninvalid", "onkeydown", "onkeypress", "onkeyup", "onlanguagechange", "onload",
+    "onloadeddata", "onloadedmetadata", "onloadstart", "onlostpointercapture", "onmessage",
+    "onmessageerror", "onmousedown", "onmouseenter", "onmouseleave", "onmousemove", "onmouseout",
+    "onmouseover", "onmouseup", "onmousewheel", "onnotificationclick", "onnotificationclose",
+    "onoffline", "ononline", "onpagehide", "onpagereveal", "onpageshow", "onpageswap", "onpaste",
+    "onpause", "onpaymentrequest", "onperiodicsync", "onplay", "onplaying", "onpointercancel",
+    "onpointerdown", "onpointerenter", "onpointerleave", "onpointermove", "onpointerout",
+    "onpointerover", "onpointerrawupdate", "onpointerup", "onpopstate", "onprogress", "onpush",
+    "onpushsubscriptionchange", "onratechange", "onrejectionhandled", "onreset", "onresize",
+    "onrtctransform", "onscroll", "onscrollend", "onscrollsnapchange", "onscrollsnapchanging",
+    "onsearch", "onsecuritypolicyviolation", "onseeked", "onseeking", "onselect",
+    "onselectionchange", "onselectstart", "onslotchange", "onstalled", "onstorage", "onsubmit",
+    "onsuspend", "onsync", "ontimeupdate", "ontoggle", "ontransitioncancel", "ontransitionend",
+    "ontransitionrun", "ontransitionstart", "onunhandledrejection", "onunload", "onvolumechange",
+    "onwaiting", "onwheel", "open", "opener", "opr", "org", "origin", "originAgentCluster",
+    "outerHeight", "outerWidth", "pageXOffset", "pageYOffset", "parent", "parseFloat", "parseInt",
+    "pauseTest", "pending", "performance", "personalbar", "phantom", "popd", "postMessage", "print",
+    "printjson", "process", "prompt", "propEqual", "protractor", "pushd", "pwd", "queryLocalFonts",
+    "queueMicrotask", "quit", "raises", "registration", "removeEventListener", "removeFile",
+    "reportError", "requestAnimationFrame", "requestIdleCallback", "requestResize", "require",
+    "resetTimeouts", "resizeBy", "resizeTo", "resumeTest", "rm", "rs", "run", "runs", "sap",
+    "scheduler", "screen", "screenLeft", "screenTop", "screenX", "screenY", "scroll", "scrollBy",
+    "scrollTo", "scrollX", "scrollY", "scrollbars", "sed", "self", "serviceWorker",
+    "sessionStorage", "set", "setImmediate", "setInterval", "setTimeout", "setup", "sh", "share",
+    "sharedStorage", "showDirectoryPicker", "showOpenFilePicker", "showSaveFilePicker",
+    "skipWaiting", "sort", "specify", "speechSynthesis", "spyOn", "spyOnAllFunctions",
+    "spyOnProperty", "start", "status", "statusbar", "stop", "strictEqual", "structuredClone",
+    "styleMedia", "suite", "suiteSetup", "suiteTeardown", "tail", "teardown", "tempdir", "test",
+    "throwUnless", "throwUnlessAsync", "throws", "toolbar", "top", "touch", "triggerEvent",
+    "trustedTypes", "undefined", "unescape", "uniq", "unsafeWindow", "version", "viewport", "visit",
+    "visualViewport", "wait", "waits", "waitsFor", "waitsForPromise", "webkitRequestFileSystem",
+    "webkitRequestFileSystemSync", "webkitResolveLocalFileSystemSyncURL",
+    "webkitResolveLocalFileSystemURL", "when", "which", "window", "xcontext", "xdescribe", "xit",
+    "xspecify", "xtest",
+];
+
+/// SonarJS has no TypeScript program (hence no type information) for scripts embedded in HTML,
+/// and usually none for Vue single-file components; type-dependent rules stay silent there.
+pub fn has_type_services(ctx: &Ctx<'_, '_>) -> bool {
+    let p = ctx.file.path;
+    !(p.ends_with(".html") || p.ends_with(".htm") || p.ends_with(".vue"))
+}

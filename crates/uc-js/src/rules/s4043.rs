@@ -26,6 +26,9 @@ impl JsRule for Rule {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
+        if !helpers::batch_smell3::has_type_services(ctx) {
+            return;
+        }
         let AstKind::CallExpression(call) = node.kind() else {
             return;
         };

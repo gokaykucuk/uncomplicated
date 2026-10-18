@@ -32,8 +32,35 @@ fn category(t: &Ty) -> Option<&'static str> {
     })
 }
 
+/// `{}`, or a never-reassigned variable initialized with `{}`.
+fn is_empty_object(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> bool {
+    match strip_parens(e) {
+        Expression::ObjectExpression(o) => o.properties.is_empty(),
+        Expression::Identifier(id) => ctx.symbol_of(id).is_some_and(|sym| {
+            !ctx.scoping().symbol_is_mutated(sym)
+                && matches!(ctx.symbol_decl(sym).kind(), AstKind::VariableDeclarator(v)
+                    if matches!(v.init.as_ref().map(strip_parens), Some(Expression::ObjectExpression(o)) if o.properties.is_empty()))
+                && !has_expando_assignment(ctx, sym)
+        }),
+        _ => false,
+    }
+}
+
+/// `x.prop = ...` somewhere: TypeScript then infers the declared properties (JS expandos).
+fn has_expando_assignment(ctx: &Ctx<'_, '_>, sym: SymbolId) -> bool {
+    let scoping = ctx.scoping();
+    scoping.get_resolved_reference_ids(sym).iter().any(|&r| {
+        let member = ctx.parent(scoping.get_reference(r).node_id());
+        matches!(member.kind(), AstKind::StaticMemberExpression(_))
+            && matches!(ctx.parent_kind(member.id()), AstKind::AssignmentExpression(a) if a.left.span() == member.kind().span())
+    })
+}
+
 impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
+        if !helpers::batch_smell3::has_type_services(ctx) {
+            return;
+        }
         let returns = returns_by_function(ctx);
         for (func_id, rets) in &returns {
             let node = ctx.node(*func_id);
@@ -49,7 +76,11 @@ impl JsRule for Rule {
             let mut ok = true;
             for r in rets {
                 let Some(arg) = &r.argument else { continue };
-                if matches!(strip_ts(arg), Expression::ThisExpression(_)) {
+                // `this` returns are excluded; `{}` absorbs every other object type in the
+                // inferred (subtype-reduced) return type union.
+                if matches!(strip_ts(arg), Expression::ThisExpression(_))
+                    || is_empty_object(ctx, arg)
+                {
                     ok = false;
                     break;
                 }
@@ -135,7 +166,7 @@ function documented(x) {
 }
 const arrow = (x) => {     // Noncompliant
   if (x) return [];
-  return {};
+  return { a: 1 };
 };
 function self(x) {
   if (x) return this;
