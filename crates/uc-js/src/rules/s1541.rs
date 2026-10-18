@@ -2,7 +2,7 @@
 use oxc_ast_visit::{Visit, walk};
 use oxc_syntax::scope::ScopeFlags;
 
-use crate::helpers::batch_smell2::{operator_token, sonar_function_loc};
+use crate::helpers::batch_smell2::{first_token, operator_token, sonar_function_loc};
 use crate::prelude::*;
 
 pub struct Rule {
@@ -17,23 +17,31 @@ impl Rule {
     }
 }
 
-/// Collects the complexity-increasing tokens of one function body (nested functions excluded).
-struct Complexity<'c, 'a, 's> {
-    ctx: &'c Ctx<'a, 's>,
-    tokens: Vec<Span>,
+/// A complexity point; token positions are only resolved when an issue is reported.
+enum Point {
+    /// First token of the statement / clause starting here.
+    Keyword(u32),
+    /// Operator token between two operands.
+    Operator(u32, u32, &'static str),
 }
 
-impl<'c, 'a, 's> Complexity<'c, 'a, 's> {
+/// Collects the complexity points of one function body (nested functions excluded).
+struct Complexity {
+    points: Vec<Point>,
+}
+
+impl Complexity {
     fn keyword(&mut self, span: Span) {
-        self.tokens.push(crate::helpers::batch_smell2::first_token(
-            self.ctx, span.start,
-        ));
+        self.points.push(Point::Keyword(span.start));
     }
 }
 
-impl<'a> Visit<'a> for Complexity<'_, 'a, '_> {
+impl<'a> Visit<'a> for Complexity {
     fn visit_function(&mut self, _: &Function<'a>, _: ScopeFlags) {}
     fn visit_arrow_function_expression(&mut self, _: &ArrowFunctionExpression<'a>) {}
+    fn visit_ts_type_annotation(&mut self, _: &TSTypeAnnotation<'a>) {}
+    fn visit_ts_type_parameter_declaration(&mut self, _: &TSTypeParameterDeclaration<'a>) {}
+    fn visit_ts_type_parameter_instantiation(&mut self, _: &TSTypeParameterInstantiation<'a>) {}
 
     fn visit_if_statement(&mut self, it: &IfStatement<'a>) {
         self.keyword(it.span);
@@ -66,8 +74,7 @@ impl<'a> Visit<'a> for Complexity<'_, 'a, '_> {
         walk::walk_switch_case(self, it);
     }
     fn visit_conditional_expression(&mut self, it: &ConditionalExpression<'a>) {
-        self.tokens.push(operator_token(
-            self.ctx,
+        self.points.push(Point::Operator(
             it.test.span().end,
             it.consequent.span().start,
             "?",
@@ -75,8 +82,7 @@ impl<'a> Visit<'a> for Complexity<'_, 'a, '_> {
         walk::walk_conditional_expression(self, it);
     }
     fn visit_logical_expression(&mut self, it: &LogicalExpression<'a>) {
-        self.tokens.push(operator_token(
-            self.ctx,
+        self.points.push(Point::Operator(
             it.left.span().end,
             it.right.span().start,
             it.operator.as_str(),
@@ -111,10 +117,7 @@ impl JsRule for Rule {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
-        let mut v = Complexity {
-            ctx,
-            tokens: Vec::new(),
-        };
+        let mut v = Complexity { points: Vec::new() };
         match node.kind() {
             AstKind::Function(f) => {
                 let Some(body) = &f.body else { return };
@@ -127,13 +130,19 @@ impl JsRule for Rule {
             }
             _ => return,
         }
-        let complexity = v.tokens.len() as u32 + 1;
+        let complexity = v.points.len() as u32 + 1;
         if complexity <= self.threshold || is_excluded(ctx, node) {
             return;
         }
         let loc = sonar_function_loc(ctx, node);
         let mut secondary = vec![(loc, Some("+1".to_string()))];
-        secondary.extend(v.tokens.into_iter().map(|s| (s, Some("+1".to_string()))));
+        secondary.extend(v.points.into_iter().map(|p| {
+            let span = match p {
+                Point::Keyword(pos) => first_token(ctx, pos),
+                Point::Operator(from, to, op) => operator_token(ctx, from, to, op),
+            };
+            (span, Some("+1".to_string()))
+        }));
         ctx.report_issue(
             loc,
             format!(

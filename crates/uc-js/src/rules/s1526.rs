@@ -68,6 +68,11 @@ function f() { return w; } // Noncompliant
 var w;
 function g(p) { p = 1; var p; }
 let l = 1;
+function h(c) {
+  if (c) { t(1); } // Noncompliant
+  var t = function () {};
+  var t = function () {};
+}
 "#,
         );
     }

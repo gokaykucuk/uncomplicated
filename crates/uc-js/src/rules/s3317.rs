@@ -1,6 +1,6 @@
 //! Default export names and file names should match
 //!
-//! Sonar raises this as a file-level issue; it is reported at the start of the file here.
+//! A file-level issue, as in Sonar.
 use crate::prelude::*;
 
 pub struct Rule;
@@ -94,10 +94,7 @@ impl JsRule for Rule {
         {
             return;
         }
-        ctx.report(
-            Span::new(0, 0),
-            format!("Rename this file to \"{exported}\""),
-        );
+        ctx.report_file(format!("Rename this file to \"{exported}\""));
     }
 }
 
@@ -110,7 +107,7 @@ mod tests {
         check(
             "S3317",
             "src/my_class.js",
-            r#"// Noncompliant {{Rename this file to "Foo"}}
+            r#"// Noncompliant@0 {{Rename this file to "Foo"}}
 export default class Foo {}
 "#,
         );
@@ -147,7 +144,7 @@ export default class Foo {}
         check(
             "S3317",
             "src/other.js",
-            r#"// Noncompliant {{Rename this file to "Foo"}}
+            r#"// Noncompliant@0 {{Rename this file to "Foo"}}
 const Foo = 1;
 export default Foo;
 "#,

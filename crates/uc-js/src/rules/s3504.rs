@@ -28,7 +28,8 @@ fn is_ambient(ctx: &Ctx<'_, '_>, node: &AstNode<'_>, vd: &VariableDeclaration<'_
 
 impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
-        if is_vendor_file(ctx.file.path) {
+        let lower = ctx.file.path.to_ascii_lowercase();
+        if is_vendor_file(ctx.file.path) || lower.ends_with(".html") || lower.ends_with(".htm") {
             return;
         }
         let mut total = 0usize;

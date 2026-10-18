@@ -222,25 +222,99 @@ pub fn spans_multiple_lines_without_braces(ctx: &Ctx<'_, '_>, first: Span, last:
 }
 
 /// Whether Sonar (which tries to parse every file as an ES module first and falls back to a
-/// script) sees this file as a module. TypeScript is always parsed as a module. For JavaScript
-/// without import/export syntax we re-parse as a module; callers should only do this when the
-/// answer matters, since it costs a parse.
+/// script) sees this file as a module. TypeScript and files with import/export syntax are
+/// modules. Other JavaScript files are modules unless a cheap scan finds code that is only valid
+/// in sloppy-mode scripts (`with`, legacy octal literals / escapes, HTML comments,
+/// `delete identifier`, strict-mode reserved words or `eval` / `arguments` as bindings).
 pub fn sonar_parses_as_module(ctx: &Ctx<'_, '_>) -> bool {
     if ctx.is_ts() || ctx.nodes().program().source_type.is_module() {
         return true;
     }
-    let alloc = oxc_allocator::Allocator::default();
-    let st = oxc_span::SourceType::mjs().with_jsx(true);
-    let ret = oxc_parser::Parser::new(&alloc, ctx.src, st).parse();
-    if ret.fatal_error || !ret.diagnostics.is_empty() {
+    if ctx.src.contains("<!--") {
         return false;
     }
-    let program = alloc.alloc(ret.program);
-    oxc_semantic::SemanticBuilder::new()
-        .with_check_syntax_error(true)
-        .build(program)
-        .diagnostics
-        .is_empty()
+    let toks = ctx.tokens;
+    for (i, t) in toks.iter().enumerate() {
+        match t.kind() {
+            Kind::With => return false,
+            Kind::Decimal | Kind::Octal | Kind::Float => {
+                let b = ctx.text(t.span()).as_bytes();
+                if b.len() > 1 && b[0] == b'0' && b[1].is_ascii_digit() {
+                    return false;
+                }
+            }
+            Kind::Str => {
+                let b = ctx.text(t.span()).as_bytes();
+                let mut j = 0;
+                while j + 1 < b.len() {
+                    if b[j] == b'\\' {
+                        let c = b[j + 1];
+                        if (b'1'..=b'9').contains(&c)
+                            || (c == b'0' && b.get(j + 2).is_some_and(u8::is_ascii_digit))
+                        {
+                            return false;
+                        }
+                        j += 2;
+                    } else {
+                        j += 1;
+                    }
+                }
+            }
+            Kind::Delete => {
+                if let (Some(id), Some(next)) = (toks.get(i + 1), toks.get(i + 2))
+                    && id.kind() == Kind::Ident
+                    && matches!(
+                        next.kind(),
+                        Kind::Semicolon | Kind::RParen | Kind::Comma | Kind::RCurly
+                    )
+                {
+                    return false;
+                }
+            }
+            _ => {}
+        }
+    }
+    const STRICT_RESERVED: &[&str] = &[
+        "implements",
+        "interface",
+        "package",
+        "private",
+        "protected",
+        "public",
+        "static",
+        "let",
+        "yield",
+        "eval",
+        "arguments",
+        "await",
+    ];
+    !ctx.scoping()
+        .symbol_names()
+        .any(|n| STRICT_RESERVED.contains(&n))
+}
+
+/// Names declared by ESLint `/* global a, b: writable */` (or `globals`) comments.
+pub fn global_comment_names<'a>(ctx: &Ctx<'a, '_>) -> Vec<&'a str> {
+    let mut out = Vec::new();
+    for c in ctx.comments() {
+        if !c.is_block() {
+            continue;
+        }
+        let t = ctx.comment_text(c).trim_start();
+        let rest = t
+            .strip_prefix("globals")
+            .or_else(|| t.strip_prefix("global"));
+        let Some(rest) = rest.filter(|r| r.starts_with(|ch: char| ch.is_whitespace())) else {
+            continue;
+        };
+        for item in rest.split(',') {
+            let name = item.split(':').next().unwrap_or("").trim();
+            if !name.is_empty() {
+                out.push(name);
+            }
+        }
+    }
+    out
 }
 
 /// Ancestors of a node, nearest (the parent) first.
