@@ -3,6 +3,9 @@
 use uc_core::{CpdToken, FileMetrics};
 use xxhash_rust::xxh3::xxh3_64;
 
+use std::sync::LazyLock;
+
+use crate::kinds::{F, K, field, kind};
 use crate::{Ctx, cognitive};
 
 const STATEMENTS: &[&str] = &[
@@ -28,6 +31,46 @@ const STATEMENTS: &[&str] = &[
     "fallthrough_statement",
 ];
 
+const STMT: u8 = 1;
+const COMPLEXITY: u8 = 2;
+const FUNC: u8 = 4;
+const BINARY: u8 = 8;
+const TYPE_SPEC: u8 = 16;
+const TOP_DECL: u8 = 32;
+
+/// Per kind id: classification flags for the metrics pass.
+static FLAGS: LazyLock<Vec<u8>> = LazyLock::new(|| {
+    let lang = &*crate::LANGUAGE;
+    (0..lang.node_kind_count() as u16)
+        .map(|id| {
+            if !lang.node_kind_is_named(id) {
+                return 0;
+            }
+            let name = lang.node_kind_for_id(id).unwrap_or("");
+            let mut f = 0;
+            if STATEMENTS.contains(&name) {
+                f |= STMT;
+            }
+            if matches!(name, "var_declaration" | "const_declaration") {
+                f |= TOP_DECL;
+            }
+            if matches!(name, "if_statement" | "for_statement" | "expression_case" | "type_case" | "communication_case") {
+                f |= COMPLEXITY;
+            }
+            if matches!(name, "function_declaration" | "method_declaration") {
+                f |= FUNC;
+            }
+            if name == "binary_expression" {
+                f |= BINARY;
+            }
+            if name == "type_spec" {
+                f |= TYPE_SPEC;
+            }
+            f
+        })
+        .collect()
+});
+
 pub fn compute(ctx: &Ctx<'_>) -> FileMetrics {
     let lines = ctx.lines;
     let n = lines.line_count() as usize;
@@ -50,31 +93,31 @@ pub fn compute(ctx: &Ctx<'_>) -> FileMetrics {
     }
     let mut m = FileMetrics { lines: n as u32, ..FileMetrics::default() };
     let mut exec = Vec::new();
-    for node in &ctx.nodes {
-        if !node.is_named() {
+    let flags = &*FLAGS;
+    for (i, node) in ctx.nodes.iter().enumerate() {
+        let f = flags.get(node.kind_id() as usize).copied().unwrap_or(0);
+        if f == 0 {
             continue;
         }
-        let kind = node.kind();
-        match kind {
-            "function_declaration" | "method_declaration" if node.child_by_field_name("body").is_some() => {
-                m.functions += 1;
-                m.complexity += 1;
-            }
-            "type_spec" if node.child_by_field_name("type").is_some_and(|t| t.kind() == "struct_type") => m.classes += 1,
-            "if_statement" | "for_statement" => m.complexity += 1,
-            "expression_case" | "type_case" | "communication_case" => m.complexity += 1,
-            "binary_expression" => {
-                if matches!(node.child_by_field_name("operator").map(|o| ctx.text(o)), Some("&&" | "||")) {
-                    m.complexity += 1;
-                }
-            }
-            _ => {}
+        if f & FUNC != 0 && field(*node, F.body).is_some() {
+            m.functions += 1;
+            m.complexity += 1;
         }
-        if STATEMENTS.contains(&kind)
-            && !(matches!(kind, "var_declaration" | "const_declaration") && ctx.parent(*node).is_some_and(|p| p.kind() == "source_file"))
-        {
-            m.statements += 1;
-            exec.push(node.start_position().row as u32 + 1);
+        if f & TYPE_SPEC != 0 && field(*node, F.type_).is_some_and(|t| kind(t) == K::StructType) {
+            m.classes += 1;
+        }
+        if f & COMPLEXITY != 0 {
+            m.complexity += 1;
+        }
+        if f & BINARY != 0 && field(*node, F.operator).is_some_and(|o| matches!(ctx.text(o), "&&" | "||")) {
+            m.complexity += 1;
+        }
+        if f & STMT != 0 {
+            let top_level = f & TOP_DECL != 0 && ctx.parents[i] == 0;
+            if !top_level {
+                m.statements += 1;
+                exec.push(node.start_position().row as u32 + 1);
+            }
         }
     }
     m.cognitive_complexity = cognitive::file_complexity(ctx);
