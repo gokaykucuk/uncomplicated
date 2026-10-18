@@ -5,18 +5,52 @@ use crate::helpers::batch_security2::*;
 use crate::prelude::*;
 
 pub struct Rule {
-    words: Vec<Regex>,
+    /// All secret words as one case-insensitive alternation.
+    words: Regex,
     sensibility: f64,
-    /// SonarJS' post-validation pattern without its (unsupported) escaped-backslash branch.
-    shape: Regex,
+    /// Smallest byte length whose log2 exceeds `sensibility` (shorter strings cannot have enough entropy).
+    min_len: usize,
 }
 
 const DEFAULT_WORDS: &str = "api[_.-]?key,auth,credential,secret,token";
 
-fn build_words(spec: &str) -> Option<Vec<Regex>> {
-    spec.split(',')
-        .map(|w| Regex::new(&format!("(?i)({w})")).ok())
-        .collect()
+fn build_words(spec: &str) -> Option<Regex> {
+    // Each word must be a valid regex on its own (otherwise fall back to the defaults).
+    let words: Vec<&str> = spec.split(',').collect();
+    if words.iter().any(|w| Regex::new(&format!("({w})")).is_err()) {
+        return None;
+    }
+    let alternation: Vec<String> = words.iter().map(|w| format!("({w})")).collect();
+    Regex::new(&format!("(?i)(?:{})", alternation.join("|"))).ok()
+}
+
+#[inline]
+fn shape_char(b: u8, first: bool) -> bool {
+    b.is_ascii_alphanumeric()
+        || matches!(b, b'_' | b'.' | b'+' | b'/' | b'~' | b'$' | b'-')
+        || (!first && b == b'=')
+}
+
+/// SonarJS' post-validation pattern (without its escaped-backslash branch):
+/// `[a-zA-Z0-9_.+/~$-][a-zA-Z0-9_.+/=~$-]{14,1022}[a-zA-Z0-9_.+/=~$-]` somewhere in `v`,
+/// i.e. a run of at least 16 allowed characters whose first one is not `=`.
+fn has_secret_shape(v: &str) -> bool {
+    let mut start: Option<usize> = None;
+    for (i, &c) in v.as_bytes().iter().enumerate() {
+        if !shape_char(c, false) {
+            start = None;
+            continue;
+        }
+        if start.is_none() && shape_char(c, true) {
+            start = Some(i);
+        }
+        if let Some(s) = start
+            && i + 1 - s >= 16
+        {
+            return true;
+        }
+    }
+    false
 }
 
 impl Rule {
@@ -25,32 +59,39 @@ impl Rule {
             .str("secretWords", DEFAULT_WORDS)
             .trim()
             .trim_matches('\'');
-        let words =
-            build_words(spec).unwrap_or_else(|| build_words(DEFAULT_WORDS).unwrap_or_default());
+        let words = build_words(spec)
+            .or_else(|| build_words(DEFAULT_WORDS))
+            .expect("default secret words are valid");
         let sensibility = match p.get("randomnessSensibility") {
             Some(serde_json::Value::Number(n)) => n.as_f64().unwrap_or(5.0),
             Some(serde_json::Value::String(s)) => s.trim().parse().unwrap_or(5.0),
             _ => 5.0,
         };
-        let shape =
-            Regex::new(r"[a-zA-Z0-9_.+/~$-][a-zA-Z0-9_.+/=~$-]{14,1022}[a-zA-Z0-9_.+/=~$-]")
-                .unwrap();
+        // log2(n) > s  <=>  n > 2^s
+        let bound = sensibility.exp2();
+        let min_len = if bound.is_finite() && bound >= 0.0 {
+            bound.floor() as usize + 1
+        } else {
+            usize::MAX
+        };
         Self {
             words,
             sensibility,
-            shape,
+            min_len,
         }
     }
 
     fn key<'a>(&self, name: &'a str) -> Option<&'a str> {
-        self.words.iter().any(|r| r.is_match(name)).then_some(name)
+        self.words.is_match(name).then_some(name)
     }
 
     fn value_suspect(&self, e: &Expression<'_>) -> bool {
         match strip_ts(e) {
             Expression::StringLiteral(s) => {
                 let v = s.value.as_str();
-                self.shape.is_match(v)
+                // Entropy is at most log2(#chars) <= log2(#bytes): cheap upper bound first.
+                v.len() >= self.min_len
+                    && has_secret_shape(v)
                     && shannon_entropy(v) > self.sensibility
                     && !is_excluded_secret_value(v)
             }
@@ -61,15 +102,16 @@ impl Rule {
         }
     }
 
-    fn report(
+    fn report<'k>(
         &self,
         ctx: &Ctx<'_, '_>,
-        key: Option<&str>,
+        key: impl FnOnce() -> Option<&'k str>,
         value: &Expression<'_>,
         checked: &Expression<'_>,
     ) {
-        if let Some(k) = key
-            && self.value_suspect(checked)
+        // Cheap value checks first; the key regex only runs on suspicious values.
+        if self.value_suspect(checked)
+            && let Some(k) = key()
         {
             ctx.report(
                 value.span(),
@@ -109,23 +151,34 @@ impl Rule {
 }
 
 impl JsRule for Rule {
-    fn interests(&self) -> &'static [AstType] {
-        &[
-            AstType::VariableDeclarator,
-            AstType::AssignmentExpression,
-            AstType::AssignmentPattern,
-            AstType::AssignmentTargetWithDefault,
-            AstType::FormalParameter,
-            AstType::ObjectProperty,
-            AstType::PropertyDefinition,
-        ]
+    fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
+        // Only string literals long enough to exceed the entropy threshold can be reported
+        // (entropy <= log2(#chars) <= log2(#bytes), and a raw string token is never shorter
+        // than its value). Most files have none: skip them without visiting any node.
+        let candidate = ctx.tokens.iter().any(|t| {
+            if t.kind() != Kind::Str || (t.span().size().saturating_sub(2) as usize) < self.min_len
+            {
+                return false;
+            }
+            // Escapes may hide shape characters in the raw text: keep those conservatively.
+            let raw = ctx.text(t.span());
+            raw.contains('\\') || has_secret_shape(raw)
+        });
+        if !candidate {
+            return;
+        }
+        for node in ctx.nodes().iter() {
+            self.visit(node, ctx);
+        }
     }
+}
 
-    fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
+impl Rule {
+    fn visit<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
         match node.kind() {
             AstKind::VariableDeclarator(d) => {
                 if let Some(init) = &d.init {
-                    self.report(ctx, self.binding_key(&d.id), init, init);
+                    self.report(ctx, || self.binding_key(&d.id), init, init);
                 }
             }
             AstKind::AssignmentExpression(a) => {
@@ -146,25 +199,25 @@ impl JsRule for Rule {
                 ) {
                     return;
                 }
-                self.report(ctx, self.target_key(&a.left), &a.right, checked);
+                self.report(ctx, || self.target_key(&a.left), &a.right, checked);
             }
             AstKind::AssignmentPattern(p) => {
-                self.report(ctx, self.binding_key(&p.left), &p.right, &p.right)
+                self.report(ctx, || self.binding_key(&p.left), &p.right, &p.right)
             }
             AstKind::AssignmentTargetWithDefault(p) => {
-                self.report(ctx, self.target_key(&p.binding), &p.init, &p.init);
+                self.report(ctx, || self.target_key(&p.binding), &p.init, &p.init);
             }
             AstKind::FormalParameter(p) => {
                 if let Some(init) = &p.initializer {
-                    self.report(ctx, self.binding_key(&p.pattern), init, init);
+                    self.report(ctx, || self.binding_key(&p.pattern), init, init);
                 }
             }
             AstKind::ObjectProperty(p) => {
-                self.report(ctx, self.property_key(&p.key), &p.value, &p.value)
+                self.report(ctx, || self.property_key(&p.key), &p.value, &p.value)
             }
             AstKind::PropertyDefinition(p) => {
                 if let Some(v) = &p.value {
-                    self.report(ctx, self.property_key(&p.key), v, v);
+                    self.report(ctx, || self.property_key(&p.key), v, v);
                 }
             }
             _ => {}
@@ -175,6 +228,30 @@ impl JsRule for Rule {
 #[cfg(test)]
 mod tests {
     use crate::test_util::*;
+
+    #[test]
+    fn shape_matches_sonar_pattern() {
+        let re =
+            regex::Regex::new(r"[a-zA-Z0-9_.+/~$-][a-zA-Z0-9_.+/=~$-]{14,1022}[a-zA-Z0-9_.+/=~$-]")
+                .unwrap();
+        for v in [
+            "",
+            "short",
+            "aaaaaaaaaaaaaaa",
+            "aaaaaaaaaaaaaaaa",
+            "================a",
+            "=aaaaaaaaaaaaaaaa",
+            "=aaaaaaaaaaaaaaa",
+            "abc def ghi jkl mno pqr",
+            "abcdefgh ijklmnopqrstuvwx",
+            "é0123456789abcdefé",
+            "0123456789abcde=",
+            "a=============== ",
+            "hello world: Zq8Xv2Lm9Pw4Rt7Yb3Nc6Kd1",
+        ] {
+            assert_eq!(super::has_secret_shape(v), re.is_match(v), "{v:?}");
+        }
+    }
 
     #[test]
     fn rule() {
