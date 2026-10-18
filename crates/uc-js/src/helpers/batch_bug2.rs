@@ -4,6 +4,8 @@ use oxc_ast::ast::*;
 use oxc_ast_visit::{Visit, walk};
 use oxc_syntax::scope::ScopeFlags;
 
+use oxc_span::{GetSpan, Span};
+
 use crate::Ctx;
 
 /// Facts about the statements of one function body (nested functions excluded).
@@ -342,9 +344,23 @@ fn last_object_arg<'b, 'a>(args: &'b [Argument<'a>]) -> Option<&'b ObjectExpress
 
 /// The options object of a Vue component / instance defined in a script file:
 /// `defineComponent({})`, `createApp({})`, `component('x', {})`, `Vue.component|mixin|extend(...)`,
-/// `app.component|mixin(...)`, `new Vue({})`.
-pub fn vue_component_object<'b, 'a>(kind: &'b AstKind<'a>) -> Option<&'b ObjectExpression<'a>> {
+/// `app.component|mixin(...)`, `new Vue({})`, and `export default {}` in SFC / JSX files.
+pub fn vue_component_object<'b, 'a>(
+    ctx: &Ctx<'_, '_>,
+    kind: &'b AstKind<'a>,
+) -> Option<&'b ObjectExpression<'a>> {
     match kind {
+        // `export default {}` in `.vue` / `.jsx` / `.tsx` files.
+        AstKind::ExportDefaultDeclaration(d) => {
+            let p = ctx.file.path;
+            if !(p.ends_with(".vue") || p.ends_with(".jsx") || p.ends_with(".tsx")) {
+                return None;
+            }
+            match d.declaration.as_expression().map(crate::helpers::strip_ts) {
+                Some(Expression::ObjectExpression(o)) => Some(o),
+                _ => None,
+            }
+        }
         AstKind::CallExpression(c) => {
             let ok = match crate::helpers::strip_ts(&c.callee) {
                 Expression::Identifier(id) => matches!(
@@ -438,6 +454,365 @@ pub fn visit_function_body<'a, V: Visit<'a>>(v: &mut V, e: &Expression<'a>) -> b
         }
         _ => false,
     }
+}
+
+/// A mutation found by [`find_mutating`].
+pub struct Mutation {
+    /// The assignment / update / `delete` / call expression.
+    pub span: Span,
+    pub is_call: bool,
+    /// Member expressions between the start node and the mutation (outermost last).
+    pub path: Vec<oxc_semantic::NodeId>,
+}
+
+const MUTATING_METHODS: [&str; 9] = [
+    "push",
+    "pop",
+    "shift",
+    "unshift",
+    "reverse",
+    "splice",
+    "sort",
+    "copyWithin",
+    "fill",
+];
+
+/// eslint-plugin-vue's `findMutating`: walks up from `start` (an identifier, `this` member, …)
+/// through member accesses to an assignment, update, `delete`, mutating array method call or
+/// `Object.assign(start, …)`.
+pub fn find_mutating(ctx: &Ctx<'_, '_>, start: oxc_semantic::NodeId) -> Option<Mutation> {
+    let mut node = start;
+    let mut path = Vec::new();
+    loop {
+        let span = ctx.node(node).span();
+        let parent = ctx.parent(node);
+        match parent.kind() {
+            AstKind::ParenthesizedExpression(_) | AstKind::ChainExpression(_) => node = parent.id(),
+            AstKind::AssignmentExpression(a) => {
+                return (a.left.span() == span).then_some(Mutation {
+                    span: a.span,
+                    is_call: false,
+                    path,
+                });
+            }
+            AstKind::UpdateExpression(u) => {
+                return Some(Mutation {
+                    span: u.span,
+                    is_call: false,
+                    path,
+                });
+            }
+            AstKind::UnaryExpression(u) => {
+                return (u.operator == UnaryOperator::Delete).then_some(Mutation {
+                    span: u.span,
+                    is_call: false,
+                    path,
+                });
+            }
+            AstKind::CallExpression(c) => {
+                if c.callee.span() == span
+                    && let Some(&last) = path.last()
+                    && member_name(ctx, last)
+                        .is_some_and(|n| MUTATING_METHODS.contains(&n.as_str()))
+                {
+                    path.pop();
+                    return Some(Mutation {
+                        span: c.span,
+                        is_call: true,
+                        path,
+                    });
+                }
+                let is_assign = matches!(&c.callee, Expression::StaticMemberExpression(m)
+                    if m.property.name == "assign" && matches!(&m.object, Expression::Identifier(o) if o.name == "Object"));
+                if is_assign && c.arguments.first().is_some_and(|a| a.span() == span) {
+                    return Some(Mutation {
+                        span: c.span,
+                        is_call: true,
+                        path,
+                    });
+                }
+                return None;
+            }
+            AstKind::StaticMemberExpression(m) if m.object.span() == span => {
+                path.push(parent.id());
+                node = parent.id();
+            }
+            AstKind::ComputedMemberExpression(m) if m.object.span() == span => {
+                path.push(parent.id());
+                node = parent.id();
+            }
+            AstKind::PrivateFieldExpression(m) if m.object.span() == span => {
+                path.push(parent.id());
+                node = parent.id();
+            }
+            _ => return None,
+        }
+    }
+}
+
+/// Property name of a member expression node: static name, or `[source]` for computed keys.
+pub fn member_name(ctx: &Ctx<'_, '_>, id: oxc_semantic::NodeId) -> Option<String> {
+    match ctx.node(id).kind() {
+        AstKind::StaticMemberExpression(m) => Some(m.property.name.to_string()),
+        AstKind::PrivateFieldExpression(m) => Some(m.field.name.to_string()),
+        AstKind::ComputedMemberExpression(m) => Some(match &m.expression {
+            Expression::StringLiteral(s) => s.value.to_string(),
+            Expression::TemplateLiteral(t) if t.expressions.is_empty() => t
+                .quasis
+                .first()
+                .and_then(|q| q.value.cooked)
+                .map(|c| c.to_string())
+                .unwrap_or_default(),
+            e => format!("[{}]", ctx.text(e.span())),
+        }),
+        _ => None,
+    }
+}
+
+/// eslint-plugin-vue's `isThis`: `this`, or a `const` alias initialized with `this`.
+pub fn is_vue_this(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> bool {
+    match e {
+        Expression::ThisExpression(_) => true,
+        Expression::Identifier(id) => {
+            let Some(sym) = ctx.symbol_of(id) else {
+                return false;
+            };
+            let decl = ctx.symbol_decl(sym);
+            matches!(decl.kind(), AstKind::VariableDeclarator(v)
+                if matches!(v.id, BindingPattern::BindingIdentifier(_))
+                    && matches!(v.init, Some(Expression::ThisExpression(_)))
+                    && matches!(ctx.parent_kind(decl.id()), AstKind::VariableDeclaration(d) if d.kind == VariableDeclarationKind::Const))
+        }
+        _ => false,
+    }
+}
+
+/// Prop names declared by a component's `props` option (array of strings or object keys).
+pub fn component_props<'a>(component: &ObjectExpression<'a>) -> Vec<&'a str> {
+    let mut out = Vec::new();
+    let Some(props) = find_property(component, "props") else {
+        return out;
+    };
+    match crate::helpers::strip_ts(&props.value) {
+        Expression::ArrayExpression(a) => {
+            for el in &a.elements {
+                if let Some(Expression::StringLiteral(s)) = el.as_expression() {
+                    out.push(s.value.as_str());
+                }
+            }
+        }
+        Expression::ObjectExpression(o) => {
+            for p in &o.properties {
+                if let ObjectPropertyKind::ObjectProperty(p) = p
+                    && let Some(n) = static_key(p)
+                {
+                    out.push(n);
+                }
+            }
+        }
+        _ => {}
+    }
+    out
+}
+
+/// True when a `.vue` file's script is (most likely) `<script setup>`: no `export default`.
+pub fn is_script_setup(ctx: &Ctx<'_, '_>) -> bool {
+    ctx.file.path.ends_with(".vue")
+        && !ctx
+            .nodes()
+            .program()
+            .body
+            .iter()
+            .any(|s| matches!(s, Statement::ExportDefaultDeclaration(_)))
+}
+
+/// Sonar has no TypeScript type information for scripts embedded in `.vue` / `.html` files, so
+/// type-dependent rules stay silent there.
+pub fn has_type_info(ctx: &Ctx<'_, '_>) -> bool {
+    let p = ctx.file.path.to_ascii_lowercase();
+    !(p.ends_with(".vue") || p.ends_with(".html") || p.ends_with(".htm"))
+}
+
+// ---- Promise inference ---------------------------------------------------------------------------
+
+/// `Promise<...>` return type annotation.
+pub fn is_promise_annotation(ret: Option<&TSTypeAnnotation<'_>>) -> bool {
+    matches!(ret.map(|r| &r.type_annotation), Some(TSType::TSTypeReference(t))
+        if matches!(&t.type_name, TSTypeName::IdentifierReference(id) if id.name == "Promise"))
+}
+
+fn function_returns_promise(f: &Function<'_>) -> bool {
+    (f.r#async && !f.generator) || is_promise_annotation(f.return_type.as_deref())
+}
+
+fn expr_returns_promise(e: &Expression<'_>) -> bool {
+    match e.without_parentheses() {
+        Expression::ArrowFunctionExpression(a) => {
+            a.r#async || is_promise_annotation(a.return_type.as_deref())
+        }
+        Expression::FunctionExpression(f) => function_returns_promise(f),
+        _ => false,
+    }
+}
+
+/// The class body `this` refers to at `id`, with whether the context is static.
+fn this_class<'s, 'a>(
+    ctx: &Ctx<'a, 's>,
+    id: oxc_semantic::NodeId,
+) -> Option<(&'s ClassBody<'a>, bool)> {
+    let nodes = ctx.nodes();
+    let mut is_static = None;
+    for anc in nodes.ancestor_ids(id) {
+        match nodes.kind(anc) {
+            AstKind::ArrowFunctionExpression(_) => {}
+            AstKind::Function(_) => match nodes.parent_kind(anc) {
+                AstKind::MethodDefinition(m) => is_static = Some(m.r#static),
+                AstKind::PropertyDefinition(p) => is_static = Some(p.r#static),
+                _ => return None,
+            },
+            AstKind::PropertyDefinition(p) if is_static.is_none() => is_static = Some(p.r#static),
+            AstKind::StaticBlock(_) if is_static.is_none() => is_static = Some(true),
+            AstKind::ClassBody(b) => return Some((b, is_static.unwrap_or(false))),
+            _ => {}
+        }
+    }
+    None
+}
+
+/// `this.name(...)` resolves to a member of the enclosing class that returns a Promise.
+fn this_method_returns_promise(
+    ctx: &Ctx<'_, '_>,
+    call_id: oxc_semantic::NodeId,
+    name: &str,
+    private: bool,
+) -> bool {
+    let Some((body, is_static)) = this_class(ctx, call_id) else {
+        return false;
+    };
+    let key_matches = |k: &PropertyKey<'_>| match k {
+        PropertyKey::PrivateIdentifier(p) => private && p.name == name,
+        k => !private && crate::helpers::property_key_name(k) == Some(name),
+    };
+    body.body.iter().any(|e| match e {
+        ClassElement::MethodDefinition(m) => {
+            m.kind == MethodDefinitionKind::Method
+                && m.r#static == is_static
+                && !m.computed
+                && key_matches(&m.key)
+                && function_returns_promise(&m.value)
+        }
+        ClassElement::PropertyDefinition(p) => {
+            p.r#static == is_static
+                && !p.computed
+                && key_matches(&p.key)
+                && (p.value.as_ref().is_some_and(expr_returns_promise)
+                    || matches!(p.type_annotation.as_ref().map(|t| &t.type_annotation),
+                        Some(TSType::TSFunctionType(f)) if is_promise_annotation(Some(&f.return_type))))
+        }
+        _ => false,
+    })
+}
+
+/// Known to evaluate to a native Promise: local type inference plus `this.asyncMethod()`,
+/// `import()`, async IIFEs and `.then/.catch/.finally` chains on those.
+pub fn is_promise_expr(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> bool {
+    match e.without_parentheses() {
+        Expression::ImportExpression(_) => return true,
+        Expression::StaticMemberExpression(_) => {
+            if is_global_dom_path(ctx, e, DOM_PROMISE_PROPERTIES) {
+                return true;
+            }
+        }
+        Expression::CallExpression(c) => {
+            match c.callee.without_parentheses() {
+                Expression::ArrowFunctionExpression(a) => return a.r#async,
+                Expression::FunctionExpression(f) => return f.r#async && !f.generator,
+                Expression::StaticMemberExpression(m) => {
+                    if matches!(m.object, Expression::ThisExpression(_))
+                        && this_method_returns_promise(
+                            ctx,
+                            c.node_id.get(),
+                            &m.property.name,
+                            false,
+                        )
+                    {
+                        return true;
+                    }
+                    if matches!(m.property.name.as_str(), "then" | "catch" | "finally")
+                        && is_promise_expr(ctx, &m.object)
+                    {
+                        return true;
+                    }
+                }
+                Expression::PrivateFieldExpression(m)
+                    if matches!(m.object, Expression::ThisExpression(_))
+                        && this_method_returns_promise(
+                            ctx,
+                            c.node_id.get(),
+                            &m.field.name,
+                            true,
+                        ) =>
+                {
+                    return true;
+                }
+                _ => {}
+            }
+            if is_global_dom_path(ctx, &c.callee, DOM_PROMISE_METHODS) {
+                return true;
+            }
+        }
+        _ => {}
+    }
+    crate::helpers::type_of(ctx, e).is_promise()
+}
+
+/// DOM-lib properties typed as `Promise` (available to TypeScript without any dependency).
+const DOM_PROMISE_PROPERTIES: &[&str] = &["navigator.serviceWorker.ready", "document.fonts.ready"];
+
+/// DOM-lib functions returning a `Promise`.
+const DOM_PROMISE_METHODS: &[&str] = &[
+    "navigator.serviceWorker.register",
+    "navigator.serviceWorker.getRegistration",
+    "navigator.serviceWorker.getRegistrations",
+    "navigator.clipboard.writeText",
+    "navigator.clipboard.readText",
+    "navigator.clipboard.write",
+    "navigator.clipboard.read",
+    "navigator.mediaDevices.getUserMedia",
+    "navigator.mediaDevices.getDisplayMedia",
+    "navigator.mediaDevices.enumerateDevices",
+    "navigator.permissions.query",
+    "navigator.share",
+    "Notification.requestPermission",
+    "caches.open",
+    "caches.match",
+    "caches.has",
+    "caches.delete",
+    "caches.keys",
+    "createImageBitmap",
+    "window.fetch",
+    "document.exitFullscreen",
+    "document.documentElement.requestFullscreen",
+];
+
+/// `e` is one of `paths` rooted at an undeclared (global) identifier.
+fn is_global_dom_path(ctx: &Ctx<'_, '_>, e: &Expression<'_>, paths: &[&str]) -> bool {
+    let mut root = e.without_parentheses();
+    while let Expression::StaticMemberExpression(m) = root {
+        root = m.object.without_parentheses();
+    }
+    let Expression::Identifier(id) = root else {
+        return false;
+    };
+    if ctx.symbol_of(id).is_some() {
+        return false;
+    }
+    // An explicit `lib` without the DOM typings.
+    let lib = &ctx.file.project.ts_lib;
+    if !lib.is_empty() && !lib.iter().any(|l| l.starts_with("dom")) {
+        return false;
+    }
+    crate::helpers::dotted_path(e).is_some_and(|p| paths.contains(&p.as_str()))
 }
 
 // Generated from the `globals` package (MIT) for the environments SonarJS enables by default,

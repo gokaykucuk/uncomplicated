@@ -134,7 +134,11 @@ fn check_definition<'a>(ctx: &Ctx<'a, '_>, def: &Expression<'a>, property: Optio
 
 impl JsRule for Rule {
     fn interests(&self) -> &'static [AstType] {
-        &[AstType::CallExpression, AstType::NewExpression]
+        &[
+            AstType::CallExpression,
+            AstType::NewExpression,
+            AstType::ExportDefaultDeclaration,
+        ]
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
@@ -147,7 +151,7 @@ impl JsRule for Rule {
             return;
         }
         let kind = node.kind();
-        let Some(component) = vue_component_object(&kind) else {
+        let Some(component) = vue_component_object(ctx, &kind) else {
             return;
         };
         let Some(computed) = find_property(component, "computed") else {

@@ -158,13 +158,11 @@ fn is_element_write(ctx: &Ctx<'_, '_>, member_id: NodeId, member: Span) -> bool 
 impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
         let scoping = ctx.scoping();
-        let root = scoping.root_scope_id();
+        // Sonar parses files as modules first, so top-level variables live in a module scope
+        // (not the global scope it skips) for nearly all files.
         for sym in scoping.symbol_ids() {
             let flags = scoping.symbol_flags(sym);
             if !flags.is_variable() {
-                continue;
-            }
-            if !ctx.file.is_module && scoping.symbol_scope_id(sym) == root {
                 continue;
             }
             let decl = ctx.symbol_decl(sym);

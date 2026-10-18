@@ -44,12 +44,16 @@ fn check_type(ctx: &Ctx<'_, '_>, name: &str, e: &Expression<'_>) {
 
 impl JsRule for Rule {
     fn interests(&self) -> &'static [AstType] {
-        &[AstType::CallExpression, AstType::NewExpression]
+        &[
+            AstType::CallExpression,
+            AstType::NewExpression,
+            AstType::ExportDefaultDeclaration,
+        ]
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
         let kind = node.kind();
-        let Some(component) = vue_component_object(&kind) else {
+        let Some(component) = vue_component_object(ctx, &kind) else {
             return;
         };
         let Some(props) = find_property(component, "props") else {

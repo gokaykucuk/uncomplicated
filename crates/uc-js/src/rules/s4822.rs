@@ -2,6 +2,7 @@
 use oxc_ast_visit::{Visit, walk};
 use oxc_syntax::scope::ScopeFlags;
 
+use crate::helpers::batch_bug2::{has_type_info, is_promise_expr};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -46,7 +47,7 @@ impl<'a> Visit<'a> for Calls<'_, 'a, '_> {
 impl Calls<'_, '_, '_> {
     fn classify(&mut self, e: &Expression<'_>, id: NodeId) {
         let ctx = self.ctx;
-        if !type_of(ctx, e).is_promise() {
+        if !is_promise_expr(ctx, e) {
             self.bail = true;
             return;
         }
@@ -78,6 +79,9 @@ impl JsRule for Rule {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
+        if !has_type_info(ctx) {
+            return;
+        }
         let AstKind::TryStatement(t) = node.kind() else {
             return;
         };

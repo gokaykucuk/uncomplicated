@@ -159,6 +159,7 @@ impl<'a> Visit<'a> for Flow {
             }
             if !self.super_is_ctor {
                 self.add_report(it.span, BAD_SUPER);
+                self.state = CALLED;
                 return;
             }
             if self.state & CALLED != 0 {

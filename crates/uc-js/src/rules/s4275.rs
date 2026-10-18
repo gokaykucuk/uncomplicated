@@ -73,7 +73,13 @@ fn arg_is(call: &CallExpression<'_>, idx: usize, span: Span) -> bool {
 
 /// For an object expression used as a property descriptor: the described property name.
 /// `single` is true for `Object.defineProperty`/`Reflect.defineProperty`.
-fn descriptor_name(ctx: &Ctx<'_, '_>, obj_id: NodeId, obj_span: Span) -> Option<String> {
+/// With `any_name`, also accepts descriptors whose property name is not static (returned empty).
+fn descriptor_name(
+    ctx: &Ctx<'_, '_>,
+    obj_id: NodeId,
+    obj_span: Span,
+    any_name: bool,
+) -> Option<String> {
     let parent = ctx.parent(obj_id);
     match parent.kind() {
         AstKind::CallExpression(call) => {
@@ -82,7 +88,7 @@ fn descriptor_name(ctx: &Ctx<'_, '_>, obj_id: NodeId, obj_span: Span) -> Option<
             if single && arg_is(call, 2, obj_span) {
                 return match call.arguments[1].as_expression().map(strip_parens) {
                     Some(Expression::StringLiteral(s)) => Some(s.value.to_string()),
-                    _ => None,
+                    _ => any_name.then(String::new),
                 };
             }
             None
@@ -106,6 +112,12 @@ fn descriptor_name(ctx: &Ctx<'_, '_>, obj_id: NodeId, obj_span: Span) -> Option<
             {
                 return key_name(&p.key);
             }
+            if any_name
+                && is_global_member_call(ctx, call, "Object", &["defineProperties", "create"], 2)
+                && arg_is(call, 1, o.span)
+            {
+                return Some(String::new());
+            }
             None
         }
         _ => None,
@@ -125,7 +137,7 @@ fn is_getter_function(ctx: &Ctx<'_, '_>, func_id: NodeId) -> Option<&'static str
             let AstKind::ObjectExpression(o) = obj.kind() else {
                 return None;
             };
-            descriptor_name(ctx, obj.id(), o.span).map(|_| "descriptor")
+            descriptor_name(ctx, obj.id(), o.span, true).map(|_| "descriptor")
         }
         _ => None,
     }
@@ -270,7 +282,7 @@ fn accessor_info(ctx: &Ctx<'_, '_>, node: &AstNode<'_>) -> Option<Info> {
             if key == "get" || key == "set" {
                 let obj = ctx.parent(node.id());
                 if let AstKind::ObjectExpression(o) = obj.kind()
-                    && let Some(name) = descriptor_name(ctx, obj.id(), o.span)
+                    && let Some(name) = descriptor_name(ctx, obj.id(), o.span, false)
                 {
                     let ty = if key == "get" {
                         AccessorType::Getter
@@ -562,6 +574,9 @@ Object.defineProperty(obj, "foo", {
     foo();
     bar();
   },
+});
+Object.defineProperty(obj, name, {
+  get: () => {}, // Noncompliant
 });
 class A {
   get x() { while (true) { if (y) return 1; } }
