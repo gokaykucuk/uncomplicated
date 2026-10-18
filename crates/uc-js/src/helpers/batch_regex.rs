@@ -28,16 +28,26 @@ pub const INTERESTS: &[AstType] = &[
 ];
 
 /// How regex AST positions map back to the source.
-#[derive(Clone, Copy)]
 enum Map<'a> {
     /// Pattern spans are already absolute source positions (regex literal).
     Literal,
     /// Pattern spans are offsets in the cooked value of a string literal whose raw content
     /// (without quotes) starts at `start`.
     Str { raw: &'a str, start: u32 },
+    /// A concatenation: SonarJS reports on the whole node; we keep its start and end the span
+    /// where the element ends, so that distinct elements give distinct issues.
+    Concat(Vec<Seg<'a>>),
     /// No precise mapping: everything maps to the whole node.
     Whole,
+    /// Pattern text not taken verbatim from a string literal (constant, template): SonarJS
+    /// reports on the whole node; we keep its start and derive the end from the pattern offset
+    /// so that distinct elements give distinct issues.
+    Offset,
 }
+
+/// A string literal piece of a concatenated pattern:
+/// (cooked offset, cooked length, raw body, absolute body start).
+type Seg<'a> = (usize, usize, &'a str, u32);
 
 /// A parsed regular expression.
 pub struct Regex<'r, 'a> {
@@ -62,16 +72,39 @@ impl Regex<'_, '_> {
 
     /// Source location of a regex AST span; `None` when it maps to an empty range.
     pub fn loc(&self, s: Span) -> Option<Span> {
-        let r = match self.map {
+        let r = match &self.map {
             Map::Literal => s,
-            Map::Str { raw, start } => {
+            Map::Concat(segs) => {
+                let end = s.end as usize;
+                let seg = segs
+                    .iter()
+                    .rev()
+                    .find(|&&(off, len, _, _)| off < end && end <= off + len);
+                return Some(match seg {
+                    Some(&(off, _, raw, start)) => {
+                        let e = start + raw_offset(raw, end - off) as u32;
+                        Span::new(self.node.start, e.max(self.node.start + 1))
+                    }
+                    None => self.offset_span(s),
+                });
+            }
+            // `new RegExp('')` is parsed as `(?:)`: everything maps to the quotes.
+            &Map::Str { raw: "", start } => Span::new(start - 1, start + 1),
+            &Map::Str { raw, start } => {
                 let a = raw_offset(raw, s.start as usize) as u32;
                 let b = raw_offset(raw, s.end as usize) as u32;
                 Span::new(start + a, start + b)
             }
             Map::Whole => return Some(self.node),
+            Map::Offset => return Some(self.offset_span(s)),
         };
         (r.start < r.end).then_some(r)
+    }
+
+    fn offset_span(&self, s: Span) -> Span {
+        let n = self.node;
+        let len = n.end.saturating_sub(n.start).max(1);
+        Span::new(n.start, n.start + 1 + s.end % len)
     }
 
     /// Location of a regex AST span, falling back to the whole node.
@@ -264,16 +297,31 @@ pub fn ctor_flags<'a>(ctx: &Ctx<'a, '_>, args: &'a [Argument<'a>]) -> Option<&'a
 enum Source<'a> {
     /// A regex literal (already parsed by the JS parser).
     Lit(&'a RegExpLiteral<'a>),
-    /// Pattern text that still needs parsing; `raw` is set for string literals.
+    /// Pattern text that still needs parsing, with its string literal pieces.
     Text {
         text: Cow<'a, str>,
-        raw: Option<(&'a str, u32)>,
+        segs: Vec<Seg<'a>>,
+        kind: TextKind,
     },
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum TextKind {
+    /// A single string literal.
+    Str,
+    /// A `+` concatenation.
+    Concat,
+    /// Anything else (templates, constants).
+    Other,
+}
+
+fn text<'a>(text: Cow<'a, str>, segs: Vec<Seg<'a>>, kind: TextKind) -> Option<Source<'a>> {
+    Some(Source::Text { text, segs, kind })
+}
+
 /// SonarJS' `getPatternFromNode`, without the `RegExp` constructor case.
-fn extract<'a>(ctx: &Ctx<'a, '_>, e: &'a Expression<'a>, depth: u8) -> Option<Source<'a>> {
-    if depth > 4 {
+fn extract<'a>(ctx: &Ctx<'a, '_>, e: &'a Expression<'a>, depth: u16) -> Option<Source<'a>> {
+    if depth > 250 {
         return None;
     }
     match strip_parens(e) {
@@ -284,36 +332,45 @@ fn extract<'a>(ctx: &Ctx<'a, '_>, e: &'a Expression<'a>, depth: u8) -> Option<So
             }
             let raw = ctx.text(s.span);
             let inner = raw.get(1..raw.len().saturating_sub(1))?;
-            Some(Source::Text {
-                text: Cow::Borrowed(s.value.as_str()),
-                raw: Some((inner, s.span.start + 1)),
-            })
+            let value = s.value.as_str();
+            text(
+                Cow::Borrowed(value),
+                vec![(0, value.len(), inner, s.span.start + 1)],
+                TextKind::Str,
+            )
         }
-        Expression::TemplateLiteral(t) if t.expressions.is_empty() && t.quasis.len() == 1 => {
-            Some(Source::Text {
-                text: Cow::Borrowed(t.quasis[0].value.raw.as_str()),
-                raw: None,
-            })
+        Expression::TemplateLiteral(t) if t.expressions.is_empty() && t.quasis.len() == 1 => text(
+            Cow::Borrowed(t.quasis[0].value.raw.as_str()),
+            Vec::new(),
+            TextKind::Other,
+        ),
+        Expression::TaggedTemplateExpression(t) => {
+            text(Cow::Borrowed(simple_raw(t)?), Vec::new(), TextKind::Other)
         }
-        Expression::TaggedTemplateExpression(t) => simple_raw(t).map(|r| Source::Text {
-            text: Cow::Borrowed(r),
-            raw: None,
-        }),
-        Expression::Identifier(id) => match extract(ctx, const_init(ctx, id)?, depth + 1)? {
-            Source::Text { text, .. } => Some(Source::Text { text, raw: None }),
+        Expression::Identifier(id) => match extract(ctx, const_init(ctx, id)?, depth + 50)? {
+            Source::Text { text: t, .. } => text(t, Vec::new(), TextKind::Other),
             lit => Some(lit),
         },
         Expression::BinaryExpression(b) if b.operator == BinaryOperator::Addition => {
-            let (Source::Text { text: l, .. }, Source::Text { text: r, .. }) = (
+            let (
+                Source::Text {
+                    text: l,
+                    segs: mut ls,
+                    ..
+                },
+                Source::Text {
+                    text: r, segs: rs, ..
+                },
+            ) = (
                 extract(ctx, &b.left, depth + 1)?,
                 extract(ctx, &b.right, depth + 1)?,
-            ) else {
+            )
+            else {
                 return None;
             };
-            Some(Source::Text {
-                text: Cow::Owned(format!("{l}{r}")),
-                raw: None,
-            })
+            let shift = l.len();
+            ls.extend(rs.into_iter().map(|(o, n, raw, s)| (o + shift, n, raw, s)));
+            text(Cow::Owned(format!("{l}{r}")), ls, TextKind::Concat)
         }
         _ => None,
     }
@@ -355,7 +412,7 @@ fn with_source<'a>(
                 map,
             });
         }
-        Source::Text { text, raw } => {
+        Source::Text { text, segs, kind } => {
             let flags_s = flags.unwrap_or("");
             let Some(fl) = parse_flags(flags_s) else {
                 return;
@@ -366,9 +423,13 @@ fn with_source<'a>(
             else {
                 return;
             };
-            let map = match raw {
-                Some((raw, start)) => Map::Str { raw, start },
-                None => Map::Whole,
+            let map = match kind {
+                TextKind::Str => match segs.first() {
+                    Some(&(_, _, raw, start)) => Map::Str { raw, start },
+                    None => Map::Whole,
+                },
+                TextKind::Concat if !segs.is_empty() => Map::Concat(segs),
+                _ => Map::Offset,
             };
             f(&Regex {
                 pattern: &pattern,
@@ -476,8 +537,9 @@ fn ctor_regex<'a>(
     let Some(flags) = ctor_flags(ctx, args) else {
         return;
     };
-    // Regex literal arguments are checked as literals already.
-    if let Some(source @ Source::Text { .. }) = extract(ctx, first, 0) {
+    // Like SonarJS, a regex literal argument is checked again here (with the constructor's
+    // flags), reported on the whole literal.
+    if let Some(source) = extract(ctx, first, 0) {
         with_source(ctx.src, source, Some(flags), first.span(), false, f);
     }
 }
