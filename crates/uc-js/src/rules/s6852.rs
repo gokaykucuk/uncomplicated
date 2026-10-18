@@ -54,6 +54,9 @@ impl JsRule for Rule {
             || is_interactive_element(tag, el)
             || is_non_interactive_element(tag, el)
             || is_non_interactive_role(tag, el)
+            // Upstream's non-interactive role set is every non-abstract role outside `widget`,
+            // which includes `toolbar` (also listed as interactive), so toolbars never report.
+            || first_valid_role(el).is_some_and(|r| !r.is_abstract && !r.widget)
             || tab_index(el).is_defined()
         {
             return;

@@ -51,7 +51,15 @@ runs and unchanged files are not re-analyzed.
 
 ## Configuration
 
-`uncomplicated.toml` at the project root. Every key is optional:
+Projects already set up for SonarQube work as-is. Without an `uncomplicated.toml`, `unc` reads
+`sonar-project.properties`: sources, tests, inclusions and exclusions, coverage report paths, CPD
+exclusions and `sonar.issue.ignore.multicriteria` rules.
+
+To get exactly what a specific SonarQube server reports, pin its rule set:
+`--profile sonarqube-26.9` uses the Sonar way profile and rule behaviour of SonarQube 26.9
+(SonarJS 13.8.0, sonar-go 1.43.0).
+
+Otherwise, use `uncomplicated.toml` at the project root. Every key is optional:
 
 ```toml
 [analysis]
@@ -102,6 +110,10 @@ profile enabled:
 | Prometheus (Go) | 998 | 345k | 0.5 s | 0.2 GB |
 
 With a warm cache (nothing changed), the JS/TS corpus takes 0.4 s.
+
+On a real monorepo (polybase: 7,300 JS/TS/Go files, 1.5M lines), `unc` takes 0.9–1.5 s. The
+project's own SonarQube pipeline takes 633 s in the scanner (695 s with server startup). With
+`--profile sonarqube-26.9` both report the same issues on the committed code.
 
 Parity with SonarJS on its own ruling corpus, comparing issues per rule at file/line granularity:
 471 rules compared, **99.9% precision, 97.5% recall**, 352 rules matching exactly. Most remaining

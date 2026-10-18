@@ -2,11 +2,14 @@
 use crate::helpers::batch_a11y::*;
 use crate::prelude::*;
 
-pub struct Rule;
+pub struct Rule {
+    /// `<svg>` accessible names (added in SonarJS after 13.8; off in older pinned profiles).
+    check_svg: bool,
+}
 
 impl Rule {
-    pub fn new(_: &Params) -> Self {
-        Self
+    pub fn new(p: &Params) -> Self {
+        Self { check_svg: p.bool("checkSvg", true) }
     }
 }
 
@@ -187,7 +190,7 @@ impl JsRule for Rule {
                 }
             }
             "svg" => {
-                if matches!(el.name, JSXElementName::Identifier(_)) {
+                if self.check_svg && matches!(el.name, JSXElementName::Identifier(_)) {
                     check_svg(ctx, node, el);
                 }
             }

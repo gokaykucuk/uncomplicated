@@ -112,7 +112,9 @@ fn walk(ctx: &Ctx<'_>, n: Node<'_>, nesting: u32, out: &mut Vec<Increment>) {
                 walk(ctx, ch, if kind(ch) == K::Block { nesting + 1 } else { nesting }, out);
             }
         }
-        K::ExprSwitch | K::TypeSwitch | K::Select => {
+        // sonar-go maps `select` to an opaque native node: no increment, no nesting.
+        K::Select => children(ctx, n, nesting, out),
+        K::ExprSwitch | K::TypeSwitch => {
             out.push(Increment { span: kw(n, 6), nesting });
             let mut c = n.walk();
             for ch in n.named_children(&mut c) {

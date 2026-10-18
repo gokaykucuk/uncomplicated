@@ -33,15 +33,11 @@ fn range(n: Option<Nd<'_>>) -> Range {
     n.map(|n| (n.start_byte(), n.end_byte()))
 }
 
-/// The parameter list, when it declares named parameters (unnamed ones are not parameters for
-/// sonar-go).
+/// The parameter list, when it declares parameters. Unnamed parameters count: functions whose
+/// parameter types differ are different functions.
 fn named_params(n: Nd<'_>) -> Range {
     let list = n.child_by_field_name("parameters")?;
-    let mut c = list.walk();
-    let named = list
-        .named_children(&mut c)
-        .any(|p| p.child_by_field_name("name").is_some());
-    named.then(|| (list.start_byte(), list.end_byte()))
+    (list.named_child_count() > 0).then(|| (list.start_byte(), list.end_byte()))
 }
 
 fn equivalent(ctx: &Ctx<'_>, a: &[Range; 4], b: &[Range; 4]) -> bool {

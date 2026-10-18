@@ -48,11 +48,23 @@ pub struct Config {
     pub coverage: Coverage,
     pub new_code: NewCode,
     pub gate: Gate,
+    /// Issues to drop: rule key (optionally `javascript:`/`typescript:`/`go:` prefixed, `*` for
+    /// any) in files matching the globs (like `sonar.issue.ignore.multicriteria`).
+    pub ignore: Vec<IssueIgnore>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct IssueIgnore {
+    pub rule: String,
+    pub paths: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Analysis {
+    /// Directories to analyze, relative to the root (empty = the whole root).
+    pub sources: Vec<String>,
     /// Extra exclusion globs (relative to the project root).
     pub exclusions: Vec<String>,
     /// Replace the default exclusions instead of extending them.
@@ -75,6 +87,7 @@ pub struct Analysis {
 impl Default for Analysis {
     fn default() -> Self {
         Self {
+            sources: Vec::new(),
             exclusions: Vec::new(),
             replace_default_exclusions: false,
             tests: None,
@@ -161,7 +174,8 @@ impl Config {
             None => {
                 let p = root.join(CONFIG_FILE);
                 if !p.exists() {
-                    return Ok(Self::default());
+                    // Fall back to an existing SonarQube configuration.
+                    return Ok(crate::sonar::load(root).unwrap_or_default());
                 }
                 p
             }
@@ -193,6 +207,7 @@ impl Config {
         let mut keys: Vec<_> = self.rules.iter().map(|(k, v)| format!("{k}={v:?}")).collect();
         keys.extend(self.go_rules.iter().map(|(k, v)| format!("go:{k}={v:?}")));
         keys.extend(self.ts_rules.iter().map(|(k, v)| format!("ts:{k}={v:?}")));
+        // Ignores filter issues after analysis: they don't affect cached per-file results.
         keys.sort();
         s.push_str(&keys.join(","));
         xxhash_rust::xxh3::xxh3_64(s.as_bytes())

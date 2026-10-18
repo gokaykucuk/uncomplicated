@@ -30,9 +30,40 @@ fn is_render_hook_result(f: &str) -> bool {
     has_prefix(f, RENDER_HOOK_RESULT)
 }
 
+/// The callee is an imported utility or a member chain on one (`fireEvent.click`,
+/// `screen.getByRole`), not a method called on a value a utility returned (`el.focus()` where
+/// `el = screen.getByRole(..)`), like upstream's `isTestingLibraryUtil`.
+fn direct_callee(e: &Expression<'_>) -> bool {
+    match strip_parens(e) {
+        Expression::Identifier(_) => true,
+        Expression::StaticMemberExpression(m) => direct_callee(&m.object),
+        _ => false,
+    }
+}
+
 fn is_tl(ctx: &Ctx<'_, '_>, call: &CallExpression<'_>) -> bool {
+    if !direct_callee(&call.callee) || callee_root_is_derived(ctx, &call.callee) {
+        return false;
+    }
     fqn(ctx, &call.callee)
         .is_some_and(|f| !is_render_hook_result(&f) && PREFIXES.iter().any(|p| has_prefix(&f, p)))
+}
+
+/// True if the callee's root identifier is a local variable initialized with a call result
+/// (a queried element, a `userEvent.setup()` instance...), not an import.
+fn callee_root_is_derived(ctx: &Ctx<'_, '_>, callee: &Expression<'_>) -> bool {
+    let mut e = strip_parens(callee);
+    while let Expression::StaticMemberExpression(m) = e {
+        e = strip_parens(&m.object);
+    }
+    let Expression::Identifier(id) = e else { return false };
+    let Some(sym) = ctx.symbol_of(id) else { return false };
+    match ctx.symbol_decl(sym).kind() {
+        AstKind::VariableDeclarator(v) => v.init.as_ref().is_some_and(|i| {
+            matches!(strip_parens(i), Expression::CallExpression(_) | Expression::AwaitExpression(_))
+        }),
+        _ => false,
+    }
 }
 
 fn is_act(ctx: &Ctx<'_, '_>, callee: &Expression<'_>) -> bool {
@@ -196,6 +227,20 @@ function hookState(id) {
         if (id) rerender();
     });
 }
+"#,
+        );
+    }
+
+    #[test]
+    fn methods_on_queried_elements_are_not_utilities() {
+        check(
+            "S8980",
+            "a.test.tsx",
+            r#"
+import { act, fireEvent, screen } from "@testing-library/react";
+const before = screen.getByRole("textbox");
+act(() => before.focus());
+act(() => fireEvent.click(before)); // Noncompliant
 "#,
         );
     }

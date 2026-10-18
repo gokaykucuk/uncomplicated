@@ -31,6 +31,12 @@ impl<'a> Visit<'a> for Calls<'_, 'a, '_> {
                 self.bail = true;
                 None
             }
+            // Optional calls (`f?.()`, `a?.b()`) are calls whose result we can't type: they may
+            // throw synchronously, like any non-promise call.
+            Expression::ChainExpression(c) if matches!(c.expression, ChainElement::CallExpression(_)) => {
+                self.bail = true;
+                None
+            }
             _ => None,
         };
         if let Some(id) = id {
@@ -153,6 +159,22 @@ async function f() {
   try {
     returningPromise();
   } finally {}
+}
+"#,
+        );
+    }
+
+    #[test]
+    fn optional_call_inside_try_may_throw() {
+        check(
+            "S4822",
+            "a.ts",
+            r#"
+declare const cb: (() => void) | undefined;
+function f() {
+  try {
+    return Promise.resolve(cb?.()).finally(() => {});
+  } catch (e) {}
 }
 "#,
         );

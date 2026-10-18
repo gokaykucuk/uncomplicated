@@ -57,6 +57,9 @@ fn shannon_entropy(s: &str) -> f64 {
 /// Placeholder / fake / templated values (an approximation of SonarSource's shared secret
 /// exclusion patterns, which are not available here).
 fn is_excluded(value: &str) -> bool {
+    if crate::helpers::batch_security2::is_excluded_secret_value(value) {
+        return true;
+    }
     let lower = value.to_lowercase();
     const MARKERS: &[&str] = &[
         "xxx",
@@ -89,6 +92,9 @@ fn is_excluded(value: &str) -> bool {
         "replace",
         "insert",
         "enter",
+        "admin",
+        "1234",
+        "demo",
     ];
     if MARKERS.iter().any(|m| lower.contains(m)) {
         return true;

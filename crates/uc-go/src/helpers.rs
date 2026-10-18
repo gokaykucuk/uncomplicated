@@ -127,5 +127,6 @@ pub const PREDECLARED: &[&str] = &[
 pub fn looks_like_error_ident(name: &str) -> bool {
     name == "err"
         || name.ends_with("Err")
+        || (name.len() > 3 && name.ends_with("err") && name.as_bytes()[0].is_ascii_lowercase())
         || (name.starts_with("err") && name[3..].chars().next().is_some_and(|c| c.is_uppercase() || c.is_ascii_digit()))
 }

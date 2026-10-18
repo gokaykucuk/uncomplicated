@@ -54,7 +54,8 @@ static FLAGS: LazyLock<Vec<u8>> = LazyLock::new(|| {
             if matches!(name, "var_declaration" | "const_declaration") {
                 f |= TOP_DECL;
             }
-            if matches!(name, "if_statement" | "for_statement" | "expression_case" | "type_case" | "communication_case") {
+            // `select` cases are not switch cases for sonar-go.
+            if matches!(name, "if_statement" | "for_statement" | "expression_case" | "type_case") {
                 f |= COMPLEXITY;
             }
             if matches!(name, "function_declaration" | "method_declaration") {

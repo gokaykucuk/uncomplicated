@@ -9,9 +9,11 @@ pub mod discover;
 pub mod filter;
 pub mod gate;
 pub mod measures;
+pub mod profile;
 pub mod project;
 pub mod report;
 pub mod scm;
+pub mod sonar;
 
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -110,6 +112,37 @@ fn build_id() -> u64 {
         .map_or(0, |d| d.as_nanos() as u64)
 }
 
+/// Drops issues matching `[[ignore]]` entries (rule + path globs).
+fn apply_ignores(cfg: &Config, files: &mut [AnalyzedFile]) -> Result<(), String> {
+    if cfg.ignore.is_empty() {
+        return Ok(());
+    }
+    let mut rules: Vec<(Option<&str>, &str, globset::GlobSet)> = Vec::new();
+    for ig in &cfg.ignore {
+        let (lang, key) = match ig.rule.split_once(':') {
+            Some((l, k)) => (Some(l), k),
+            None => (None, ig.rule.as_str()),
+        };
+        rules.push((lang, key, discover::globset(&ig.paths)?));
+    }
+    for f in files.iter_mut() {
+        let path = f.result.path.as_str();
+        let lang = match f.result.lang {
+            Some(uc_core::Lang::Go) => "go",
+            Some(uc_core::Lang::Ts) => "typescript",
+            _ => "javascript",
+        };
+        let applicable: Vec<&(Option<&str>, &str, globset::GlobSet)> = rules
+            .iter()
+            .filter(|(l, _, g)| l.is_none_or(|l| l == lang || l == "*") && g.is_match(path))
+            .collect();
+        if !applicable.is_empty() {
+            f.result.issues.retain(|i| !applicable.iter().any(|(_, k, _)| *k == "*" || *k == i.rule));
+        }
+    }
+    Ok(())
+}
+
 fn is_ts_path(p: &str) -> bool {
     p.ends_with(".ts") || p.ends_with(".tsx") || p.ends_with(".mts") || p.ends_with(".cts")
 }
@@ -125,17 +158,36 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
 
     // Profiles: "sonar-way" (default), "all", or "none" (only rules enabled explicitly).
     let profile = cfg.analysis.profile.as_str();
-    let default_on = |m: &RuleMeta| !m.deprecated && (profile == "all" || (profile != "none" && m.sonar_way));
-    let js_rules = uc_js::JsRules::new(|m| rule_params(&cfg.rules, &m.key, default_on(m)));
+    let pinned = profile::pinned(profile)?;
+    let default_on = |m: &RuleMeta| match &pinned {
+        Some(p) => p.contains(m),
+        None => !m.deprecated && (profile == "all" || (profile != "none" && m.sonar_way)),
+    };
+    // Pinned profiles may carry parameters reproducing older behaviour; config overrides win.
+    let js_overrides = {
+        let mut o = cfg.rules.clone();
+        if let Some(p) = &pinned {
+            for (k, params) in &p.params {
+                o.entry(k.clone()).or_insert_with(|| config::RuleSetting::Params(params.clone()));
+            }
+        }
+        o
+    };
+    let js_rules = uc_js::JsRules::new(|m| rule_params(&js_overrides, &m.key, default_on(m)));
     // TypeScript files get their own rule set only when TS-specific overrides exist.
     let ts_rules = (!cfg.ts_rules.is_empty()).then(|| {
-        let mut merged = cfg.rules.clone();
+        let mut merged = js_overrides.clone();
         merged.extend(cfg.ts_rules.clone());
         uc_js::JsRules::new(|m| rule_params(&merged, &m.key, default_on(m)))
     });
     let go_rules = uc_go::GoRules::new(|m| rule_params(&cfg.go_rules, &m.key, default_on(m)));
 
-    let files = discover::discover(&root, &opts.paths, cfg)?;
+    let paths: Vec<PathBuf> = if opts.paths.is_empty() {
+        cfg.analysis.sources.iter().map(|s| root.join(s)).filter(|p| p.exists()).collect()
+    } else {
+        opts.paths.clone()
+    };
+    let files = discover::discover(&root, &paths, cfg)?;
     let t_disc = t0.elapsed();
 
     let cache = opts.cache.as_ref().map(|p| cache::Cache::load(p, cache_key(cfg, &js_rules)));
@@ -222,6 +274,17 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
     let t_cpd = t2.elapsed();
 
     let t3 = Instant::now();
+    if let Some(c) = &cache {
+        let changed = c.len() != analyzed.len() || analyzed.iter().any(|f| !c.has(&f.result.path, &f.stamp));
+        if changed {
+            let entries = analyzed.iter().map(|f| (f.result.path.as_str(), &f.stamp, &f.result));
+            if let Err(e) = c.save(entries) {
+                warnings.push(format!("could not write cache: {e}"));
+            }
+        }
+    }
+    // Ignores are applied after caching (cached results don't depend on them).
+    apply_ignores(cfg, &mut analyzed)?;
     let cov = coverage::load(
         &root,
         &cfg.coverage.lcov,
@@ -243,15 +306,6 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
     let (measures, new_measures) = measures::compute(&analyzed, &duplications, &cov, new_code.as_ref());
     let gate = gate::evaluate(&cfg.gate, &measures, new_measures.as_ref());
 
-    if let Some(c) = &cache {
-        let changed = c.len() != analyzed.len() || analyzed.iter().any(|f| !c.has(&f.result.path, &f.stamp));
-        if changed {
-            let entries = analyzed.iter().map(|f| (f.result.path.as_str(), &f.stamp, &f.result));
-            if let Err(e) = c.save(entries) {
-                warnings.push(format!("could not write cache: {e}"));
-            }
-        }
-    }
     // CPD tokens are only needed for detection; drop them before reporting.
     for f in &mut analyzed {
         f.result.cpd = Vec::new();

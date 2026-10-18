@@ -152,6 +152,11 @@ fn may_have_label_children(children: &[JSXChild<'_>], depth: u32) -> bool {
         JSXChild::Text(t) => !t.value.trim().is_empty(),
         JSXChild::Element(e) => {
             has_labelling_prop(&e.opening_element)
+                // A childless React component may render the label text itself.
+                || (e.children.is_empty() && {
+                    let name = element_name(&e.opening_element);
+                    name.starts_with(|c: char| c.is_ascii_uppercase()) && !CONTROLS.contains(&name)
+                })
                 || may_have_label_children(&e.children, depth + 1)
         }
         JSXChild::Fragment(f) => may_have_label_children(&f.children, depth + 1),
@@ -247,6 +252,18 @@ mod tests {
 <label>Name<div><span><input /></span></div></label>; // Noncompliant {{A form label must be associated with a control.}}
 <Label></Label>;
 "##,
+        );
+    }
+
+    #[test]
+    fn childless_component_may_render_label() {
+        check(
+            "S6853",
+            "a.tsx",
+            r#"
+<label><input type="radio" /><span><Icon aria-hidden="true" /><span>{x}</span></span></label>;
+<label><input type="radio" /><span><span><b /></span></span></label>; // Noncompliant
+"#,
         );
     }
 }

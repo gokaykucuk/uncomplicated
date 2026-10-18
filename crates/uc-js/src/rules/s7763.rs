@@ -72,7 +72,14 @@ impl JsRule for Rule {
                                 _ => None,
                             };
                             match (exported, &v.id) {
-                                (Some(span), BindingPattern::BindingIdentifier(b)) => {
+                                // Like upstream: only an exported const that is otherwise unused
+                                // and has no type annotation can become `export { y as x } from`.
+                                (Some(span), BindingPattern::BindingIdentifier(b))
+                                    if v.type_annotation.is_none()
+                                        && b.symbol_id.get().is_some_and(|s| {
+                                            scoping.get_resolved_references(s).next().is_none()
+                                        }) =>
+                                {
                                     exports.push((span, b.name.as_str()))
                                 }
                                 _ => used_locally = true,
@@ -139,6 +146,20 @@ import type { Plugin } from 'vite';
 import { Config } from './config';
 export type { Plugin }; // Noncompliant
 export type { Config }; // Noncompliant
+"#,
+        );
+    }
+
+    #[test]
+    fn exported_alias_used_locally() {
+        check(
+            "S7763",
+            "a.ts",
+            r#"
+import { a, b } from "./m";
+export const x = a;
+export const y = b; // Noncompliant
+x();
 "#,
         );
     }
