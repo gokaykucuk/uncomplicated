@@ -60,11 +60,19 @@ nosonar = true
 
 [cpd]
 enabled = false
+
+[rules]
+S1192 = {{ threshold = 4 }}
+S1451 = {{ headerFormat = "// Copyright 20\\\\d\\\\d The Closure Library Authors. All Rights Reserved.", isRegularExpression = true }}
+
+[ts_rules]
+S1451 = {{ headerFormat = "//.*", isRegularExpression = true }}
 """
     if rules:
         # Only the requested rules: disable everything else via profile + explicit enable.
         cfg = cfg.replace('profile = "all"', 'profile = "none"')
-        cfg += "\n[rules]\n" + "".join(f'{r} = "on"\n' for r in rules)
+        cfg = cfg.replace("[rules]\n", "[rules]\n" + "".join(f'{r} = "on"\n' for r in rules if r not in ("S1192", "S1451")), 1)
+        cfg = cfg.replace('profile = "none"', 'profile = "none"')
     with tempfile.NamedTemporaryFile("w", suffix=".toml", delete=False) as f:
         f.write(cfg)
         cfg_path = f.name

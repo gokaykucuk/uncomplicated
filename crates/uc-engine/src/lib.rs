@@ -102,6 +102,10 @@ fn build_id() -> u64 {
         .map_or(0, |d| d.as_nanos() as u64)
 }
 
+fn is_ts_path(p: &str) -> bool {
+    p.ends_with(".ts") || p.ends_with(".tsx") || p.ends_with(".mts") || p.ends_with(".cts")
+}
+
 pub fn run(opts: Options) -> Result<Analysis, String> {
     let t0 = Instant::now();
     if let Some(n) = opts.threads {
@@ -115,6 +119,12 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
     let profile = cfg.analysis.profile.as_str();
     let default_on = |m: &RuleMeta| !m.deprecated && (profile == "all" || (profile != "none" && m.sonar_way));
     let js_rules = uc_js::JsRules::new(|m| rule_params(&cfg.rules, &m.key, default_on(m)));
+    // TypeScript files get their own rule set only when TS-specific overrides exist.
+    let ts_rules = (!cfg.ts_rules.is_empty()).then(|| {
+        let mut merged = cfg.rules.clone();
+        merged.extend(cfg.ts_rules.clone());
+        uc_js::JsRules::new(|m| rule_params(&merged, &m.key, default_on(m)))
+    });
     let go_rules = uc_go::GoRules::new(|m| rule_params(&cfg.go_rules, &m.key, default_on(m)));
 
     let files = discover::discover(&root, &opts.paths, cfg)?;
@@ -156,7 +166,10 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
                     &f.rel,
                     &src,
                     f.is_test,
-                    &js_rules,
+                    match &ts_rules {
+                        Some(ts) if is_ts_path(&f.rel) => ts,
+                        _ => &js_rules,
+                    },
                     &js_opts,
                     projects.for_file(&f.abs).unwrap_or(&no_project),
                 ),

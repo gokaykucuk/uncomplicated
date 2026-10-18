@@ -40,6 +40,8 @@ pub struct Config {
     pub analysis: Analysis,
     /// Per-rule overrides: `"off"`, `"on"`, or a table of parameters (implies on).
     pub rules: FxHashMap<String, RuleSetting>,
+    /// Overrides applied on top of `rules` for TypeScript files only.
+    pub ts_rules: FxHashMap<String, RuleSetting>,
     /// Overrides for Go rules (keys overlap with JS ones).
     pub go_rules: FxHashMap<String, RuleSetting>,
     pub cpd: Cpd,
@@ -190,6 +192,7 @@ impl Config {
         let mut s = format!("{}|{}|{:?}", self.analysis.profile, self.analysis.nosonar, self.test_globs());
         let mut keys: Vec<_> = self.rules.iter().map(|(k, v)| format!("{k}={v:?}")).collect();
         keys.extend(self.go_rules.iter().map(|(k, v)| format!("go:{k}={v:?}")));
+        keys.extend(self.ts_rules.iter().map(|(k, v)| format!("ts:{k}={v:?}")));
         keys.sort();
         s.push_str(&keys.join(","));
         xxhash_rust::xxh3::xxh3_64(s.as_bytes())
