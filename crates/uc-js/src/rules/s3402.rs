@@ -23,9 +23,22 @@ fn annotated_ident_type(ctx: &Ctx<'_, '_>, id: &IdentifierReference<'_>) -> Ty {
     let Some(sym) = ctx.symbol_of(id) else {
         return Ty::Unknown;
     };
-    let annotated = match ctx.symbol_decl(sym).kind() {
+    let decl = ctx.symbol_decl(sym);
+    let annotated = match decl.kind() {
         AstKind::FormalParameter(p) => p.type_annotation.is_some() && !p.optional,
-        AstKind::VariableDeclarator(v) => v.type_annotation.is_some(),
+        AstKind::VariableDeclarator(v) => {
+            // `for (var k in obj)`: keys are strings.
+            if v.type_annotation.is_none()
+                && ctx.scoping().symbol_redeclarations(sym).is_empty()
+                && matches!(
+                    ctx.parent_kind(ctx.parent(decl.id()).id()),
+                    AstKind::ForInStatement(_)
+                )
+            {
+                return Ty::String;
+            }
+            v.type_annotation.is_some()
+        }
         _ => false,
     };
     if annotated {
@@ -39,6 +52,8 @@ fn annotated_ident_type(ctx: &Ctx<'_, '_>, id: &IdentifierReference<'_>) -> Ty {
 fn operand_type(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> Ty {
     match strip_parens(e) {
         Expression::Identifier(id) => annotated_ident_type(ctx, id),
+        Expression::NumericLiteral(_) | Expression::UpdateExpression(_) => Ty::Number,
+        Expression::BooleanLiteral(_) => Ty::Boolean,
         e @ (Expression::CallExpression(_) | Expression::StaticMemberExpression(_)) => {
             type_of(ctx, e)
         }
@@ -134,6 +149,9 @@ function f(s: string, n: number, b: boolean, u, o: object) {
   const lit = "abc";
   const r = lit + n;
   const k = n.toFixed(2) + n; // Noncompliant
+  for (var key in o) {
+    const code = 48 + key; // Noncompliant
+  }
 }
 "#,
         );

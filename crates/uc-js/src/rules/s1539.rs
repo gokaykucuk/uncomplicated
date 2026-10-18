@@ -23,6 +23,13 @@ impl JsRule for Rule {
         if !ctx.src.contains("use strict") {
             return;
         }
+        // `/* eslint strict: 0 */` turns the rule off for the file.
+        if ctx.comments().iter().any(|c| {
+            let t = ctx.comment_text(c).trim_start();
+            t.starts_with("eslint ") && t.contains("strict")
+        }) {
+            return;
+        }
         let mut found: Vec<Span> = Vec::new();
         for node in ctx.nodes().iter() {
             let ds = match node.kind() {

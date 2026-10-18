@@ -43,6 +43,22 @@ fn binding_context(ctx: &Ctx<'_, '_>, decl: NodeId) -> Span {
     ctx.nodes().program().span
 }
 
+/// ESLint records a write reference for a parameter with a default value (`p = {}`).
+fn param_default_write(ctx: &Ctx<'_, '_>, sym: SymbolId) -> Option<Span> {
+    let scoping = ctx.scoping();
+    let decl = scoping
+        .symbol_redeclarations(sym)
+        .first()
+        .map_or(scoping.symbol_declaration(sym), |r| r.declaration);
+    match ctx.node(decl).kind() {
+        AstKind::FormalParameter(p) if p.initializer.is_some() => match &p.pattern {
+            BindingPattern::BindingIdentifier(id) => Some(id.span),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
 impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
         let mut defs: FxHashMap<SymbolId, Vec<VarDef>> = FxHashMap::default();
@@ -101,7 +117,8 @@ impl JsRule for Rule {
                         .scoping()
                         .get_resolved_references(sym)
                         .map(|r| ctx.node(r.node_id()).span())
-                        .chain(all_defs.iter().filter(|d| d.writes).map(|d| d.binding));
+                        .chain(all_defs.iter().filter(|d| d.writes).map(|d| d.binding))
+                        .chain(param_default_write(ctx, sym));
                     let mut outside: Vec<Span> = refs
                         .filter(|s| s.start < scope.start || s.end > scope.end)
                         .collect();
@@ -167,6 +184,9 @@ function h() {
 function k() {
   for (var j = 0; j < 10; j++) {} // Noncompliant
   return j;
+}
+function n(options = {}) { // Noncompliant@+1
+  var { uri, options } = build(options);
 }
 function m(c) {
   if (c) { var z = 1; } else { var z = 2; } // Noncompliant

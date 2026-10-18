@@ -1,7 +1,7 @@
 //! Variables and functions should not be redeclared
 //!
-//! ESLint `no-redeclare` (builtinGlobals off). oxc merges a catch parameter or a function
-//! parameter with a `var` of the same name; those are not reported.
+//! ESLint `no-redeclare` (builtinGlobals off). oxc merges a catch parameter with a `var` of the
+//! same name, which ESLint keeps in separate scopes: those are not reported.
 use crate::prelude::*;
 
 pub struct Rule;
@@ -21,13 +21,11 @@ impl JsRule for Rule {
                 continue;
             }
             let mut decls = redecls.iter().filter(|r| {
-                !matches!(
-                    ctx.node(r.declaration).kind(),
-                    AstKind::CatchParameter(_) | AstKind::FormalParameter(_)
-                ) && !matches!(
-                    ctx.node(r.declaration).kind(),
-                    AstKind::TSTypeAliasDeclaration(_)
-                )
+                !matches!(ctx.node(r.declaration).kind(), AstKind::CatchParameter(_))
+                    && !matches!(
+                        ctx.node(r.declaration).kind(),
+                        AstKind::TSTypeAliasDeclaration(_)
+                    )
             });
             if decls.next().is_none() {
                 continue;
@@ -54,7 +52,7 @@ var a = 1;
 var a = 2; // Noncompliant {{'a' is already defined.}}
 function f() {}
 var f; // Noncompliant
-function g(p) { var p; }
+function g(p) { var p; } // Noncompliant
 try {} catch (e) { var e; }
 function h() { var x; if (c) { var x; } } // Noncompliant
 let y = 1;
