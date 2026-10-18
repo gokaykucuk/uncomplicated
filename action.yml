@@ -1,0 +1,72 @@
+name: uncomplicated
+description: Run the unc static analyzer (JS/TS and Go) on the checked-out repository.
+inputs:
+  args:
+    description: Arguments passed to `unc` (word-split, no globbing).
+    default: analyze --format github
+  version:
+    description: Release tag to run (e.g. v0.1.0). Defaults to the ref this action is used at, or the latest release.
+    default: ""
+  mode:
+    description: "`docker` pulls ghcr.io/gokaykucuk/uncomplicated (Linux runners); `binary` downloads the release tarball (needs a token that can read this repository)."
+    default: docker
+  token:
+    description: Token used to pull the image or download the release.
+    default: ${{ github.token }}
+  cache:
+    description: Restore and save the result cache (.uncomplicated/) between runs.
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - name: Resolve version
+      id: v
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        ACTION_REF: ${{ github.action_ref }}
+      run: |
+        v="$VERSION"
+        if [ -z "$v" ] && [[ "$ACTION_REF" == v[0-9]* ]]; then v="$ACTION_REF"; fi
+        echo "tag=${v:-latest}" >> "$GITHUB_OUTPUT"
+    - if: inputs.cache == 'true'
+      uses: actions/cache@v4
+      with:
+        path: .uncomplicated
+        key: unc-${{ runner.os }}-${{ steps.v.outputs.tag }}-${{ github.sha }}
+        restore-keys: unc-${{ runner.os }}-${{ steps.v.outputs.tag }}-
+    - if: inputs.mode == 'binary'
+      name: Install unc
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        TAG: ${{ steps.v.outputs.tag }}
+      run: |
+        case "$RUNNER_OS-$RUNNER_ARCH" in
+          Linux-X64) target=x86_64-unknown-linux-musl ;;
+          Linux-ARM64) target=aarch64-unknown-linux-musl ;;
+          macOS-ARM64) target=aarch64-apple-darwin ;;
+          *) echo "::error::unsupported runner $RUNNER_OS-$RUNNER_ARCH"; exit 1 ;;
+        esac
+        dir="$RUNNER_TEMP/unc"
+        mkdir -p "$dir"
+        if [ "$TAG" = latest ]; then tag=(); else tag=("$TAG"); fi
+        gh release download "${tag[@]}" -R gokaykucuk/uncomplicated -p "unc-$target.tar.gz" -O - | tar -xz -C "$dir"
+        echo "$dir" >> "$GITHUB_PATH"
+    - name: Run unc
+      shell: bash
+      env:
+        UNC_ARGS: ${{ inputs.args }}
+        MODE: ${{ inputs.mode }}
+        TOKEN: ${{ inputs.token }}
+        TAG: ${{ steps.v.outputs.tag }}
+      run: |
+        set -f
+        if [ "$MODE" = docker ]; then
+          image="ghcr.io/gokaykucuk/uncomplicated:${TAG#v}"
+          echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin >/dev/null
+          docker run --rm --user "$(id -u):$(id -g)" -v "$GITHUB_WORKSPACE:/src" -w /src \
+            -e GITHUB_ACTIONS -e GITHUB_WORKSPACE=/src "$image" $UNC_ARGS
+        else
+          unc $UNC_ARGS
+        fi

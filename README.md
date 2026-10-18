@@ -30,21 +30,67 @@ unc init                           # write a starter uncomplicated.toml
 
 Exit status: `0` gate passed, `1` gate failed (or `--fail-on <severity>` matched), `2` error.
 
+### Installing
+
+Tagging `vX.Y.Z` runs `.github/workflows/release.yml`, which publishes:
+
+- static binaries on the GitHub release: `unc-x86_64-unknown-linux-musl.tar.gz`,
+  `unc-aarch64-unknown-linux-musl.tar.gz`, `unc-aarch64-apple-darwin.tar.gz` (plus `SHA256SUMS`);
+- a multi-arch image `ghcr.io/gokaykucuk/uncomplicated:X.Y.Z` (also `X.Y` and `latest`), with `git`.
+
+```bash
+gh release download -R gokaykucuk/uncomplicated -p 'unc-aarch64-apple-darwin.tar.gz' -O - | tar -xz -C ~/.local/bin
+```
+
+While this repository is private, other repositories need access granted once:
+
+- the action: this repository's *Settings → Actions → General → Access* →
+  "Accessible from repositories owned by the user";
+- the image: the `uncomplicated` package's *Package settings → Manage Actions access* → add the
+  repository (read). The workflow's own `GITHUB_TOKEN` can then pull it;
+- or `mode: binary` with a token (fine-grained PAT, *Contents: read* on this repository) in `token`.
+
 ### GitHub Actions
 
 ```yaml
-- run: unc --new-code origin/${{ github.base_ref }} --lcov coverage/lcov.info -f github
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # new-code detection needs the merge base
+      - uses: gokaykucuk/uncomplicated@v0.1.0
+        with:
+          args: analyze --format github --new-code origin/${{ github.base_ref || 'main' }} --lcov coverage/lcov.info
 ```
+
+The action caches `.uncomplicated/` between runs. With `--report sarif=unc.sarif` the SARIF file can
+be uploaded with `github/codeql-action/upload-sarif` (needs code scanning on the repository).
 
 ### GitLab CI
 
 ```yaml
 code_quality:
+  image:
+    name: ghcr.io/gokaykucuk/uncomplicated:0.1.0
+    entrypoint: [""]
+  variables:
+    GIT_DEPTH: 0
   script: unc --new-code origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME --report gitlab=gl-code-quality.json
+  cache:
+    key: unc
+    paths: [.uncomplicated/]
   artifacts:
     reports:
       codequality: gl-code-quality.json
 ```
+
+GitLab needs registry credentials for the private image (`DOCKER_AUTH_CONFIG` with a PAT that has
+`read:packages`).
 
 Results are cached by content hash in `.uncomplicated/cache.bin`. Cache that directory between CI
 runs and unchanged files are not re-analyzed.
