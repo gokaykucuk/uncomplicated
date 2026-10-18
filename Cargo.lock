@@ -1248,12 +1248,14 @@ dependencies = [
 name = "uc-go"
 version = "0.1.0"
 dependencies = [
+ "memchr",
  "regex",
  "rustc-hash",
  "serde_json",
  "tree-sitter",
  "tree-sitter-go",
  "uc-core",
+ "xxhash-rust",
 ]
 
 [[package]]
