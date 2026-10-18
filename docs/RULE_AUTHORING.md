@@ -57,7 +57,8 @@ Rules must be stateless between files (`Send + Sync`). Per-file state goes in lo
 
 - Reporting: `ctx.report(span, msg)`, `ctx.report_with(span, msg, [(span, Some(msg))])` for
   secondary locations, `ctx.report_gap(span, msg, gap)` for linear remediation cost,
-  `ctx.report_file(msg)` for file-level issues (Sonar's line 0; annotate tests with
+  `ctx.report_each(span, msg)` when the same issue must be counted once per occurrence
+  (identical issues are merged otherwise), `ctx.report_file(msg)` for file-level issues (Sonar's line 0; annotate tests with
   `// Noncompliant@0`).
 - Suppression is handled by the engine: `NOSONAR`, and `eslint-disable` / `-line` / `-next-line`
   directives matched against the rule's Sonar key or its upstream ESLint id (catalog `eslint`).

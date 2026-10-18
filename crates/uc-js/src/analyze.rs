@@ -190,7 +190,7 @@ fn analyze_in(
     let sup = if opts.nosonar { Suppressions::new(&ctx) } else { Suppressions::default() };
     let mut issues = ctx.issues.into_inner();
     issues.sort_by_key(|i| (i.span.start, i.span.end, i.rule));
-    issues.dedup_by(|a, b| a.rule == b.rule && a.span == b.span && a.message == b.message);
+    issues.dedup_by(|a, b| !a.distinct && a.rule == b.rule && a.span == b.span && a.message == b.message);
     result.issues = issues
         .into_iter()
         .filter_map(|i| {

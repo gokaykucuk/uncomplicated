@@ -32,11 +32,14 @@ pub struct Issue {
     pub secondary: Vec<Secondary>,
     /// Multiplier for linear remediation functions (e.g. complexity points over the threshold).
     pub gap: Option<f32>,
+    /// Keep this issue even if an identical one (rule, span, message) was already reported.
+    /// By default identical issues are merged.
+    pub distinct: bool,
 }
 
 impl Issue {
     pub fn new(rule: &'static str, span: Span, message: impl Into<String>) -> Self {
-        Self { rule, message: message.into(), span, secondary: Vec::new(), gap: None }
+        Self { rule, message: message.into(), span, secondary: Vec::new(), gap: None, distinct: false }
     }
 }
 
