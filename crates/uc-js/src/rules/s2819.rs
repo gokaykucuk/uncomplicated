@@ -4,7 +4,7 @@
 //! receiver's name when the type is unknown. Without a type checker we use the name heuristic
 //! unless our local inference resolves the receiver to a named, non-window type.
 use crate::helpers::batch_security1::{
-    FnLike, parents, resolve_function, resolve_str, resolve_value_deep,
+    FnLike, parents, resolve_function, resolve_str, resolve_value_deep, src_mentions,
 };
 use crate::prelude::*;
 
@@ -112,8 +112,18 @@ fn check_listener<'a>(ctx: &Ctx<'a, '_>, listener: &Expression<'a>, report: Span
 }
 
 impl JsRule for Rule {
-    fn interests(&self) -> &'static [AstType] {
-        &[AstType::CallExpression, AstType::AssignmentExpression]
+    fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
+        if !src_mentions(ctx, &["postMessage", "addEventListener", "onmessage"]) {
+            return;
+        }
+        for node in ctx.nodes().iter() {
+            if matches!(
+                node.kind(),
+                AstKind::CallExpression(_) | AstKind::AssignmentExpression(_)
+            ) {
+                self.run(node, ctx);
+            }
+        }
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {

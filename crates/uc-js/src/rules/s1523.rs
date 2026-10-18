@@ -75,7 +75,16 @@ impl Rule {
         let Some(name) = callee_name_of(callee) else {
             return;
         };
-        if !EVAL_LIKE.iter().any(|f| f.rsplit('.').next() == Some(name)) {
+        if !matches!(
+            name,
+            "eval"
+                | "Function"
+                | "Script"
+                | "SourceTextModule"
+                | "runInContext"
+                | "runInNewContext"
+                | "runInThisContext"
+        ) {
             return;
         }
         let Some(q) = fqn(ctx, callee) else { return };
@@ -102,13 +111,24 @@ fn callee_name_of<'a>(e: &Expression<'a>) -> Option<&'a str> {
 }
 
 impl JsRule for Rule {
-    fn interests(&self) -> &'static [AstType] {
-        &[
-            AstType::CallExpression,
-            AstType::NewExpression,
-            AstType::TemplateLiteral,
-            AstType::BinaryExpression,
-        ]
+    fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
+        let src = ctx.src.as_bytes();
+        let has = |n: &[u8]| memchr::memmem::find(src, n).is_some();
+        let calls = has(b"eval") || has(b"Function") || has(b"vm") || has(b"runIn");
+        let scheme = has(b"cript:") || has(b"CRIPT:");
+        if !calls && !scheme {
+            return;
+        }
+        for node in ctx.nodes().iter() {
+            let relevant = match node.kind() {
+                AstKind::CallExpression(_) | AstKind::NewExpression(_) => calls,
+                AstKind::TemplateLiteral(_) | AstKind::BinaryExpression(_) => scheme,
+                _ => false,
+            };
+            if relevant {
+                self.run(node, ctx);
+            }
+        }
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {

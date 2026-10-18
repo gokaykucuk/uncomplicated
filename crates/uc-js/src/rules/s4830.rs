@@ -1,5 +1,7 @@
 //! Server certificates should be verified during SSL/TLS connections
-use crate::helpers::batch_security1::{call_fqn, property_with_bool, resolve_object, sec};
+use crate::helpers::batch_security1::{
+    call_fqn, imports_any, property_with_bool, resolve_object, sec,
+};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -10,9 +12,18 @@ impl Rule {
     }
 }
 
+const MODULES: &[&str] = &["https", "tls", "request"];
+
 impl JsRule for Rule {
-    fn interests(&self) -> &'static [AstType] {
-        &[AstType::CallExpression]
+    fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
+        if !imports_any(ctx, MODULES) {
+            return;
+        }
+        for node in ctx.nodes().iter() {
+            if matches!(node.kind(), AstKind::CallExpression(_)) {
+                self.run(node, ctx);
+            }
+        }
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {

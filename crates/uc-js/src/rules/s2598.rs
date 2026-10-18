@@ -1,6 +1,6 @@
 //! File uploads should be restricted
 use crate::helpers::batch_security1::{
-    Prop, fqn, get_property, resolve_object, resolve_value, sec, src_mentions,
+    Prop, fqn, get_property, imports_any, resolve_object, resolve_value, sec,
 };
 use crate::prelude::*;
 
@@ -149,7 +149,7 @@ impl Rule {
 
 impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
-        if !src_mentions(ctx, &["formidable", "multer"]) {
+        if !imports_any(ctx, &["formidable", "multer"]) {
             return;
         }
         for node in ctx.nodes().iter() {

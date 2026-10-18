@@ -1,7 +1,7 @@
 //! Cross-Origin Resource Sharing (CORS) policy should be restricted to trusted origins
 use crate::helpers::batch_security1::{
-    FnLike, Prop, call_fqn, fqn, get_property, parents, resolve_function, resolve_object,
-    resolve_str, resolve_value, sec,
+    FnLike, Prop, call_fqn, fqn, get_property, imports_any, parents, resolve_function,
+    resolve_object, resolve_str, resolve_value, sec,
 };
 use crate::prelude::*;
 
@@ -235,8 +235,15 @@ fn is_validated(ctx: &Ctx<'_, '_>, cb: FnLike<'_, '_>, header: &Expression<'_>) 
 }
 
 impl JsRule for Rule {
-    fn interests(&self) -> &'static [AstType] {
-        &[AstType::CallExpression]
+    fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
+        if !imports_any(ctx, &["http", "express"]) {
+            return;
+        }
+        for node in ctx.nodes().iter() {
+            if matches!(node.kind(), AstKind::CallExpression(_)) {
+                self.run(node, ctx);
+            }
+        }
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {

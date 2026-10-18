@@ -1,6 +1,7 @@
 //! Auto-escaping in HTML template engines should not be disabled
 use crate::helpers::batch_security1::{
-    FnLike, call_fqn, fqn, property_with_bool, resolve_function, resolve_object, sec,
+    FnLike, call_fqn, fqn, imports_any, property_with_bool, resolve_function, resolve_object, sec,
+    src_mentions,
 };
 use crate::prelude::*;
 
@@ -53,12 +54,31 @@ fn is_identity(f: FnLike<'_, '_>) -> bool {
 }
 
 impl JsRule for Rule {
-    fn interests(&self) -> &'static [AstType] {
-        &[
-            AstType::CallExpression,
-            AstType::NewExpression,
-            AstType::AssignmentExpression,
-        ]
+    fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
+        if !imports_any(
+            ctx,
+            &[
+                "handlebars",
+                "marked",
+                "markdown-it",
+                "swig",
+                "kramed",
+                "mustache",
+            ],
+        ) && !src_mentions(ctx, &["Mustache"])
+        {
+            return;
+        }
+        for node in ctx.nodes().iter() {
+            if matches!(
+                node.kind(),
+                AstKind::CallExpression(_)
+                    | AstKind::NewExpression(_)
+                    | AstKind::AssignmentExpression(_)
+            ) {
+                self.run(node, ctx);
+            }
+        }
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {

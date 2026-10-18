@@ -1,5 +1,5 @@
 //! SQL queries should not be dynamically formatted
-use crate::helpers::batch_security1::{fqn, is_literal};
+use crate::helpers::batch_security1::{fqn, imports_any, is_literal};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -133,8 +133,28 @@ fn is_questionable(e: &Expression<'_>) -> bool {
 }
 
 impl JsRule for Rule {
-    fn interests(&self) -> &'static [AstType] {
-        &[AstType::CallExpression]
+    fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
+        const MODULES: &[&str] = &[
+            "pg",
+            "mysql",
+            "mysql2",
+            "sequelize",
+            "sqlite3",
+            "better-sqlite3",
+            "mssql",
+            "oracledb",
+            "pg-promise",
+            "knex",
+            "typeorm",
+        ];
+        if !imports_any(ctx, MODULES) {
+            return;
+        }
+        for node in ctx.nodes().iter() {
+            if matches!(node.kind(), AstKind::CallExpression(_)) {
+                self.run(node, ctx);
+            }
+        }
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {

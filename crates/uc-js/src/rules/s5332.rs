@@ -89,7 +89,9 @@ fn message(protocol: &str) -> String {
 impl Rule {
     /// Host (lowercase, without port) and path of `scheme://[user@]host[:port][/path]`.
     fn has_exception_host(&self, rest: &str) -> bool {
-        let end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+        let end = rest
+            .find(|c: char| matches!(c, '/' | '?' | '#') || c.is_whitespace())
+            .unwrap_or(rest.len());
         let authority = &rest[..end];
         let path = if end < rest.len() && rest.as_bytes()[end] == b'/' {
             let p = &rest[end..];

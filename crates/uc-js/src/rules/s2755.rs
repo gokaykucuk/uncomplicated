@@ -1,5 +1,5 @@
 //! XML parsers should not be vulnerable to XXE attacks
-use crate::helpers::batch_security1::{call_fqn, get_property, sec};
+use crate::helpers::batch_security1::{call_fqn, get_property, imports_any, sec};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -17,9 +17,18 @@ const TARGETS: &[&str] = &[
     "libxmljs2.parseXmlString",
 ];
 
+const MODULES: &[&str] = &["libxmljs", "libxmljs2"];
+
 impl JsRule for Rule {
-    fn interests(&self) -> &'static [AstType] {
-        &[AstType::CallExpression]
+    fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
+        if !imports_any(ctx, MODULES) {
+            return;
+        }
+        for node in ctx.nodes().iter() {
+            if matches!(node.kind(), AstKind::CallExpression(_)) {
+                self.run(node, ctx);
+            }
+        }
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
