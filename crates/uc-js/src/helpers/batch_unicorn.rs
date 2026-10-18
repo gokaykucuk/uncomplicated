@@ -12,6 +12,270 @@ use oxc_span::{GetSpan, Span};
 use crate::Ctx;
 use crate::helpers::ast::strip_parens;
 
+/// Globals that ESLint knows from the environments SonarJS enables (ES builtins, browser, node,
+/// common test frameworks). An approximation of the `globals` package entries Sonar loads.
+pub fn is_env_global(name: &str) -> bool {
+    const NAMES: &[&str] = &[
+        // ES
+        "AggregateError",
+        "Array",
+        "ArrayBuffer",
+        "Atomics",
+        "BigInt",
+        "BigInt64Array",
+        "BigUint64Array",
+        "Boolean",
+        "DataView",
+        "Date",
+        "Error",
+        "EvalError",
+        "FinalizationRegistry",
+        "Float32Array",
+        "Float64Array",
+        "Function",
+        "Infinity",
+        "Int16Array",
+        "Int32Array",
+        "Int8Array",
+        "Intl",
+        "Iterator",
+        "JSON",
+        "Map",
+        "Math",
+        "NaN",
+        "Number",
+        "Object",
+        "Promise",
+        "Proxy",
+        "RangeError",
+        "ReferenceError",
+        "Reflect",
+        "RegExp",
+        "Set",
+        "SharedArrayBuffer",
+        "String",
+        "Symbol",
+        "SyntaxError",
+        "TypeError",
+        "URIError",
+        "Uint16Array",
+        "Uint32Array",
+        "Uint8Array",
+        "Uint8ClampedArray",
+        "WeakMap",
+        "WeakRef",
+        "WeakSet",
+        "decodeURI",
+        "decodeURIComponent",
+        "encodeURI",
+        "encodeURIComponent",
+        "escape",
+        "eval",
+        "globalThis",
+        "isFinite",
+        "isNaN",
+        "parseFloat",
+        "parseInt",
+        "undefined",
+        "unescape",
+        // browser
+        "window",
+        "document",
+        "navigator",
+        "location",
+        "history",
+        "screen",
+        "console",
+        "alert",
+        "confirm",
+        "prompt",
+        "setTimeout",
+        "clearTimeout",
+        "setInterval",
+        "clearInterval",
+        "requestAnimationFrame",
+        "cancelAnimationFrame",
+        "requestIdleCallback",
+        "cancelIdleCallback",
+        "fetch",
+        "XMLHttpRequest",
+        "localStorage",
+        "sessionStorage",
+        "self",
+        "top",
+        "parent",
+        "frames",
+        "event",
+        "Event",
+        "CustomEvent",
+        "Node",
+        "NodeList",
+        "Element",
+        "DOMParser",
+        "FormData",
+        "Blob",
+        "File",
+        "FileReader",
+        "URL",
+        "URLSearchParams",
+        "Image",
+        "Audio",
+        "WebSocket",
+        "Worker",
+        "MutationObserver",
+        "IntersectionObserver",
+        "ResizeObserver",
+        "getComputedStyle",
+        "matchMedia",
+        "performance",
+        "crypto",
+        "atob",
+        "btoa",
+        "queueMicrotask",
+        "structuredClone",
+        "addEventListener",
+        "removeEventListener",
+        "dispatchEvent",
+        "name",
+        "length",
+        "status",
+        "open",
+        "close",
+        "print",
+        "scroll",
+        "scrollTo",
+        "scrollBy",
+        "innerWidth",
+        "innerHeight",
+        "outerWidth",
+        "outerHeight",
+        "pageXOffset",
+        "pageYOffset",
+        "devicePixelRatio",
+        "TextEncoder",
+        "TextDecoder",
+        "AbortController",
+        "Headers",
+        "Request",
+        "Response",
+        "caches",
+        "indexedDB",
+        "CSS",
+        "DocumentFragment",
+        "Text",
+        "Range",
+        "Selection",
+        "getSelection",
+        "postMessage",
+        "Option",
+        "XMLSerializer",
+        "Notification",
+        "customElements",
+        "origin",
+        "opener",
+        // node / commonjs
+        "process",
+        "Buffer",
+        "require",
+        "module",
+        "exports",
+        "__dirname",
+        "__filename",
+        "global",
+        "setImmediate",
+        "clearImmediate",
+        // test frameworks
+        "describe",
+        "it",
+        "test",
+        "expect",
+        "beforeEach",
+        "afterEach",
+        "beforeAll",
+        "afterAll",
+        "jest",
+        "jasmine",
+        "spyOn",
+        "xit",
+        "xdescribe",
+        "fit",
+        "fdescribe",
+        "before",
+        "after",
+        "suite",
+        "setup",
+        "teardown",
+        "QUnit",
+        "pending",
+        "fail",
+        // jquery / prototypejs environments
+        "$",
+        "jQuery",
+        "$$",
+        "$A",
+        "$F",
+        "$H",
+        "$R",
+        "$w",
+        "Prototype",
+        "Ajax",
+        "Class",
+        "Form",
+        "Hash",
+        "Template",
+        "Insertion",
+        "Position",
+        "Toggle",
+        "PeriodicalExecuter",
+        "Field",
+        "Abstract",
+        "Enumerable",
+        "ObjectRange",
+        "Try",
+        // `sonar.javascript.globals` defaults
+        "angular",
+        "goog",
+        "google",
+        "OpenLayers",
+        "d3",
+        "dojo",
+        "dojox",
+        "dijit",
+        "Backbone",
+        "moment",
+        "casper",
+        "_",
+        "sap",
+    ];
+    if NAMES.contains(&name) {
+        return true;
+    }
+    // DOM interfaces (`HTMLDivElement`, `SVGElement`, `KeyboardEvent`, ...).
+    ((name.starts_with("HTML") || name.starts_with("SVG")) && name.ends_with("Element"))
+        || matches!(
+            name,
+            "MouseEvent"
+                | "KeyboardEvent"
+                | "FocusEvent"
+                | "InputEvent"
+                | "PointerEvent"
+                | "TouchEvent"
+                | "WheelEvent"
+                | "UIEvent"
+                | "MessageEvent"
+                | "ErrorEvent"
+                | "ProgressEvent"
+                | "AnimationEvent"
+                | "TransitionEvent"
+                | "CompositionEvent"
+                | "DragEvent"
+                | "ClipboardEvent"
+                | "StorageEvent"
+                | "PopStateEvent"
+                | "HashChangeEvent"
+        )
+}
+
 /// `obj.name(...)` with a non-computed member callee: returns the member and the method name.
 pub fn method_call<'b, 'a>(
     call: &'b CallExpression<'a>,
@@ -125,6 +389,26 @@ pub fn same_reference(ctx: &Ctx<'_, '_>, a: &Expression<'_>, b: &Expression<'_>)
 }
 
 /// Initializer of a `const` binding referenced by `e` (identifier), never reassigned.
+/// Initializer of a variable that is `const` or never reassigned (eslint-utils' "effectively
+/// const" used by `getStaticValue`).
+pub fn effective_const_init<'b, 'a>(
+    ctx: &'b Ctx<'a, '_>,
+    e: &Expression<'_>,
+) -> Option<&'b Expression<'a>> {
+    let Expression::Identifier(id) = strip_parens(e) else {
+        return None;
+    };
+    let sym = ctx.symbol_of(id)?;
+    let AstKind::VariableDeclarator(v) = ctx.symbol_decl(sym).kind() else {
+        return None;
+    };
+    if !matches!(v.id, BindingPattern::BindingIdentifier(_)) || ctx.scoping().symbol_is_mutated(sym)
+    {
+        return None;
+    }
+    v.init.as_ref().map(strip_parens)
+}
+
 pub fn const_init<'b, 'a>(ctx: &'b Ctx<'a, '_>, e: &Expression<'_>) -> Option<&'b Expression<'a>> {
     let Expression::Identifier(id) = strip_parens(e) else {
         return None;
@@ -222,30 +506,6 @@ pub fn find_property<'b, 'a>(
             Some(&**p)
         }
         _ => None,
-    })
-}
-
-/// Ancestors of a node, nearest (the parent) first.
-///
-/// Note: `Ctx::ancestors` skips the direct parent with oxc 0.154 (`ancestor_ids` already excludes
-/// the node itself), so this batch uses its own walk.
-pub fn ancestors<'s, 'a>(
-    ctx: &Ctx<'a, 's>,
-    id: oxc_semantic::NodeId,
-) -> impl Iterator<Item = &'s oxc_semantic::AstNode<'a>> + 's {
-    ctx.nodes().ancestors(id)
-}
-
-/// Nearest enclosing function or arrow function.
-pub fn enclosing_fn<'s, 'a>(
-    ctx: &Ctx<'a, 's>,
-    id: oxc_semantic::NodeId,
-) -> Option<&'s oxc_semantic::AstNode<'a>> {
-    ancestors(ctx, id).find(|n| {
-        matches!(
-            n.kind(),
-            AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)
-        )
     })
 }
 

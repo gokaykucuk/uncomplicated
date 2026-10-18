@@ -1,7 +1,5 @@
 //! Arrays used only for existence checks should be Sets
-use crate::helpers::batch_unicorn::{
-    ancestors, const_init, is_method_call, is_static_call, paren_parent,
-};
+use crate::helpers::batch_unicorn::{const_init, is_method_call, is_static_call, paren_parent};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -193,7 +191,8 @@ impl JsRule for Rule {
         if includes.len() == 1 {
             // A single check is fine unless it runs repeatedly (in a loop or a function).
             let root = ctx.parent(decl.id()).id();
-            let repeated = ancestors(ctx, includes[0])
+            let repeated = ctx
+                .ancestors(includes[0])
                 .take_while(|a| a.id() != root)
                 .any(|a| {
                     matches!(

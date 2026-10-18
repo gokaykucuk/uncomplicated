@@ -1,5 +1,5 @@
 //! Promise.resolve() and Promise.reject() should not be used in async functions or promise callbacks
-use crate::helpers::batch_unicorn::{enclosing_fn, is_ident, is_method_call};
+use crate::helpers::batch_unicorn::{is_ident, is_method_call};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -56,7 +56,7 @@ impl JsRule for Rule {
             AstKind::YieldExpression(y) if !y.delegate => "yield",
             _ => return,
         };
-        let Some(func) = enclosing_fn(ctx, node.id()) else {
+        let Some(func) = ctx.enclosing_function(node.id()) else {
             return;
         };
         let is_async = match func.kind() {

@@ -1,7 +1,6 @@
 //! Default parameters should be used instead of reassigning parameters with literal fallback values
 use oxc_ast_visit::Visit;
 
-use crate::helpers::batch_unicorn::enclosing_fn;
 use crate::prelude::*;
 
 pub struct Rule;
@@ -86,7 +85,7 @@ impl JsRule for Rule {
             }
             _ => return,
         };
-        let Some(func) = enclosing_fn(ctx, node.id()) else {
+        let Some(func) = ctx.enclosing_function(node.id()) else {
             return;
         };
         let (params, body) = match func.kind() {
