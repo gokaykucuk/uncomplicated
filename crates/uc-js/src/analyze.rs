@@ -58,6 +58,7 @@ pub fn analyze_in_project(
     opts: &FileOptions,
     project: &ProjectInfo,
 ) -> FileResult {
+    let raw = src;
     let embedded = embedded_scripts(path, src);
     let (src, lang) = match &embedded {
         Some((s, l)) => (s.as_str(), *l),
@@ -65,7 +66,7 @@ pub fn analyze_in_project(
     };
     ALLOC.with_borrow_mut(|alloc| {
         alloc.reset();
-        analyze_in(alloc, path, src, lang, embedded.is_some(), is_test, rules, opts, project)
+        analyze_in(alloc, path, src, raw, lang, embedded.is_some(), is_test, rules, opts, project)
     })
 }
 
@@ -121,6 +122,7 @@ fn analyze_in(
     alloc: &Allocator,
     path: &str,
     src: &str,
+    raw: &str,
     lang: Lang,
     embedded: bool,
     is_test: bool,
@@ -163,7 +165,7 @@ fn analyze_in(
     let program = alloc.alloc(ret.program);
     let semantic = SemanticBuilder::new().with_cfg(true).with_build_nodes(true).with_class_table(true).build(program).semantic;
     let tokens: &[oxc_parser::Token] = &ret.tokens;
-    let file = FileInfo { path, lang, is_test, jsx: st.is_jsx(), is_module: st.is_module(), project };
+    let file = FileInfo { path, lang, is_test, jsx: st.is_jsx(), is_module: st.is_module(), raw, project };
     let ctx = Ctx {
         semantic: &semantic,
         src,
@@ -303,6 +305,38 @@ fn directive(text: &str) -> Option<(&str, Option<Vec<String>>)> {
     Some((word, (!rules.is_empty()).then_some(rules)))
 }
 
+/// Rules turned off by an inline config comment: `/* eslint no-console: "off", eqeqeq: 0 */`.
+fn inline_config_off(text: &str) -> Option<Vec<String>> {
+    let rest = text.trim().strip_prefix("eslint ")?;
+    let mut off = Vec::new();
+    // Split on commas outside brackets.
+    let mut depth = 0i32;
+    let mut start = 0;
+    let bytes = rest.as_bytes();
+    let mut parts = Vec::new();
+    for (i, &b) in bytes.iter().enumerate() {
+        match b {
+            b'[' | b'{' => depth += 1,
+            b']' | b'}' => depth -= 1,
+            b',' if depth == 0 => {
+                parts.push(&rest[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    parts.push(&rest[start..]);
+    for p in parts {
+        let Some((name, value)) = p.split_once(':') else { continue };
+        let v = value.trim().trim_start_matches('[').trim().trim_matches('"').trim_matches('\'');
+        let v = v.split([',', ']']).next().unwrap_or("").trim().trim_matches('"').trim_matches('\'');
+        if v == "off" || v == "0" {
+            off.push(name.trim().trim_matches('"').to_string());
+        }
+    }
+    (!off.is_empty()).then_some(off)
+}
+
 impl Suppressions {
     fn new(ctx: &Ctx<'_, '_>) -> Self {
         let mut s = Self::default();
@@ -311,6 +345,10 @@ impl Suppressions {
             let text = ctx.comment_text(c);
             if text.contains("NOSONAR") {
                 s.nosonar.push(ctx.line(c.span.start));
+            }
+            if c.is_block() && let Some(off) = inline_config_off(text) {
+                s.ranges.push((c.span.end, u32::MAX, Some(off)));
+                continue;
             }
             let Some((word, rules)) = directive(text) else { continue };
             let line = ctx.line(c.span.start);

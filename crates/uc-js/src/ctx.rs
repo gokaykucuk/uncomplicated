@@ -14,6 +14,9 @@ pub struct FileInfo<'s> {
     pub is_test: bool,
     pub jsx: bool,
     pub is_module: bool,
+    /// Original file text. For `.vue` / `.html` files `Ctx::src` has everything outside
+    /// `<script>` blanked; this keeps the template.
+    pub raw: &'s str,
     /// Enclosing `package.json` / `tsconfig.json` information.
     pub project: &'s crate::project::ProjectInfo,
 }
