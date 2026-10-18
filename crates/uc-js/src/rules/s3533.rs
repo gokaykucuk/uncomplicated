@@ -35,7 +35,9 @@ impl JsRule for Rule {
         let common_js = name == "require"
             && args.len() == 1
             && arg_expr(&args[0]).is_some_and(|e| is_string_like(ctx, e));
-        let amd = (args.len() == 2 || args.len() == 3)
+        // AMD detection needs type information, which SonarJS doesn't have for HTML scripts.
+        let amd = helpers::batch_smell3::has_type_services(ctx)
+            && (args.len() == 2 || args.len() == 3)
             && args
                 .last()
                 .and_then(arg_expr)

@@ -16,6 +16,9 @@ impl JsRule for Rule {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
+        if !helpers::batch_smell3::es_version_allows(ctx, 2017, false) {
+            return;
+        }
         let AstKind::AwaitExpression(aw) = node.kind() else {
             return;
         };
