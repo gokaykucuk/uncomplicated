@@ -56,7 +56,7 @@ runs and unchanged files are not re-analyzed.
 ```toml
 [analysis]
 profile = "sonar-way"          # "sonar-way" (default), "all", or "none"
-exclusions = ["generated/**"]  # in addition to the SonarJS / sonar-go defaults
+exclusions = ["generated/**"]  # root-relative globs (use **/ to match anywhere), added to the defaults
 tests = ["test/**"]            # test code globs (default: Sonar's file-name heuristics + *_test.go)
 
 [new_code]
@@ -83,7 +83,10 @@ op = "lt"
 threshold = 80
 ```
 
-Like SonarQube, `unc` honors `// NOSONAR`, and for JS/TS also `eslint-disable` directives. It skips
+Like SonarQube, `unc` honors `// NOSONAR`, and for JS/TS also `eslint-disable` directives and
+inline `/* eslint rule: "off" */` comments. Rules SonarJS only enables for some projects follow the
+same conditions: dependencies declared in `package.json` (React, Vue, Angular, AWS CDK, testing
+libraries...) and the ECMAScript version detected from `tsconfig.json` and the Node.js version. It skips
 bundles, minified files and generated Go code, and also analyzes the scripts embedded in `.vue` and
 `.html` files.
 
