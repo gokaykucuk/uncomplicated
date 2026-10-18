@@ -56,12 +56,10 @@ fn type_readonly(ctx: &Ctx<'_, '_>, t: &TSType<'_>, depth: u8) -> Option<bool> {
                 return None;
             }
             match ctx.symbol_decl(sym).kind() {
-                AstKind::TSInterfaceDeclaration(i)
-                    if i.extends.is_empty() && i.type_parameters.is_none() =>
-                {
+                AstKind::TSInterfaceDeclaration(i) if i.extends.is_empty() => {
                     members_readonly(&i.body.body)
                 }
-                AstKind::TSTypeAliasDeclaration(a) if a.type_parameters.is_none() => {
+                AstKind::TSTypeAliasDeclaration(a) => {
                     type_readonly(ctx, &a.type_annotation, depth + 1)
                 }
                 _ => None,
@@ -94,6 +92,18 @@ fn returns_jsx_value<'a>(ctx: &Ctx<'a, '_>, e: &Expression<'a>) -> bool {
     false
 }
 
+/// Sonar never raises on Vue / Preact JSX (no React types for the props). Use the project's
+/// dependencies when known, otherwise require a React import in the file.
+fn react_project(ctx: &Ctx<'_, '_>) -> bool {
+    let project = &ctx.file.project;
+    if project.has_package_json {
+        return project.has_dependency("react");
+    }
+    ctx.nodes().program().body.iter().any(|s| {
+        matches!(s, Statement::ImportDeclaration(d) if d.source.value == "react" || d.source.value.starts_with("react-"))
+    })
+}
+
 impl JsRule for Rule {
     fn interests(&self) -> &'static [AstType] {
         &[AstType::Function]
@@ -103,6 +113,9 @@ impl JsRule for Rule {
         let AstKind::Function(f) = node.kind() else {
             return;
         };
+        if !react_project(ctx) {
+            return;
+        }
         if !f.is_function_declaration()
             || f.params.items.len() + usize::from(f.params.rest.is_some()) > 1
         {
@@ -147,6 +160,7 @@ mod tests {
             "S6759",
             "a.tsx",
             r#"
+import React from "react";
 interface FooProps { x: number; y: string; }
 function Foo(props: FooProps) { // Noncompliant {{Mark the props of the component as read-only.}}
   return <div>{props.x}</div>;

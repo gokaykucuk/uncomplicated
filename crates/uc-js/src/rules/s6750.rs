@@ -1,5 +1,4 @@
 //! The return value of "ReactDOM.render" should not be used
-use crate::helpers::batch_react::*;
 use crate::prelude::*;
 
 pub struct Rule;
@@ -40,8 +39,7 @@ impl JsRule for Rule {
             _ => false,
         };
         if used {
-            report_react(
-                ctx,
+            ctx.report(
                 m.span,
                 "Do not depend on the return value from ReactDOM.render",
             );

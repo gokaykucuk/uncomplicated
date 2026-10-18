@@ -31,7 +31,7 @@ impl JsRule for Rule {
                 AstKind::ObjectProperty(_) | AstKind::MethodDefinition(_)
             )
         }) {
-            report_react(ctx, m.span, "Do not use isMounted");
+            ctx.report(m.span, "Do not use isMounted");
         }
     }
 }

@@ -155,7 +155,7 @@ impl JsRule for Rule {
                 info.ty
             ),
         };
-        report_react(ctx, info.span, msg);
+        ctx.report(info.span, msg);
     }
 }
 

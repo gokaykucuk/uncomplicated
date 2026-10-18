@@ -998,11 +998,18 @@ fn is_valid_data_attribute(name: &str) -> bool {
             .is_some_and(|p| p.eq_ignore_ascii_case("data-xml"))
 }
 
-/// Sonar only runs this rule on React projects; without the manifest, require a React import.
 fn report(ctx: &Ctx<'_, '_>, span: Span, msg: String) {
-    if imports_react(ctx) && !non_react_jsx_framework(ctx) {
-        ctx.report(span, msg);
-    }
+    ctx.report(span, msg);
+}
+
+fn uses_vue(ctx: &Ctx<'_, '_>) -> bool {
+    ctx.file.path.ends_with(".vue")
+        || ctx
+            .nodes()
+            .program()
+            .body
+            .iter()
+            .any(|s| matches!(s, Statement::ImportDeclaration(d) if d.source.value == "vue"))
 }
 
 fn uses_stencil(ctx: &Ctx<'_, '_>) -> bool {
@@ -1021,7 +1028,8 @@ impl JsRule for Rule {
             return;
         };
         let actual = ctx.text(attr.name.span());
-        if uses_stencil(ctx) {
+        // Sonar doesn't raise on Vue files (JSX in `.vue` or with Vue imports).
+        if uses_stencil(ctx) || uses_vue(ctx) {
             return;
         }
         // jsx-a11y/aria-props, on every element.

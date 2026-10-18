@@ -20,6 +20,10 @@ impl JsRule for Rule {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
+        // Sonar: React 19 ignores propTypes on function components, so the rule is off there.
+        if project_react_version(ctx).is_some_and(|v| v.0 >= 19) {
+            return;
+        }
         let Some(comp) = component_info(ctx, node) else {
             return;
         };
@@ -36,8 +40,7 @@ impl JsRule for Rule {
             if declared.contains(&u.names[0].as_str()) {
                 continue;
             }
-            report_react(
-                ctx,
+            ctx.report(
                 u.span,
                 format!("'{}' is missing in props validation", u.names.join(".")),
             );

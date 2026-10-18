@@ -42,6 +42,51 @@ fn text_preceding_element(t: &str) -> bool {
     !trimmed.is_empty() && t[trimmed.len()..].contains('\n')
 }
 
+/// JSX text as ESTree exposes it: HTML entities decoded (`&nbsp;` is whitespace for `\\s`).
+fn decode_entities(t: &str) -> std::borrow::Cow<'_, str> {
+    if !t.contains('&') {
+        return std::borrow::Cow::Borrowed(t);
+    }
+    let mut out = String::with_capacity(t.len());
+    let mut rest = t;
+    while let Some(i) = rest.find('&') {
+        out.push_str(&rest[..i]);
+        let after = &rest[i + 1..];
+        let decoded = after.find(';').filter(|&e| e <= 10).and_then(|e| {
+            let name = &after[..e];
+            let c = match name {
+                "nbsp" => Some('\u{a0}'),
+                "amp" => Some('&'),
+                "lt" => Some('<'),
+                "gt" => Some('>'),
+                "quot" => Some('"'),
+                "apos" => Some('\''),
+                _ => {
+                    let n = name.strip_prefix("#x").or_else(|| name.strip_prefix("#X"));
+                    match n {
+                        Some(h) => u32::from_str_radix(h, 16).ok(),
+                        None => name.strip_prefix('#').and_then(|d| d.parse().ok()),
+                    }
+                    .and_then(char::from_u32)
+                }
+            };
+            c.map(|c| (c, e))
+        });
+        match decoded {
+            Some((c, e)) => {
+                out.push(c);
+                rest = &after[e + 1..];
+            }
+            None => {
+                out.push('&');
+                rest = after;
+            }
+        }
+    }
+    out.push_str(rest);
+    std::borrow::Cow::Owned(out)
+}
+
 fn check(ctx: &Ctx<'_, '_>, children: &[JSXChild<'_>]) {
     let n = children.len();
     for i in 0..n {
@@ -56,7 +101,8 @@ fn check(ctx: &Ctx<'_, '_>, children: &[JSXChild<'_>]) {
         if last.is_some_and(|l| !is_inline(l)) || next.is_some_and(|x| !is_inline(x)) {
             continue;
         }
-        let value = text.value.as_str();
+        let decoded = decode_entities(text.value.as_str());
+        let value = decoded.as_ref();
         if let Some(l) = last
             && text_following_element(value)
         {
@@ -135,6 +181,11 @@ const e = <p><div>Hello</div>
 world</p>;
 const f = <p><strong>Hello</strong>{' '}
 world</p>;
+// Noncompliant@+1
+const h = <p><a>Lambda</a>&nbsp;
+  for your webhooks.</p>;
+const i = <p><strong>Hello</strong>
+&#46; Next sentence</p>;
 const g = <><strong>Hello</strong>
 , Next words
 <em>continue</em></>; // Noncompliant

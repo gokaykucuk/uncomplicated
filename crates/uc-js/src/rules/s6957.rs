@@ -150,13 +150,31 @@ fn module_name(source: &str) -> Option<&'static str> {
     }
 }
 
+fn parse_version(v: &str) -> (u64, u64, u64) {
+    let mut p = v.split('.').map(|x| x.parse::<u64>().unwrap_or(0));
+    (
+        p.next().unwrap_or(0),
+        p.next().unwrap_or(0),
+        p.next().unwrap_or(0),
+    )
+}
+
+/// Is a deprecation `since` active for the project's React version (`None`: latest)?
+fn applies(react: Option<(u64, u64, u64)>, since: &str) -> bool {
+    react.is_none_or(|v| v >= parse_version(since))
+}
+
 fn check(ctx: &Ctx<'_, '_>, name: &str, span: Span) {
     if let Some((old, version, new)) = DEPRECATED.iter().find(|(o, _, _)| *o == name) {
+        // Deprecations newer than the project's React version don't apply; an unknown
+        // version counts as the latest one.
+        if !applies(project_react_version(ctx), version) {
+            return;
+        }
         let new = new
             .map(|n| format!(", use {n} instead"))
             .unwrap_or_default();
-        report_react(
-            ctx,
+        ctx.report(
             span,
             format!("{old} is deprecated since React {version}{new}"),
         );
@@ -239,6 +257,14 @@ impl JsRule for Rule {
 #[cfg(test)]
 mod tests {
     use crate::test_util::*;
+
+    #[test]
+    fn version_gate() {
+        assert!(super::applies(None, "18.0.0"));
+        assert!(super::applies(Some((18, 2, 0)), "18.0.0"));
+        assert!(!super::applies(Some((16, 8, 0)), "16.9.0"));
+        assert!(super::applies(Some((16, 8, 0)), "15.5.0"));
+    }
 
     #[test]
     fn deprecated() {

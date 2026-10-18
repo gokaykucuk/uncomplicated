@@ -90,6 +90,11 @@ impl JsRule for Rule {
         let Some(comp) = component_info(ctx, node) else {
             return;
         };
+        // `memo(Component, areEqual)`: the comparator reads props too.
+        if matches!(ctx.node(comp.node).kind(), AstKind::CallExpression(c) if c.arguments.len() > 1)
+        {
+            return;
+        }
         if comp
             .class
             .is_some_and(|c| c.r#abstract || !c.decorators.is_empty())
@@ -158,8 +163,7 @@ impl JsRule for Rule {
                 .iter()
                 .any(|u| u.names.last().is_some_and(|n| n == d.name));
             if !used {
-                report_react(
-                    ctx,
+                ctx.report(
                     d.key_span,
                     format!("'{}' PropType is defined but prop is never used", d.name),
                 );

@@ -17,9 +17,7 @@ impl JsRule for Rule {
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &Ctx<'a, '_>) {
         match node.kind() {
-            AstKind::JSXAttribute(a) if attr_name(a) == Some("children") => report_react(
-                ctx,
-                a.span,
+            AstKind::JSXAttribute(a) if attr_name(a) == Some("children") => ctx.report(a.span,
                 "Do not pass children as props. Instead, nest children between the opening and closing tags.",
             ),
             AstKind::CallExpression(c) if c.arguments.len() > 1 && is_create_element(ctx, c) => {
@@ -30,9 +28,7 @@ impl JsRule for Rule {
                     matches!(p, ObjectPropertyKind::ObjectProperty(p) if matches!(&p.key, PropertyKey::StaticIdentifier(k) if k.name == "children"))
                 });
                 if has_children {
-                    report_react(
-                        ctx,
-                        c.span,
+                    ctx.report(c.span,
                         "Do not pass children as props. Instead, pass them as additional arguments to React.createElement.",
                     );
                 }
