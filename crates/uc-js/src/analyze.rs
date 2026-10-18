@@ -130,14 +130,17 @@ fn analyze_in(
         }
     }
     let lines = LineIndex::new(src);
-    if ret.fatal_error {
-        let msg = ret.diagnostics.first().map(|d| d.to_string()).unwrap_or_else(|| "parse error".into());
-        result.parse_error = Some(msg);
-        result.metrics.lines = lines.line_count();
-        return result;
-    }
     if let Some(d) = ret.diagnostics.first() {
-        result.parse_error = Some(format!("recovered: {d}"));
+        // Like SonarJS: a file that doesn't parse only gets a parsing-failure issue (S2260).
+        let msg = d.message.to_string();
+        result.parse_error = Some(msg.clone());
+        result.metrics.lines = lines.line_count();
+        let off = d.labels.first().map_or(0, |l| l.offset() as u32);
+        if rules.rules.iter().any(|r| r.key == "S2260") {
+            let loc = lines.location(uc_core::Span::new(off, off));
+            result.issues.push(FileIssue { rule: "S2260".into(), message: format!("Parse error: {msg}"), loc, secondary: Vec::new(), gap: None });
+        }
+        return result;
     }
 
     let program = alloc.alloc(ret.program);
@@ -189,9 +192,29 @@ fn analyze_in(
     result
 }
 
+/// `UNC_PROFILE=1` accumulates per-rule time (nanoseconds) and prints it at exit.
+pub static PROFILE: std::sync::LazyLock<Option<Vec<std::sync::atomic::AtomicU64>>> = std::sync::LazyLock::new(|| {
+    std::env::var_os("UNC_PROFILE").map(|_| (0..crate::rules::REGISTRY.len()).map(|_| Default::default()).collect())
+});
+
+/// Per-rule profile: (key, nanoseconds), slowest first.
+pub fn profile_report() -> Vec<(&'static str, u64)> {
+    let Some(p) = PROFILE.as_ref() else { return Vec::new() };
+    let mut v: Vec<_> = crate::rules::REGISTRY
+        .iter()
+        .zip(p)
+        .map(|((k, _), t)| (*k, t.load(std::sync::atomic::Ordering::Relaxed)))
+        .collect();
+    v.sort_by(|a, b| b.1.cmp(&a.1));
+    v
+}
+
 fn run_rules(ctx: &Ctx<'_, '_>, rules: &JsRules, lang: Lang, is_test: bool) {
     let active: Vec<bool> =
         rules.rules.iter().map(|r| r.meta.applies_to(lang) && r.meta.applies_to_scope(is_test)).collect();
+    if let Some(prof) = PROFILE.as_ref() {
+        return run_rules_profiled(ctx, rules, &active, prof);
+    }
     for (i, r) in rules.rules.iter().enumerate() {
         if active[i] {
             ctx.rule.set(r.key);
@@ -209,6 +232,36 @@ fn run_rules(ctx: &Ctx<'_, '_>, rules: &JsRules, lang: Lang, is_test: bool) {
                 r.rule.run(node, ctx);
             }
         }
+    }
+}
+
+fn run_rules_profiled(ctx: &Ctx<'_, '_>, rules: &JsRules, active: &[bool], prof: &[std::sync::atomic::AtomicU64]) {
+    use std::sync::atomic::Ordering::Relaxed;
+    let slot = |key: &str| crate::rules::REGISTRY.iter().position(|(k, _)| *k == key).unwrap();
+    let slots: Vec<usize> = rules.rules.iter().map(|r| slot(r.key)).collect();
+    let mut local = vec![0u64; rules.rules.len()];
+    for (i, r) in rules.rules.iter().enumerate() {
+        if active[i] {
+            ctx.rule.set(r.key);
+            let t = std::time::Instant::now();
+            r.rule.run_once(ctx);
+            local[i] += t.elapsed().as_nanos() as u64;
+        }
+    }
+    for node in ctx.semantic.nodes().iter() {
+        for &ri in &rules.dispatch[node.kind().ty() as usize] {
+            let ri = ri as usize;
+            if active[ri] {
+                let r = &rules.rules[ri];
+                ctx.rule.set(r.key);
+                let t = std::time::Instant::now();
+                r.rule.run(node, ctx);
+                local[ri] += t.elapsed().as_nanos() as u64;
+            }
+        }
+    }
+    for (i, t) in local.into_iter().enumerate() {
+        prof[slots[i]].fetch_add(t, Relaxed);
     }
 }
 

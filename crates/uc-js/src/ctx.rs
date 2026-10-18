@@ -41,6 +41,11 @@ impl<'a, 's> Ctx<'a, 's> {
         self.issues.borrow_mut().push(Issue::new(self.rule.get(), conv(span), message));
     }
 
+    /// Reports a file-level issue (no line; Sonar shows these at line 0).
+    pub fn report_file(&self, message: impl Into<String>) {
+        self.issues.borrow_mut().push(Issue::new(self.rule.get(), uc_core::Span::FILE, message));
+    }
+
     /// Reports an issue with secondary locations.
     pub fn report_with(
         &self,

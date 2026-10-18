@@ -208,6 +208,14 @@ fn analyze(a: AnalyzeArgs) -> Result<ExitCode, String> {
         eprintln!("Quality gate: {}", if analysis.gate.status == Status::Ok { "PASSED" } else { "FAILED" });
     }
 
+    if std::env::var_os("UNC_PROFILE").is_some() {
+        let prof = uc_engine::profile_report();
+        let total: u64 = prof.iter().map(|p| p.1).sum();
+        eprintln!("rule time (summed across threads): {:.0} ms", total as f64 / 1e6);
+        for (k, ns) in prof.iter().take(25) {
+            eprintln!("  {k:<8} {:>8.1} ms", *ns as f64 / 1e6);
+        }
+    }
     let gate_failed = !a.no_gate && analysis.gate.status == Status::Error;
     let issues_failed = fail_on.is_some_and(|s| uc_engine::report::items(&analysis, &filter).iter().any(|i| i.meta.severity >= s));
     Ok(if gate_failed || issues_failed { ExitCode::from(1) } else { ExitCode::SUCCESS })

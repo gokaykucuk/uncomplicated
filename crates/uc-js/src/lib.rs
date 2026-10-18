@@ -17,7 +17,7 @@ use oxc_ast::AstType;
 use oxc_semantic::AstNode;
 use uc_core::{Catalog, Lang, Params, RuleMeta};
 
-pub use analyze::{FileOptions, analyze};
+pub use analyze::{FileOptions, analyze, profile_report};
 pub use ctx::{Ctx, FileInfo};
 
 /// A JS/TS rule. Rules are stateless across files and shared between threads.

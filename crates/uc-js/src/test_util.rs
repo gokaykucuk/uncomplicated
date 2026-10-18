@@ -66,8 +66,8 @@ pub fn check_with(key: &str, file: &str, params: serde_json::Value, code: &str) 
     assert_eq!(rules.len(), 1, "{key} is not implemented");
     let is_test = meta.scope == Scope::Tests;
     let res = analyze(file, code, is_test, &rules, &FileOptions { nosonar: false, cpd: false, metrics: false });
-    if let Some(e) = &res.parse_error {
-        assert!(e.starts_with("recovered"), "parse error in test code: {e}");
+    if key != "S2260" {
+        assert!(res.parse_error.is_none(), "parse error in test code: {:?}", res.parse_error);
     }
     let expected = expectations(code);
     let mut actual: Vec<(u32, String)> = res.issues.iter().map(|i| (i.loc.line, i.message.clone())).collect();

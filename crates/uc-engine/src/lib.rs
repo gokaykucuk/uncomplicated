@@ -65,6 +65,11 @@ pub struct Analysis {
     pub warnings: Vec<String>,
 }
 
+/// Per-rule time when `UNC_PROFILE` is set.
+pub fn profile_report() -> Vec<(&'static str, u64)> {
+    uc_js::profile_report()
+}
+
 /// Keys of implemented JS/TS rules.
 pub fn implemented_js() -> impl Iterator<Item = &'static str> {
     uc_js::implemented()
