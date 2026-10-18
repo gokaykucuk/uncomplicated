@@ -76,7 +76,7 @@ impl GoRule for Rule {
         };
         if !ok {
             // File-level issue: reported at the start of the file.
-            ctx.report_span(Span::new(0, 0), "Add or update the header of this file.");
+            ctx.report_span(Span::FILE, "Add or update the header of this file.");
         }
     }
 }
@@ -92,7 +92,7 @@ mod tests {
         check_with(
             "S1451",
             p,
-            "// copyright 2019 // Noncompliant {{Add or update the header of this file.}}\npackage p\n",
+            "// copyright 2019 // Noncompliant@0 {{Add or update the header of this file.}}\npackage p\n",
         );
     }
 
@@ -104,6 +104,6 @@ mod tests {
             p.clone(),
             "// copyright 2042\n// all rights reserved\npackage p\n",
         );
-        check_with("S1451", p, "package p // Noncompliant\n// copyright 2042\n");
+        check_with("S1451", p, "package p // Noncompliant@0\n// copyright 2042\n");
     }
 }

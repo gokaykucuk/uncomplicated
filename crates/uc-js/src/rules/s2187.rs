@@ -116,7 +116,7 @@ impl JsRule for Rule {
             }
         });
         if !has_test {
-            ctx.report(Span::new(0, 0), "Add some tests to this file or delete it.");
+            ctx.report_file("Add some tests to this file or delete it.");
         }
     }
 }
@@ -130,7 +130,7 @@ mod tests {
         check(
             "S2187",
             "foo.test.js",
-            r#"// Noncompliant {{Add some tests to this file or delete it.}}
+            r#"// Noncompliant@0 {{Add some tests to this file or delete it.}}
 describe('suite', () => {
   beforeEach(() => {});
 });
@@ -147,7 +147,7 @@ describe('suite', () => {
         );
         check("S2187", "foo.spec.ts", "test.each`a | b`('t', () => {});");
         check("S2187", "foo.spec.ts", "test.skip('title', () => {});");
-        check("S2187", "foo.spec.ts", "// Noncompliant\ntest.skip(cond);");
+        check("S2187", "foo.spec.ts", "// Noncompliant@0\ntest.skip(cond);");
         // not a test file name
         check("S2187", "helpers.js", "const a = 1;");
     }

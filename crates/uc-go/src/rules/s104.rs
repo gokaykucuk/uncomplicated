@@ -26,7 +26,7 @@ impl GoRule for Rule {
                 .unwrap_or(ctx.file.path);
             // File-level issue: reported at the start of the file.
             ctx.report_span(
-                Span::new(0, 0),
+                Span::FILE,
                 format!(
                     "File \"{name}\" has {loc} lines, which is greater than {} authorized. Split it into smaller files.",
                     self.max
@@ -45,7 +45,7 @@ mod tests {
         check_with(
             "S104",
             serde_json::json!({"Max": 4}),
-            r#"package p // Noncompliant {{File "x.go" has 5 lines, which is greater than 4 authorized. Split it into smaller files.}}
+            r#"package p // Noncompliant@0 {{File "x.go" has 5 lines, which is greater than 4 authorized. Split it into smaller files.}}
 
 // comments don't count
 
