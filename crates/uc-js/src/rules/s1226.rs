@@ -254,7 +254,11 @@ impl JsRule for Rule {
         let mut limit_cache: Option<u32> = None;
         let mut limit = || {
             *limit_cache.get_or_insert_with(|| {
-                if is_function { first_arguments_use(ctx, node.id(), region) } else { u32::MAX }
+                if is_function {
+                    first_arguments_use(ctx, node.id(), region)
+                } else {
+                    u32::MAX
+                }
             })
         };
         for sym in symbols {

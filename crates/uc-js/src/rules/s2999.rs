@@ -38,13 +38,21 @@ fn is_not_instantiable(ctx: &Ctx<'_, '_>, callee: &Expression<'_>) -> bool {
 /// `C.m` where `C` is a local class and `m` one of its static methods (methods aren't
 /// constructible).
 fn is_static_method(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> bool {
-    let Expression::StaticMemberExpression(m) = e else { return false };
-    let Expression::Identifier(obj) = strip_parens(&m.object) else { return false };
-    let Some(sym) = ctx.symbol_of(obj) else { return false };
+    let Expression::StaticMemberExpression(m) = e else {
+        return false;
+    };
+    let Expression::Identifier(obj) = strip_parens(&m.object) else {
+        return false;
+    };
+    let Some(sym) = ctx.symbol_of(obj) else {
+        return false;
+    };
     if ctx.scoping().symbol_is_mutated(sym) {
         return false;
     }
-    let AstKind::Class(class) = ctx.symbol_decl(sym).kind() else { return false };
+    let AstKind::Class(class) = ctx.symbol_decl(sym).kind() else {
+        return false;
+    };
     let name = m.property.name.as_str();
     let mut found = false;
     for el in &class.body.body {
@@ -53,7 +61,11 @@ fn is_static_method(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> bool {
             continue;
         }
         match el {
-            ClassElement::MethodDefinition(md) if md.r#static && md.kind == MethodDefinitionKind::Method => found = true,
+            ClassElement::MethodDefinition(md)
+                if md.r#static && md.kind == MethodDefinitionKind::Method =>
+            {
+                found = true
+            }
             _ => return false,
         }
     }

@@ -102,9 +102,13 @@ pub const BUILTIN_GLOBALS: &[&str] = &[
 ];
 
 pub fn is_builtin_global(name: &str) -> bool {
-    static SET: std::sync::OnceLock<rustc_hash::FxHashSet<&'static str>> = std::sync::OnceLock::new();
+    static SET: std::sync::OnceLock<rustc_hash::FxHashSet<&'static str>> =
+        std::sync::OnceLock::new();
     // Cheap pre-filter: every built-in name is 3 to 20 bytes long.
-    (3..=20).contains(&name.len()) && SET.get_or_init(|| BUILTIN_GLOBALS.iter().copied().collect()).contains(name)
+    (3..=20).contains(&name.len())
+        && SET
+            .get_or_init(|| BUILTIN_GLOBALS.iter().copied().collect())
+            .contains(name)
 }
 
 /// JavaScript's `String(number)` for the common cases.
@@ -213,7 +217,8 @@ pub fn contains(outer: Span, inner: Span) -> bool {
 /// TypeScript type information (type-dependent rules don't run there).
 pub fn is_html(ctx: &Ctx<'_, '_>) -> bool {
     let p = ctx.file.path.as_bytes();
-    let ends = |s: &str| p.len() >= s.len() && p[p.len() - s.len()..].eq_ignore_ascii_case(s.as_bytes());
+    let ends =
+        |s: &str| p.len() >= s.len() && p[p.len() - s.len()..].eq_ignore_ascii_case(s.as_bytes());
     ends(".html") || ends(".htm")
 }
 
@@ -251,7 +256,8 @@ fn is_for_in_key(ctx: &Ctx<'_, '_>, sym: SymbolId) -> bool {
         return false;
     }
     let list = ctx.parent(decl.id());
-    matches!(ctx.parent_kind(list.id()), AstKind::ForInStatement(_)) && !ctx.scoping().symbol_is_mutated(sym)
+    matches!(ctx.parent_kind(list.id()), AstKind::ForInStatement(_))
+        && !ctx.scoping().symbol_is_mutated(sym)
 }
 
 /// [`type_of`] plus a few extra cases: `for...in` keys and indexed access into arrays of known
@@ -290,8 +296,16 @@ fn elem_of_annotation(ctx: &Ctx<'_, '_>, t: &TSType<'_>) -> Option<Ty> {
     let elem = match t {
         TSType::TSArrayType(a) => &a.element_type,
         TSType::TSTypeReference(r) => {
-            let TSTypeName::IdentifierReference(id) = &r.type_name else { return None };
-            if id.name != "Array" || ctx.scoping().get_reference(id.reference_id()).symbol_id().is_some() {
+            let TSTypeName::IdentifierReference(id) = &r.type_name else {
+                return None;
+            };
+            if id.name != "Array"
+                || ctx
+                    .scoping()
+                    .get_reference(id.reference_id())
+                    .symbol_id()
+                    .is_some()
+            {
                 return None;
             }
             r.type_arguments.as_ref()?.params.first()?
@@ -319,12 +333,16 @@ fn evolving_elem(ctx: &Ctx<'_, '_>, sym: SymbolId, at: u32, d: u8) -> Option<Ty>
                 if !matches!(m.property.name.as_str(), "push" | "unshift") {
                     continue;
                 }
-                let AstKind::CallExpression(c) = ctx.parent_kind(parent.id()) else { continue };
+                let AstKind::CallExpression(c) = ctx.parent_kind(parent.id()) else {
+                    continue;
+                };
                 if c.callee.span() != m.span {
                     continue;
                 }
                 for a in &c.arguments {
-                    let t = a.as_expression().map_or(Ty::Unknown, |e| ty_d(ctx, e, d + 1));
+                    let t = a
+                        .as_expression()
+                        .map_or(Ty::Unknown, |e| ty_d(ctx, e, d + 1));
                     if t.is_unknown() {
                         return None;
                     }
@@ -333,14 +351,21 @@ fn evolving_elem(ctx: &Ctx<'_, '_>, sym: SymbolId, at: u32, d: u8) -> Option<Ty>
             }
             // `a[i] = v` also evolves the type.
             AstKind::ComputedMemberExpression(m) if m.object.span() == span => {
-                if matches!(ctx.parent_kind(parent.id()), AstKind::AssignmentExpression(_)) {
+                if matches!(
+                    ctx.parent_kind(parent.id()),
+                    AstKind::AssignmentExpression(_)
+                ) {
                     return None;
                 }
             }
             _ => {}
         }
     }
-    Some(if types.is_empty() { Ty::Any } else { union_of(types) })
+    Some(if types.is_empty() {
+        Ty::Any
+    } else {
+        union_of(types)
+    })
 }
 
 /// Element type of an expression known to be an array: `None` when it's not known to be one or
@@ -374,17 +399,22 @@ fn array_elem_d(ctx: &Ctx<'_, '_>, e: &Expression<'_>, at: u32, d: u8) -> Option
                         return elem_of_annotation(ctx, &ann.type_annotation);
                     }
                     let init = const_init(ctx, sym)?;
-                    if matches!(strip_parens(init), Expression::ArrayExpression(a) if a.elements.is_empty()) {
+                    if matches!(strip_parens(init), Expression::ArrayExpression(a) if a.elements.is_empty())
+                    {
                         return evolving_elem(ctx, sym, at, d);
                     }
                     array_elem_d(ctx, init, at, d + 1)
                 }
-                AstKind::FormalParameter(p) => elem_of_annotation(ctx, &p.type_annotation.as_ref()?.type_annotation),
+                AstKind::FormalParameter(p) => {
+                    elem_of_annotation(ctx, &p.type_annotation.as_ref()?.type_annotation)
+                }
                 _ => None,
             }
         }
         Expression::CallExpression(c) => {
-            let Expression::StaticMemberExpression(m) = strip_parens(&c.callee) else { return None };
+            let Expression::StaticMemberExpression(m) = strip_parens(&c.callee) else {
+                return None;
+            };
             let name = m.property.name.as_str();
             if let Expression::Identifier(obj) = strip_parens(&m.object)
                 && obj.name == "Object"
@@ -394,9 +424,8 @@ fn array_elem_d(ctx: &Ctx<'_, '_>, e: &Expression<'_>, at: u32, d: u8) -> Option
             }
             match name {
                 "split" if ty_d(ctx, &m.object, d + 1).is_string() => Some(Ty::String),
-                "filter" | "slice" | "concat" | "reverse" | "sort" | "toSorted" | "toReversed" | "splice" => {
-                    array_elem_d(ctx, &m.object, at, d + 1)
-                }
+                "filter" | "slice" | "concat" | "reverse" | "sort" | "toSorted" | "toReversed"
+                | "splice" => array_elem_d(ctx, &m.object, at, d + 1),
                 "map" => {
                     array_elem_d(ctx, &m.object, at, d + 1)?;
                     let body = match c.arguments.first()?.as_expression()? {

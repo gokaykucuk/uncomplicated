@@ -96,8 +96,10 @@ impl JsRule for Rule {
         let Some(sym) = ctx.symbol_of(callee) else {
             return;
         };
+        // Cheap checks first: the body scan below is the expensive part.
         if !ctx.scoping().symbol_redeclarations(sym).is_empty()
             || ctx.scoping().symbol_is_mutated(sym)
+            || !is_return_value_used(ctx, node.id(), call.span)
         {
             return;
         }
@@ -117,7 +119,7 @@ impl JsRule for Rule {
             },
             _ => false,
         };
-        if nothing && is_return_value_used(ctx, node.id(), call.span) {
+        if nothing {
             ctx.report(
                 callee.span,
                 format!(

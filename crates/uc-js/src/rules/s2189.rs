@@ -350,7 +350,10 @@ impl Suppressed {
 }
 
 fn suppressed_lines(ctx: &Ctx<'_, '_>) -> Suppressed {
-    let mut s = Suppressed { lines: Vec::new(), from: u32::MAX };
+    let mut s = Suppressed {
+        lines: Vec::new(),
+        from: u32::MAX,
+    };
     for c in ctx.comments() {
         let text = ctx.comment_text(c).trim_start();
         if !text.contains("no-unmodified-loop-condition") {

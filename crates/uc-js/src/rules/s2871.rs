@@ -43,7 +43,7 @@ impl JsRule for Rule {
         let AstKind::CallExpression(call) = node.kind() else {
             return;
         };
-        if !call.arguments.is_empty() || is_html(ctx) {
+        if !call.arguments.is_empty() {
             return;
         }
         let (object, prop_span) = match &call.callee {
@@ -60,6 +60,9 @@ impl JsRule for Rule {
             }
             _ => return,
         };
+        if is_html(ctx) {
+            return;
+        }
         let Some(elem) = array_elem(ctx, object, call.span.start) else {
             return;
         };

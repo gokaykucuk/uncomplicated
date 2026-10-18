@@ -65,15 +65,22 @@ fn dissimilar(ctx: &Ctx<'_, '_>, left: &Expression<'_>, right: &Expression<'_>) 
             // Call results depend on library typings (which shims may override): not trusted.
             if is_nullish_literal(ctx, other)
                 || other.is_member_expression()
-                || matches!(other, Expression::ChainExpression(_) | Expression::CallExpression(_))
+                || matches!(
+                    other,
+                    Expression::ChainExpression(_) | Expression::CallExpression(_)
+                )
             {
                 return false;
             }
             return families(&ty(ctx, other)).is_some();
         }
     }
-    let Some(lf) = families(&ty(ctx, l)) else { return false };
-    let Some(rf) = families(&ty(ctx, r)) else { return false };
+    let Some(lf) = families(&ty(ctx, l)) else {
+        return false;
+    };
+    let Some(rf) = families(&ty(ctx, r)) else {
+        return false;
+    };
     let comparable = lf.iter().any(|f| rf.contains(f));
     // Object instances are only "dissimilar" to primitives.
     !(comparable || (lf.contains(&Family::Object) && rf.contains(&Family::Object)))
