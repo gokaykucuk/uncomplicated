@@ -1,0 +1,667 @@
+[
+ {
+  "key": "S100",
+  "title": "Function names should comply with a naming convention",
+  "type": "CODE_SMELL",
+  "severity": "Minor",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "convention"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 5
+  }
+ },
+ {
+  "key": "S103",
+  "title": "Lines should not be too long",
+  "type": "CODE_SMELL",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": false,
+  "deprecated": false,
+  "tags": [
+   "convention"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 1
+  }
+ },
+ {
+  "key": "S104",
+  "title": "Files should not have too many lines of code",
+  "type": "CODE_SMELL",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": false,
+  "deprecated": false,
+  "tags": [
+   "brain-overload"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 60
+  }
+ },
+ {
+  "key": "S107",
+  "title": "Functions should not have too many parameters",
+  "type": "CODE_SMELL",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "brain-overload"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 20
+  }
+ },
+ {
+  "key": "S108",
+  "title": "Nested blocks of code should not be left empty",
+  "type": "CODE_SMELL",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "suspicious"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 5
+  }
+ },
+ {
+  "key": "S117",
+  "title": "Local variable and function parameter names should comply with a naming convention",
+  "type": "CODE_SMELL",
+  "severity": "Minor",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "convention"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 2
+  }
+ },
+ {
+  "key": "S122",
+  "title": "Statements should be on separate lines",
+  "type": "CODE_SMELL",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": false,
+  "deprecated": false,
+  "tags": [
+   "convention"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 1
+  }
+ },
+ {
+  "key": "S126",
+  "title": "\"if ... else if\" constructs should end with \"else\" clauses",
+  "type": "CODE_SMELL",
+  "severity": "Critical",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": false,
+  "deprecated": false,
+  "tags": [],
+  "scope": "All",
+  "effort": {
+   "const": 5
+  }
+ },
+ {
+  "key": "S131",
+  "title": "\"switch\" statements should have \"default\" clauses",
+  "type": "CODE_SMELL",
+  "severity": "Critical",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": false,
+  "deprecated": false,
+  "tags": [
+   "cwe"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 5
+  }
+ },
+ {
+  "key": "S134",
+  "title": "Control flow statements \"if\", \"for\" and \"switch\" should not be nested too deeply",
+  "type": "CODE_SMELL",
+  "severity": "Critical",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": false,
+  "deprecated": false,
+  "tags": [
+   "brain-overload"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 10
+  }
+ },
+ {
+  "key": "S138",
+  "title": "Functions and methods should not have too many lines",
+  "type": "CODE_SMELL",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": false,
+  "deprecated": false,
+  "tags": [
+   "brain-overload"
+  ],
+  "scope": "Main",
+  "effort": {
+   "const": 20
+  }
+ },
+ {
+  "key": "S978",
+  "title": "Predeclared identifiers should not be shadowed",
+  "type": "CODE_SMELL",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "suspicious",
+   "pitfall"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 5
+  }
+ },
+ {
+  "key": "S1067",
+  "title": "Expressions should not be too complex",
+  "type": "CODE_SMELL",
+  "severity": "Critical",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": false,
+  "deprecated": false,
+  "tags": [
+   "brain-overload"
+  ],
+  "scope": "All",
+  "effort": {
+   "offset": 5,
+   "factor": 1
+  }
+ },
+ {
+  "key": "S1110",
+  "title": "Redundant pairs of parentheses should be removed",
+  "type": "CODE_SMELL",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "confusing"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 1
+  }
+ },
+ {
+  "key": "S1125",
+  "title": "Boolean literals should not be redundant",
+  "type": "CODE_SMELL",
+  "severity": "Minor",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "clumsy"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 5
+  }
+ },
+ {
+  "key": "S1134",
+  "title": "Track uses of \"FIXME\" tags",
+  "type": "CODE_SMELL",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "cwe"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 0
+  }
+ },
+ {
+  "key": "S1135",
+  "title": "Track uses of \"TODO\" tags",
+  "type": "CODE_SMELL",
+  "severity": "Info",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "cwe"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 0
+  }
+ },
+ {
+  "key": "S1145",
+  "title": "Useless \"if(true) {...}\" and \"if(false){...}\" blocks should be removed",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": false,
+  "deprecated": false,
+  "tags": [
+   "cwe"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 2
+  }
+ },
+ {
+  "key": "S1151",
+  "title": "\"switch case\" clauses should not have too many lines",
+  "type": "CODE_SMELL",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": false,
+  "deprecated": false,
+  "tags": [
+   "brain-overload"
+  ],
+  "scope": "Main",
+  "effort": {
+   "const": 5
+  }
+ },
+ {
+  "key": "S1186",
+  "title": "Functions should not be empty",
+  "type": "CODE_SMELL",
+  "severity": "Critical",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "suspicious"
+  ],
+  "scope": "Main",
+  "effort": {
+   "const": 5
+  }
+ },
+ {
+  "key": "S1192",
+  "title": "String literals should not be duplicated",
+  "type": "CODE_SMELL",
+  "severity": "Critical",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "design"
+  ],
+  "scope": "Main",
+  "effort": {
+   "offset": 2,
+   "factor": 2
+  }
+ },
+ {
+  "key": "S1314",
+  "title": "Octal values should not be used",
+  "type": "CODE_SMELL",
+  "severity": "Blocker",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": false,
+  "deprecated": false,
+  "tags": [
+   "pitfall"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 5
+  }
+ },
+ {
+  "key": "S1451",
+  "title": "Track lack of copyright and license headers",
+  "type": "CODE_SMELL",
+  "severity": "Blocker",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": false,
+  "deprecated": false,
+  "tags": [
+   "convention"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 5
+  }
+ },
+ {
+  "key": "S1479",
+  "title": "\"switch\" statements should not have too many \"case\" clauses",
+  "type": "CODE_SMELL",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "brain-overload"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 30
+  }
+ },
+ {
+  "key": "S1656",
+  "title": "Variables should not be self-assigned",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "All",
+  "effort": {
+   "const": 3
+  }
+ },
+ {
+  "key": "S1763",
+  "title": "All code should be reachable",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "cwe",
+   "unused"
+  ],
+  "scope": "Main",
+  "effort": {
+   "const": 5
+  }
+ },
+ {
+  "key": "S1764",
+  "title": "Identical expressions should not be used on both sides of a binary operator",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "suspicious"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 2
+  }
+ },
+ {
+  "key": "S1821",
+  "title": "\"switch\" statements should not be nested",
+  "type": "CODE_SMELL",
+  "severity": "Critical",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": false,
+  "deprecated": false,
+  "tags": [
+   "pitfall"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 10
+  }
+ },
+ {
+  "key": "S1862",
+  "title": "Related \"if/else if\" statements should not have the same condition",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "unused",
+   "pitfall"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 10
+  }
+ },
+ {
+  "key": "S1871",
+  "title": "Two branches in a conditional structure should not have exactly the same implementation",
+  "type": "CODE_SMELL",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "design",
+   "suspicious"
+  ],
+  "scope": "Main",
+  "effort": {
+   "const": 10
+  }
+ },
+ {
+  "key": "S1940",
+  "title": "Boolean checks should not be inverted",
+  "type": "CODE_SMELL",
+  "severity": "Minor",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "pitfall"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 2
+  }
+ },
+ {
+  "key": "S2260",
+  "title": "Go parser failure",
+  "type": "CODE_SMELL",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": false,
+  "deprecated": false,
+  "tags": [
+   "suspicious"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 30
+  }
+ },
+ {
+  "key": "S2757",
+  "title": "Non-existent operators like \"=+\" should not be used",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "All",
+  "effort": {
+   "const": 2
+  }
+ },
+ {
+  "key": "S3776",
+  "title": "Cognitive Complexity of functions should not be too high",
+  "type": "CODE_SMELL",
+  "severity": "Critical",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "brain-overload"
+  ],
+  "scope": "All",
+  "effort": {
+   "offset": 5,
+   "factor": 1
+  }
+ },
+ {
+  "key": "S3923",
+  "title": "All branches in a conditional structure should not have exactly the same implementation",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "All",
+  "effort": {
+   "const": 15
+  }
+ },
+ {
+  "key": "S4144",
+  "title": "Functions should not have identical implementations",
+  "type": "CODE_SMELL",
+  "severity": "Major",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "confusing",
+   "duplicate",
+   "suspicious"
+  ],
+  "scope": "All",
+  "effort": {
+   "const": 15
+  }
+ },
+ {
+  "key": "S4663",
+  "title": "Multi-line comments should not be empty",
+  "type": "CODE_SMELL",
+  "severity": "Minor",
+  "langs": [
+   "go"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  }
+ }
+]

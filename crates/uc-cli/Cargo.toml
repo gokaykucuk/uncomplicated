@@ -1,0 +1,16 @@
+[package]
+name = "uc-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "unc"
+path = "src/main.rs"
+
+[dependencies]
+uc-core.workspace = true
+uc-engine.workspace = true
+clap.workspace = true
+mimalloc.workspace = true
+serde_json.workspace = true

@@ -1,0 +1,20 @@
+[package]
+name = "uc-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+uc-core.workspace = true
+uc-js.workspace = true
+uc-go.workspace = true
+globset.workspace = true
+ignore.workspace = true
+rayon.workspace = true
+rustc-hash.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+xxhash-rust.workspace = true
+bitcode.workspace = true
+memchr.workspace = true

@@ -1,0 +1,11 @@
+[package]
+name = "uc-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+rustc-hash.workspace = true
+memchr.workspace = true
