@@ -50,6 +50,11 @@ fn split_lines(s: &str) -> impl Iterator<Item = &str> {
 
 impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
+        // Scripts embedded in HTML pages have no file header of their own.
+        let path = ctx.file.path.to_ascii_lowercase();
+        if path.ends_with(".html") || path.ends_with(".htm") {
+            return;
+        }
         let ok = match &self.header {
             Header::Invalid => return,
             Header::Regex(re) => re.find(ctx.src).is_some_and(|m| m.start() == 0),
@@ -64,7 +69,7 @@ impl JsRule for Rule {
         };
         if !ok {
             // File-level issue: Sonar reports it without a line.
-            ctx.report(Span::new(0, 0), "Add or update the header of this file.");
+            ctx.report_file("Add or update the header of this file.");
         }
     }
 }
@@ -85,7 +90,7 @@ mod tests {
             "S1451",
             "b.js",
             serde_json::json!({"headerFormat": "// Copyright 2024"}),
-            "// Copyright 2023 Noncompliant {{Add or update the header of this file.}}\nlet a = 1;\n",
+            "// Copyright 2023 Noncompliant@0 {{Add or update the header of this file.}}\nlet a = 1;\n",
         );
         check_with(
             "S1451",
@@ -97,7 +102,7 @@ mod tests {
             "S1451",
             "d.js",
             serde_json::json!({"headerFormat": "// Copyright", "isRegularExpression": true}),
-            "let a = 1; // Noncompliant\n// Copyright\n",
+            "let a = 1; // Noncompliant@0\n// Copyright\n",
         );
     }
 }

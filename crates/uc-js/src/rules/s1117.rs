@@ -1,5 +1,4 @@
 //! Variables should not be shadowed
-use crate::helpers::batch_smell1::eslint_disabled;
 use crate::prelude::*;
 
 pub struct Rule;
@@ -46,6 +45,46 @@ fn is_static_method_type_param(ctx: &Ctx<'_, '_>, decl: &AstNode<'_>) -> bool {
         && matches!(ctx.parent_kind(func.id()), AstKind::MethodDefinition(m) if m.r#static)
 }
 
+/// True if `target` is `e` itself or one of its operands through parentheses, logical and
+/// conditional expressions.
+fn reaches_directly(e: &Expression<'_>, target: Span) -> bool {
+    match e {
+        _ if e.span() == target => true,
+        Expression::ParenthesizedExpression(p) => reaches_directly(&p.expression, target),
+        Expression::LogicalExpression(l) => {
+            reaches_directly(&l.left, target) || reaches_directly(&l.right, target)
+        }
+        Expression::ConditionalExpression(c) => {
+            reaches_directly(&c.consequent, target) || reaches_directly(&c.alternate, target)
+        }
+        _ => false,
+    }
+}
+
+/// Module specifier of an import binding's declaration.
+fn import_source<'a>(ctx: &Ctx<'a, '_>, decl: &AstNode<'a>) -> Option<&'a str> {
+    match decl.kind() {
+        AstKind::ImportSpecifier(_)
+        | AstKind::ImportDefaultSpecifier(_)
+        | AstKind::ImportNamespaceSpecifier(_) => match ctx.parent_kind(decl.id()) {
+            AstKind::ImportDeclaration(d) => Some(d.source.value.as_str()),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn report(ctx: &Ctx<'_, '_>, sym: SymbolId, name: &str, outer: Span) {
+    ctx.report(
+        ctx.scoping().symbol_span(sym),
+        format!(
+            "'{name}' is already declared in the upper scope on line {} column {}.",
+            ctx.line(outer.start),
+            ctx.lines.col(outer.start) + 1
+        ),
+    );
+}
+
 impl JsRule for Rule {
     fn run_once<'a>(&self, ctx: &Ctx<'a, '_>) {
         let scoping = ctx.scoping();
@@ -57,6 +96,19 @@ impl JsRule for Rule {
             }
             let flags = scoping.symbol_flags(sym);
             let name = scoping.symbol_ident(sym);
+            // oxc binds a function expression's name in the function's own scope, where ESLint
+            // has a separate scope around it: `(function f() { const f = 1; })`.
+            if let AstKind::Function(f) = ctx.node(scoping.get_node_id(scope)).kind()
+                && f.is_expression()
+                && let Some(id) = &f.id
+                && id.name.as_str() == name.as_str()
+                && id.symbol_id.get() != Some(sym)
+                && is_value(flags)
+                && !is_signature_param(ctx, ctx.symbol_decl(sym))
+            {
+                report(ctx, sym, name.as_str(), id.span);
+                continue;
+            }
             let Some(shadowed) = scoping
                 .scope_ancestors(scope)
                 .skip(1)
@@ -93,27 +145,29 @@ impl JsRule for Rule {
                 AstKind::Class(c) if c.is_expression() => Some(c.span),
                 _ => None,
             };
+            // ... possibly behind `||` / `? :` (`var f = g || function f() {}`), which the
+            // ruling shows Sonar accepts, unlike arrays, calls or assignments.
+            let sdecl = ctx.symbol_decl(shadowed);
             if let Some(expr_span) = expr_span
-                && let AstKind::VariableDeclarator(v) = ctx.symbol_decl(shadowed).kind()
+                && let AstKind::VariableDeclarator(v) = sdecl.kind()
                 && v.init
                     .as_ref()
-                    .is_some_and(|i| strip_parens(i).span() == expr_span)
+                    .is_some_and(|i| reaches_directly(i, expr_span))
             {
                 continue;
             }
-            if eslint_disabled(ctx, scoping.symbol_span(sym).start, "no-shadow") {
+            // Declaration merging into a type-imported module: `import type { A } from 'm'` +
+            // `declare module 'm' { interface A {} }`.
+            if sflags.contains(SymbolFlags::TypeImport)
+                && flags.contains(SymbolFlags::Interface)
+                && let Some(source) = import_source(ctx, sdecl)
+                && ctx.nodes().ancestors(decl.id()).any(|a| {
+                    matches!(a.kind(), AstKind::TSExternalModuleDeclaration(m) if m.id.value == source)
+                })
+            {
                 continue;
             }
-            let outer = scoping.symbol_span(shadowed);
-            ctx.report(
-                scoping.symbol_span(sym),
-                format!(
-                    "'{}' is already declared in the upper scope on line {} column {}.",
-                    name.as_str(),
-                    ctx.line(outer.start),
-                    ctx.lines.col(outer.start) + 1
-                ),
-            );
+            report(ctx, sym, name.as_str(), scoping.symbol_span(shadowed));
         }
     }
 }
@@ -138,6 +192,8 @@ function g() {
 }
 var h = function h() {};
 var arr = [function arr() {}];  // Noncompliant
+var orFn = Number.isNaN || function orFn() {};
+var cond = x ? null : function cond() {};
 const k = class k {};
 function later() { let b; }  // Noncompliant
 let b = 1;
@@ -149,6 +205,11 @@ declare function d(a: string): void;
 function ov(a: string): void;
 function ov(x: any) {}
 import { Foo } from 'foo';
+import type { Bar } from 'bar';
+declare module 'bar' { interface Bar {} }
+import { Baz } from 'baz';
+declare module 'baz' { namespace Baz { export let x: number; } } // Noncompliant
+run.watch = function watch() { const watch = 1; }; // Noncompliant
 function u() { type Foo = string; }
 class C<U> { static m<U>() {} n<U>() {} } // Noncompliant
 enum E { a }                 // Noncompliant

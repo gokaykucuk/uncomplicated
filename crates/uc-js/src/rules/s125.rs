@@ -327,10 +327,12 @@ fn contains_code(alloc: &mut Allocator, st: SourceType, value: &str) -> bool {
     let Expression::JSXElement(el) = &e.expression else {
         return false;
     };
-    let JSXElementName::Identifier(name) = &el.opening_element.name else {
-        return false;
+    let name = match &el.opening_element.name {
+        JSXElementName::Identifier(n) => n.name.as_str(),
+        JSXElementName::IdentifierReference(n) => n.name.as_str(),
+        _ => return false,
     };
-    if name.name != WRAPPER {
+    if name != WRAPPER {
         return false;
     }
     let attrs = &el.opening_element.attributes;
@@ -477,6 +479,26 @@ s();
 s();
 // see the docs (chapter 3) for more
 s();
+"#,
+        );
+    }
+
+    #[test]
+    fn jsx_attributes() {
+        check(
+            "S125",
+            "c.tsx",
+            r#"
+const a = (
+  <div>
+    {/* Noncompliant@+1 */}
+    {/*width={500}*/}
+    {/* Noncompliant@+1 */}
+    {/*isOpen={this.state.open}*/}
+  </div>
+);
+/* Noncompliant@+1 */
+// value={response.webhook ? response.webhook.response.body : response.inline.logs}
 "#,
         );
     }
