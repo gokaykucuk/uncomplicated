@@ -23,6 +23,16 @@ fn mentions_window(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> bool {
 }
 
 fn is_window_object(ctx: &Ctx<'_, '_>, e: &Expression<'_>) -> bool {
+    // DOM globals typed `Window & typeof globalThis`.
+    if let Expression::Identifier(id) = strip_parens(e)
+        && ctx.symbol_of(id).is_none()
+        && matches!(
+            id.name.as_str(),
+            "self" | "globalThis" | "top" | "parent" | "frames"
+        )
+    {
+        return true;
+    }
     match type_of(ctx, e) {
         Ty::Named(n) => n.contains("Window"),
         t if !t.is_unknown() => false,
@@ -221,6 +231,7 @@ window.addEventListener("click", (e) => go(e));
 window.onmessage = function (e) { use(e.data); }; // Noncompliant
 window.onmessage = function (e) { if (e.origin === o) use(e.data); };
 ws.onmessage = function (e) { use(e.data); };
+self.addEventListener('message', async (event) => { use(event.data); }); // Noncompliant
 "#,
         );
     }

@@ -72,6 +72,13 @@ fn global_type(name: &str) -> Option<&'static str> {
         .map(|i| GLOBAL_TYPES[i].1)
 }
 
+fn method_return(owner: &str, name: &str) -> Option<&'static str> {
+    METHOD_RETURNS
+        .binary_search_by(|(o, n, _)| (*o, *n).cmp(&(owner, name)))
+        .ok()
+        .map(|i| METHOD_RETURNS[i].2)
+}
+
 fn event_type(name: &str) -> Option<&'static str> {
     EVENTS
         .binary_search_by(|(e, _)| e.cmp(&name))
@@ -144,13 +151,27 @@ impl Rule {
                 None
             }
             Expression::CallExpression(c) => {
-                let Expression::StaticMemberExpression(m) = strip_parens(&c.callee) else {
-                    return self.lib_of_ty(type_of(ctx, e));
+                let m = match strip_parens(&c.callee) {
+                    Expression::StaticMemberExpression(m) => m,
+                    Expression::Identifier(id) if ctx.symbol_of(id).is_none() => {
+                        return method_return("", id.name.as_str());
+                    }
+                    _ => return self.lib_of_ty(type_of(ctx, e)),
                 };
                 let name = m.property.name.as_str();
-                if name == "createEvent"
-                    && self.lib_type(ctx, &m.object, depth + 1) == Some("Document")
-                {
+                let recv = self.lib_type(ctx, &m.object, depth + 1);
+                if let Some(r) = recv.and_then(|t| {
+                    method_return(t, name).or_else(|| {
+                        if t == "Window" {
+                            method_return("", name)
+                        } else {
+                            None
+                        }
+                    })
+                }) {
+                    return Some(r);
+                }
+                if name == "createEvent" && recv == Some("Document") {
                     let lit = c
                         .arguments
                         .first()
@@ -165,9 +186,7 @@ impl Rule {
                         _ => None,
                     };
                 }
-                if STRING_METHODS.contains(&name)
-                    && self.lib_type(ctx, &m.object, depth + 1) == Some("String")
-                {
+                if STRING_METHODS.contains(&name) && recv == Some("String") {
                     return Some("String");
                 }
                 self.lib_of_ty(type_of(ctx, e))
@@ -386,6 +405,18 @@ impl JsRule for Rule {
                     if mask_has(&self.global_mask, id.name.as_str()) =>
                 {
                     self.check_global(ctx, node, id)
+                }
+                AstKind::TSTypeReference(r) => {
+                    if let TSTypeName::IdentifierReference(id) = &r.type_name
+                        && DEPRECATED_TYPES.binary_search(&id.name.as_str()).is_ok()
+                        && ctx
+                            .scoping()
+                            .get_reference(id.reference_id())
+                            .symbol_id()
+                            .is_none()
+                    {
+                        ctx.report(id.span, format!("'{}' is deprecated.", id.name));
+                    }
                 }
                 _ => {}
             }
@@ -1644,6 +1675,53 @@ pub const EVENTS: &[(&str, &str)] = &[
     ("webkittransitionend", "Event"),
     ("wheel", "WheelEvent"),
 ];
+/// Return types of methods of global objects (`window.matchMedia()` is a `MediaQueryList`).
+pub const METHOD_RETURNS: &[(&str, &str, &str)] = &[
+    ("", "getComputedStyle", "CSSStyleDeclaration"),
+    ("", "matchMedia", "MediaQueryList"),
+    ("Document", "createAttribute", "Attr"),
+    ("Document", "createAttributeNS", "Attr"),
+    ("Document", "createCDATASection", "CDATASection"),
+    ("Document", "createComment", "Comment"),
+    ("Document", "createDocumentFragment", "DocumentFragment"),
+    ("Document", "createElement", "HTMLElement"),
+    ("Document", "createNodeIterator", "NodeIterator"),
+    (
+        "Document",
+        "createProcessingInstruction",
+        "ProcessingInstruction",
+    ),
+    ("Document", "createRange", "Range"),
+    ("Document", "createTextNode", "Text"),
+    ("Document", "createTreeWalker", "TreeWalker"),
+    ("Document", "startViewTransition", "ViewTransition"),
+    ("Window", "getComputedStyle", "CSSStyleDeclaration"),
+    ("Window", "matchMedia", "MediaQueryList"),
+];
+/// Deprecated lib types (`ClientRect`, ...).
+pub const DEPRECATED_TYPES: &[&str] = &[
+    "AudioProcessingEvent",
+    "ClientRect",
+    "ElementTagNameMap",
+    "External",
+    "HTMLDirectoryElement",
+    "HTMLFontElement",
+    "HTMLFrameElement",
+    "HTMLFrameSetElement",
+    "HTMLMarqueeElement",
+    "HTMLParamElement",
+    "HTMLTableDataCellElement",
+    "HTMLTableHeaderCellElement",
+    "ImportAssertions",
+    "MimeType",
+    "MimeTypeArray",
+    "PerformanceNavigation",
+    "PerformanceTiming",
+    "Plugin",
+    "PluginArray",
+    "ScriptProcessorNode",
+    "TextEvent",
+];
 
 #[cfg(test)]
 mod tests {
@@ -1655,6 +1733,7 @@ mod tests {
             "S1874",
             "a.ts",
             r#"
+function rect(r: ClientRect) {} // Noncompliant {{'ClientRect' is deprecated.}}
 /** @deprecated use NEW_LIMIT */
 const OLD_LIMIT = 10;
 /**
@@ -1703,6 +1782,10 @@ if (window.onwebkittransitionend !== undefined) {} // Noncompliant
 console.log(name); // Noncompliant {{'name' is deprecated.}}
 function f(name) { return name; }
 var event;
+const mql = window.matchMedia("(min-width: 1px)");
+mql.addListener(cb); // Noncompliant
+const mql2 = matchMedia("x");
+mql2.removeListener(cb); // Noncompliant
 "#,
         );
     }

@@ -443,6 +443,10 @@ impl JsRule for Rule {
             if in_loop_head {
                 continue;
             }
+            // Read, and written only by its initializer: the initial value is the one the reads see.
+            if !refs.iter().any(|r| r.3) {
+                continue;
+            }
             let decl_fn = fn_scope(&mut fn_scopes, scope);
             if refs
                 .iter()

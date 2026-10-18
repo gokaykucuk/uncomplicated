@@ -75,7 +75,7 @@ impl Rule {
         let Some(name) = callee_name_of(callee) else {
             return;
         };
-        if !matches!(
+        let known_name = matches!(
             name,
             "eval"
                 | "Function"
@@ -84,7 +84,10 @@ impl Rule {
                 | "runInContext"
                 | "runInNewContext"
                 | "runInThisContext"
-        ) {
+        );
+        // Aliases (`var $Function = Function; $Function(code)`) resolve through local variables.
+        let local_alias = matches!(strip_parens(callee), Expression::Identifier(id) if ctx.symbol_of(id).is_some());
+        if !known_name && !local_alias {
             return;
         }
         let Some(q) = fqn(ctx, callee) else { return };
@@ -183,6 +186,10 @@ vm.runInNewContext(code, sandbox); // Noncompliant
 vm.runInNewContext("1", {}); // Noncompliant
 const { runInThisContext } = require('node:vm');
 runInThisContext(code); // Noncompliant
+var $Function = Function;
+$Function("return " + x)(); // Noncompliant
+const g = new Function(body); // Noncompliant
+g(x); // Noncompliant
 function f(eval) { eval(x); }
 other.eval(x);
 location.href = `javascript:${code}`; // Noncompliant {{Make sure that 'javascript:' code is safe as it is a form of eval().}}

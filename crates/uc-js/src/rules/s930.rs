@@ -1,5 +1,5 @@
 //! Function calls should not pass extra arguments
-use crate::helpers::batch_security1::{FnLike, sec, unique_init};
+use crate::helpers::batch_security1::{FnLike, parents, sec, unique_init};
 use crate::prelude::*;
 
 pub struct Rule;
@@ -40,9 +40,30 @@ fn uses_arguments(ctx: &Ctx<'_, '_>, f: FnLike<'_, '_>) -> bool {
     let Some(body) = f.body_span() else {
         return true;
     };
-    ctx.tokens_in(body)
+    if !ctx
+        .tokens_in(body)
         .iter()
         .any(|t| ctx.text(t.span()) == "arguments")
+    {
+        return false;
+    }
+    // `arguments` of this function: the nearest enclosing non-arrow function (Sonar only
+    // considers function declarations and expressions).
+    let Some(ids) = ctx.scoping().root_unresolved_references().get("arguments") else {
+        // Resolved or shadowed somewhere: stay conservative.
+        return true;
+    };
+    let target = f.node_id();
+    ids.iter().any(|&rid| {
+        let node = ctx.scoping().get_reference(rid).node_id();
+        let span = ctx.node(node).kind().span();
+        if span.start < body.start || span.end > body.end {
+            return false;
+        }
+        parents(ctx, node)
+            .find(|a| matches!(a.kind(), AstKind::Function(_)) || a.id() == target)
+            .is_some_and(|a| a.id() == target)
+    })
 }
 
 fn plural(n: usize, one: &str, many: &str) -> String {
@@ -128,6 +149,10 @@ function empty() {}
 empty(1, 2);
 function variadic() { return arguments.length; }
 variadic(1, 2);
+function nested(a) { return function () { return arguments; }; }
+nested(1, 2); // Noncompliant
+const arrowArgs = function (a) { return () => arguments[1]; };
+arrowArgs(1, 2);
 function rest(a, ...r) { return r; }
 rest(1, 2, 3);
 const one = (a) => a;
