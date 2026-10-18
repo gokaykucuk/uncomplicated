@@ -155,7 +155,7 @@ impl<'a, 's> Ctx<'a, 's> {
     /// Ancestors of a node, nearest first (excluding the node itself).
     pub fn ancestors(&self, id: NodeId) -> impl Iterator<Item = &'s AstNode<'a>> + 's {
         let nodes = self.semantic.nodes();
-        nodes.ancestor_ids(id).skip(1).map(move |i| nodes.get_node(i))
+        nodes.ancestor_ids(id).map(move |i| nodes.get_node(i))
     }
 
     /// Nearest enclosing function-like node (function, arrow), if any.
