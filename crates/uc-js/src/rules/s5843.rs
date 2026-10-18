@@ -175,7 +175,13 @@ impl JsRule for Rule {
                     complexity += c.complexity;
                 });
             }
-            self.check(ctx, first.span(), complexity);
+            let mut span = first.span();
+            if matches!(strip_parens(first), Expression::RegExpLiteral(_)) {
+                // SonarJS reports regex literals a second time when they are reached through a
+                // constructor or a constant; keep that issue distinct from the literal's own one.
+                span.end -= 1;
+            }
+            self.check(ctx, span, complexity);
         }
     }
 }
