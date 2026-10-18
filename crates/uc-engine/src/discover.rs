@@ -22,6 +22,8 @@ pub struct SourceFile {
     pub lang: FileLang,
     pub is_test: bool,
     pub size: u64,
+    /// Modification time (ns since the epoch), 0 if unknown.
+    pub mtime: u64,
 }
 
 pub fn globset(patterns: &[String]) -> Result<GlobSet, String> {
@@ -85,13 +87,18 @@ pub fn discover(root: &Path, paths: &[PathBuf], cfg: &Config) -> Result<Vec<Sour
             if excl.is_match(&rel_s) || incl.as_ref().is_some_and(|i| !i.is_match(&rel_s)) {
                 return WalkState::Continue;
             }
-            let size = entry.metadata().map_or(0, |m| m.len());
+            let meta = entry.metadata().ok();
+            let size = meta.as_ref().map_or(0, |m| m.len());
+            let mtime = meta
+                .and_then(|m| m.modified().ok())
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map_or(0, |d| d.as_nanos() as u64);
             if size > max {
                 return WalkState::Continue;
             }
             // HTML pages are always main code (SonarJS analyzes their scripts as such).
             let is_test = tests.is_match(&rel_s) && !(rel_s.ends_with(".html") || rel_s.ends_with(".htm"));
-            sink.push(SourceFile { abs: path.to_path_buf(), rel: rel_s, lang, is_test, size });
+            sink.push(SourceFile { abs: path.to_path_buf(), rel: rel_s, lang, is_test, size, mtime });
             WalkState::Continue
         })
     });

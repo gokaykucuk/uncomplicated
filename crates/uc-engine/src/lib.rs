@@ -35,7 +35,7 @@ pub struct Options {
 #[derive(Debug)]
 pub struct AnalyzedFile {
     pub result: FileResult,
-    pub hash: u64,
+    pub stamp: cache::Stamp,
     pub cached: bool,
 }
 
@@ -149,12 +149,19 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
     let analyzed: Vec<Option<AnalyzedFile>> = files
         .par_iter()
         .map(|f| {
-            let bytes = std::fs::read(&f.abs).ok()?;
-            let hash = xxhash_rust::xxh3::xxh3_64(&bytes) ^ (f.is_test as u64) ^ projects.hash_for(&f.abs).rotate_left(1);
+            let context = (f.is_test as u64) ^ projects.hash_for(&f.abs).rotate_left(1);
             if let Some(c) = &cache
-                && let Some(r) = c.get(&f.rel, hash)
+                && let Some((stamp, result)) = c.take_fresh(&f.rel, f.size, f.mtime, context)
             {
-                return Some(AnalyzedFile { result: r.clone(), hash, cached: true });
+                return Some(AnalyzedFile { result, stamp, cached: true });
+            }
+            let bytes = std::fs::read(&f.abs).ok()?;
+            let hash = xxhash_rust::xxh3::xxh3_64(&bytes);
+            let stamp = cache::Stamp { hash, size: f.size, mtime: f.mtime, context };
+            if let Some(c) = &cache
+                && let Some(result) = c.take_by_hash(&f.rel, hash, context)
+            {
+                return Some(AnalyzedFile { result, stamp, cached: true });
             }
             let src = match String::from_utf8(bytes) {
                 Ok(s) => s,
@@ -190,7 +197,7 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
                 parse_error: Some("internal error: analyzer panicked".into()),
                 ..FileResult::default()
             });
-            Some(AnalyzedFile { result, hash, cached: false })
+            Some(AnalyzedFile { result, stamp, cached: false })
         })
         .collect();
     let mut analyzed: Vec<AnalyzedFile> = analyzed.into_iter().flatten().collect();
@@ -237,9 +244,12 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
     let gate = gate::evaluate(&cfg.gate, &measures, new_measures.as_ref());
 
     if let Some(c) = &cache {
-        let entries = analyzed.iter().map(|f| (f.result.path.clone(), f.hash, f.result.clone()));
-        if let Err(e) = c.save(entries) {
-            warnings.push(format!("could not write cache: {e}"));
+        let changed = c.len() != analyzed.len() || analyzed.iter().any(|f| !c.has(&f.result.path, &f.stamp));
+        if changed {
+            let entries = analyzed.iter().map(|f| (f.result.path.as_str(), &f.stamp, &f.result));
+            if let Err(e) = c.save(entries) {
+                warnings.push(format!("could not write cache: {e}"));
+            }
         }
     }
     // CPD tokens are only needed for detection; drop them before reporting.
