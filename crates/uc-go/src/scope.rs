@@ -241,13 +241,12 @@ impl<'t> Builder<'_, 't> {
                 let mut c = n.walk();
                 let kids: Vec<_> = n.named_children(&mut c).collect();
                 for (i, k) in kids.iter().enumerate() {
-                    if i == 0 && k.kind() == "literal_element" {
-                        if let Some(id) = k.named_child(0)
+                    if i == 0 && k.kind() == "literal_element"
+                        && let Some(id) = k.named_child(0)
                             && id.kind() == "identifier"
                         {
                             continue;
                         }
-                    }
                     self.walk(*k);
                 }
             }

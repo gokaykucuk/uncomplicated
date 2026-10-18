@@ -100,7 +100,7 @@ pub fn analyze_file(
 /// Combines the results of separately analyzed script blocks of one file.
 fn merge_results(mut a: FileResult, b: FileResult) -> FileResult {
     a.issues.extend(b.issues);
-    a.issues.sort_by(|x, y| (x.loc.line, x.loc.col).cmp(&(y.loc.line, y.loc.col)));
+    a.issues.sort_by_key(|x| (x.loc.line, x.loc.col));
     let (m, n) = (&mut a.metrics, b.metrics);
     m.ncloc += n.ncloc;
     m.comment_lines += n.comment_lines;
@@ -239,7 +239,7 @@ fn analyze_in(
         let msg = d.message.to_string();
         result.parse_error = Some(msg.clone());
         result.metrics.lines = lines.line_count();
-        let off = d.labels.first().map_or(0, |l| l.offset() as u32);
+        let off = d.labels.first().map_or(0, |l| l.offset());
         if rules.rules.iter().any(|r| r.key == "S2260") {
             let loc = lines.location(uc_core::Span::new(off, off));
             result.issues.push(FileIssue { rule: "S2260".into(), message: format!("Parse error: {msg}"), loc, secondary: Vec::new(), gap: None });
@@ -311,7 +311,7 @@ pub fn profile_report() -> Vec<(&'static str, u64)> {
         .zip(p)
         .map(|((k, _), t)| (*k, t.load(std::sync::atomic::Ordering::Relaxed)))
         .collect();
-    v.sort_by(|a, b| b.1.cmp(&a.1));
+    v.sort_by_key(|e| std::cmp::Reverse(e.1));
     v
 }
 

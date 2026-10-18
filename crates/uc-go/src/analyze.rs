@@ -72,7 +72,7 @@ pub fn profile_report() -> Vec<(&'static str, u64)> {
         .zip(p)
         .map(|((k, _), t)| (*k, t.load(std::sync::atomic::Ordering::Relaxed)))
         .collect();
-    v.sort_by(|a, b| b.1.cmp(&a.1));
+    v.sort_by_key(|e| std::cmp::Reverse(e.1));
     v
 }
 

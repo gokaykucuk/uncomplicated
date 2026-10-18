@@ -18,7 +18,7 @@ fn main() {
     for (n, _) in &names {
         out += &format!("#[path = {:?}]\npub mod {n};\n", dir.join(format!("{n}.rs")).display().to_string());
     }
-    out += "pub static REGISTRY: &[(&str, fn(&uc_core::Params) -> Box<dyn crate::GoRule>)] = &[\n";
+    out += "/// Constructor of a rule from its parameters.\npub type Ctor = fn(&uc_core::Params) -> Box<dyn crate::GoRule>;\npub static REGISTRY: &[(&str, Ctor)] = &[\n";
     for (n, key) in &names {
         out += &format!("    (\"{key}\", |p| Box::new({n}::Rule::new(p))),\n");
     }

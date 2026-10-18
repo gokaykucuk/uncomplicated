@@ -69,7 +69,7 @@ pub fn check_with(key: &str, params: serde_json::Value, code: &str) {
             errors.push(format!("line {}: expected {} issue(s), got {} {:?}", e.line, e.count, got.len(), got));
         }
         for m in &e.messages {
-            if !got.iter().any(|g| *g == m) {
+            if !got.contains(&m) {
                 errors.push(format!("line {}: expected message {:?}, got {:?}", e.line, m, got));
             }
         }

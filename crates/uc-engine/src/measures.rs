@@ -161,8 +161,8 @@ pub fn compute(
             }
         }
 
-        if let Some(d) = dups.get(i) {
-            if !d.blocks.is_empty() {
+        if let Some(d) = dups.get(i)
+            && !d.blocks.is_empty() {
                 all.dup_files += 1;
                 all.dup_blocks += d.blocks.len() as u64;
                 all.dup_lines += d.lines.len() as u64;
@@ -170,7 +170,6 @@ pub fn compute(
                 nw.dup_lines += new_dup;
                 nw.dup_blocks += d.blocks.iter().filter(|b| (b.start_line..=b.end_line).any(is_new)).count() as u64;
             }
-        }
     }
     let overall = finish(&all, has_cov, false);
     let new_m = new.map(|_| finish(&nw, has_cov, true));

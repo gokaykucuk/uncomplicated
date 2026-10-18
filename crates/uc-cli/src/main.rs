@@ -24,7 +24,7 @@ struct Cli {
 #[derive(Subcommand)]
 enum Cmd {
     /// Analyze a project (default command).
-    Analyze(AnalyzeArgs),
+    Analyze(Box<AnalyzeArgs>),
     /// List rules.
     Rules(RulesArgs),
     /// Write a starter uncomplicated.toml.
@@ -126,7 +126,7 @@ fn main() -> ExitCode {
     }
     let cli = Cli::parse_from(args);
     let res = match cli.cmd {
-        Cmd::Analyze(a) => analyze(a),
+        Cmd::Analyze(a) => analyze(*a),
         Cmd::Rules(r) => rules(r),
         Cmd::Init { dir } => init(dir),
     };

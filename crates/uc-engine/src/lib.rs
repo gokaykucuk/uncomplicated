@@ -69,8 +69,8 @@ pub struct Analysis {
 /// Per-rule time when `UNC_PROFILE` is set.
 pub fn profile_report() -> Vec<(&'static str, u64)> {
     let mut v = uc_js::profile_report();
-    v.extend(uc_go::profile_report().into_iter().map(|(k, t)| (k, t)));
-    v.sort_by(|a, b| b.1.cmp(&a.1));
+    v.extend(uc_go::profile_report());
+    v.sort_by_key(|e| std::cmp::Reverse(e.1));
     v
 }
 
