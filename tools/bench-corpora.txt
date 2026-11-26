@@ -1,0 +1,7 @@
+# Benchmark corpora for .github/workflows/bench.yml: name, git URL, tag (shallow-cloned).
+# Changing this file invalidates the corpora cache.
+kubernetes  https://github.com/kubernetes/kubernetes.git  v1.32.0
+prometheus  https://github.com/prometheus/prometheus.git  v3.1.0
+grafana     https://github.com/grafana/grafana.git        v11.4.0
+discourse   https://github.com/discourse/discourse.git    v3.3.3
+excalidraw  https://github.com/excalidraw/excalidraw.git  v0.17.0
