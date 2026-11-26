@@ -1,54 +1,90 @@
 # uncomplicated (`unc`)
 
-Fast static analysis for **JavaScript, TypeScript and Go**, built for CI. It implements
-SonarQube's rule set, metrics, duplication detection, coverage import, new-code detection and
-quality gate, as a single native binary with no server, no JVM and no Node.js.
+**Fast static analysis for CI.** One native binary checks JavaScript, TypeScript and Go code,
+Dockerfiles, Kubernetes manifests, GitHub Actions workflows, Terraform, stylesheets, secrets and
+dependencies, with SonarQube's rules, metrics and quality gate. There's no server, JVM or Node.js
+to run, and a 1.6M-line monorepo takes about a second.
 
-- **Rules:** SonarJS's JS/TS rules and sonar-go's Go rules (same keys, defaults, messages and
-  locations), plus extra Go rules (`UG*`) modeled on go vet, staticcheck and gosec.
-- **Metrics:** lines, ncloc, comment lines, functions, classes, statements, cyclomatic and
-  cognitive complexity, technical debt, and A–E reliability, security and maintainability ratings.
-- **Duplication:** token-based, cross-file, with SonarQube's defaults (100 tokens, 10 lines).
-- **Coverage:** LCOV, Go cover profiles and Cobertura XML.
-- **New code:** lines changed since the merge-base with a git ref, including uncommitted and
-  untracked files.
-- **Quality gate:** SonarQube's "Sonar way" gate by default, configurable.
-- **Reports:** text, JSON, SARIF 2.1.0, GitLab Code Quality, GitHub annotations, and SonarQube's
-  generic issue format (so results can still be imported into a SonarQube server).
+```console
+$ unc
+
+.github/workflows/ci.yml
+      7:31  CRITICAL actions:GHA001 Pass this untrusted value through an environment variable instead of expanding it into the shell script.
+
+Dockerfile
+      1:6   MAJOR    docker:DKR001 Use a specific version tag for this image instead of "latest".
+      1:6   MAJOR    docker:DKR002 Make sure running the container as root is necessary; the final stage sets no non-root USER.
+      3:1   MINOR    docker:DKR008 Use the JSON exec form for CMD, so the process receives signals directly.
+
+src/api/users.ts
+      4:7   MINOR    S5689  This framework implicitly discloses version information by default. Make sure it is safe here.
+      8:33  BLOCKER  UJ1001 Change this code to not construct SQL queries directly from user-controlled data.
+
+4 files (21 LOC) · 467 JS/TS + 73 Go + 88 other rules · 6 issues: 0 bugs, 3 vulnerabilities, 2 code smells, 1 security hotspots
+Reliability A · Security E · Maintainability A (debt 0.2h, ratio 1.6%) · Duplication 0.0% · Complexity 1 / cognitive 0
+Quality gate: FAILED — new_security_rating = E (must be ≤ A)
+```
+
+## What it checks
+
+| Area | Rules | Highlights |
+|---|---|---|
+| **JavaScript / TypeScript** | 554 SonarJS + 13 | Every active SonarJS rule but one, with the same keys, messages and locations. React, Vue, Angular, Node.js, tests and accessibility. Taint analysis for SQL, command and path injection, XSS, open redirects, SSRF, NoSQL and code injection. Module graph: unresolved imports, missing exports, import cycles, unused exports. |
+| **Go** | 37 sonar-go + 65 | All sonar-go rules, plus checks modeled on go vet, staticcheck, errcheck, ineffassign and gosec. Package-level checks: unused declarations, ignored errors, locks copied by value. Taint analysis for HTTP handlers (net/http, gin, echo, chi, gorilla, fiber). Loop-variable capture before Go 1.22. |
+| **Secrets** | 21 | Cloud and SaaS tokens (AWS, GitHub, GitLab, Slack, Stripe, Google, OpenAI, Anthropic, npm…), private keys, credentials in connection URLs, secrets in `.env` and config files. Config, script and key files are scanned too, not only source code. |
+| **Dockerfile** | 15 | Unpinned base images, running as root, `curl \| sh`, secrets in `ENV`/`ARG`, apt/apk hygiene, misplaced `CMD`/`ENTRYPOINT`. |
+| **Kubernetes** | 11 | Privileged containers, host namespaces and paths, dangerous capabilities, missing memory limits, `:latest` images, literal secrets in `env`. |
+| **GitHub Actions** | 8 | Script injection from untrusted event data, `pull_request_target` checkouts that run PR code, `write-all` permissions, echoed secrets, deprecated workflow commands, outdated core actions. |
+| **Terraform** | 12 | Public buckets, open security groups, unencrypted storage, publicly accessible databases, hard-coded credentials, wildcard IAM policies, weak TLS. AWS, GCP, Azure. |
+| **CSS, SCSS, Less** | 24 | SonarQube's CSS rules: unknown properties, units, selectors and at-rules, invalid colors and `calc()`, duplicate and overridden properties. |
+| **Dependencies** | 4 | Vulnerable and malicious package versions in `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml` and `go.mod`, matched offline against OSV. Opt-in. |
+
+All rules are listed in [docs/RULES.md](docs/RULES.md); `unc rules` lists them too.
+
+Besides issues, `unc` computes SonarQube's measures and runs its quality gate:
+
+- **Size and complexity:** lines of code, comments, functions, cyclomatic and cognitive complexity.
+- **Debt and ratings:** technical debt and A–E reliability, security and maintainability ratings.
+- **Duplication:** token-based and cross-file.
+- **Coverage:** LCOV, Go, Cobertura, SonarQube generic XML, Clover and Istanbul reports.
+- **New code:** lines changed since the merge-base with a branch, so the gate can apply only to what a pull request changes.
+
+## Install
+
+Prebuilt static binaries for Linux (x86_64, arm64) and macOS (arm64) are on the
+[releases page](https://github.com/gokaykucuk/uncomplicated/releases):
+
+```bash
+curl -fsSL https://github.com/gokaykucuk/uncomplicated/releases/latest/download/unc-aarch64-apple-darwin.tar.gz | tar -xz -C ~/.local/bin
+```
+
+The Docker image `ghcr.io/gokaykucuk/uncomplicated` (multi-arch, includes `git`) is published
+with each release. To build from source: `cargo build --release`.
 
 ## Usage
 
 ```bash
-unc                                # analyze the current directory
-unc path/to/project --new-code origin/main --lcov coverage/lcov.info
-unc -f sarif -o unc.sarif          # machine-readable report
-unc --report gitlab=gl-code-quality.json --report sarif=unc.sarif
-unc rules                          # list implemented rules
-unc rules --missing                # catalog rules not implemented yet
-unc init                           # write a starter uncomplicated.toml
+unc                                    # analyze the current directory
+unc --new-code origin/main             # quality gate on the lines changed since origin/main
+unc --coverage coverage/lcov.info      # add coverage (format detected; repeatable)
+unc -f sarif -o unc.sarif              # write a report in another format
+unc --report sarif=unc.sarif --report gitlab=gl.json   # several reports in one run
+unc --write-baseline .uncomplicated/baseline.json      # accept today's issues…
+unc --baseline .uncomplicated/baseline.json            # …and only report new ones from now on
+unc deps update && unc --deps          # check lockfiles for known vulnerabilities
+unc rules                              # list rules (--missing: catalog rules not implemented)
+unc init                               # write a starter uncomplicated.toml
 ```
 
-Exit status: `0` gate passed, `1` gate failed (or `--fail-on <severity>` matched), `2` error.
+**Output formats:** text (default), `summary`, `json`, `sarif` (SARIF 2.1.0), `gitlab` (Code
+Quality), `github` (workflow annotations), `sonar` (SonarQube generic issue import).
 
-### Installing
+**Exit status:** `0` gate passed, `1` gate failed or `--fail-on <severity>` matched, `2` error.
 
-Tagging `vX.Y.Z` runs `.github/workflows/release.yml`, which publishes:
+Results are cached in `.uncomplicated/`. With that directory cached between CI runs, unchanged
+files aren't analyzed again.
 
-- static binaries on the GitHub release: `unc-x86_64-unknown-linux-musl.tar.gz`,
-  `unc-aarch64-unknown-linux-musl.tar.gz`, `unc-aarch64-apple-darwin.tar.gz` (plus `SHA256SUMS`);
-- a multi-arch image `ghcr.io/gokaykucuk/uncomplicated:X.Y.Z` (also `X.Y` and `latest`), with `git`.
-
-```bash
-gh release download -R gokaykucuk/uncomplicated -p 'unc-aarch64-apple-darwin.tar.gz' -O - | tar -xz -C ~/.local/bin
-```
-
-While this repository is private, other repositories need access granted once:
-
-- the action: this repository's *Settings → Actions → General → Access* →
-  "Accessible from repositories owned by the user";
-- the image: the `uncomplicated` package's *Package settings → Manage Actions access* → add the
-  repository (read). The workflow's own `GITHUB_TOKEN` can then pull it;
-- or `mode: binary` with a token (fine-grained PAT, *Contents: read* on this repository) in `token`.
+## CI
 
 ### GitHub Actions
 
@@ -58,18 +94,18 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: read
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # new-code detection needs the merge base
       - uses: gokaykucuk/uncomplicated@v0.1.1
         with:
-          args: analyze --format github --new-code origin/${{ github.base_ref || 'main' }} --lcov coverage/lcov.info
+          args: --format github --new-code origin/${{ github.base_ref || 'main' }} --coverage coverage/lcov.info
 ```
 
-The action caches `.uncomplicated/` between runs. With `--report sarif=unc.sarif` the SARIF file can
-be uploaded with `github/codeql-action/upload-sarif` (needs code scanning on the repository).
+The action caches `.uncomplicated/` between runs. Issues show up as annotations on the pull
+request. For GitHub code scanning, add `--report sarif=unc.sarif` and upload the file with
+`github/codeql-action/upload-sarif`.
 
 ### GitLab CI
 
@@ -89,65 +125,37 @@ code_quality:
       codequality: gl-code-quality.json
 ```
 
-GitLab needs registry credentials for the private image (`DOCKER_AUTH_CONFIG` with a PAT that has
-`read:packages`).
-
-Results are cached by content hash in `.uncomplicated/cache.bin`. Cache that directory between CI
-runs and unchanged files are not re-analyzed.
-
 ## Configuration
 
-Projects already set up for SonarQube work as-is. Without an `uncomplicated.toml`, `unc` reads
-`sonar-project.properties`: sources, tests, inclusions and exclusions, coverage report paths, CPD
-exclusions and `sonar.issue.ignore.multicriteria` rules.
+Nothing is required. Projects already set up for SonarQube work as they are: without an
+`uncomplicated.toml`, `unc` reads `sonar-project.properties` (sources, tests, exclusions, coverage
+paths, issue exclusions). To get exactly what a given SonarQube server reports, pin its rules
+with `--profile sonarqube-26.9`.
 
-To get exactly what a specific SonarQube server reports, pin its rule set:
-`--profile sonarqube-26.9` uses the Sonar way profile and rule behaviour of SonarQube 26.9
-(SonarJS 13.8.0, sonar-go 1.43.0).
-
-Otherwise, use `uncomplicated.toml` at the project root. Every key is optional:
+A typical `uncomplicated.toml`:
 
 ```toml
 [analysis]
-profile = "sonar-way"          # "sonar-way" (default), "all", or "none"
-exclusions = ["generated/**"]  # root-relative globs (use **/ to match anywhere), added to the defaults
-tests = ["test/**"]            # test code globs (default: Sonar's file-name heuristics + *_test.go)
+exclusions = ["generated/**"]
 
 [new_code]
 reference = "origin/main"
 
 [coverage]
-lcov = ["coverage/lcov.info"]
-go = ["coverage.out"]
+reports = ["coverage/lcov.info", "coverage.out"]
 
-[cpd]
-min_tokens = 100
-min_lines = 10
-
-[rules]                        # JS/TS rules
-S3776 = { threshold = 20 }
-S1135 = "off"
-
-[go_rules]
-S1192 = "off"
-
-[[gate.conditions]]
-metric = "new_coverage"
-op = "lt"
-threshold = 80
+[rules]
+S3776 = { threshold = 20 }   # parameters
+S1135 = "off"                # JS/TS rules by key
+"docker:DKR001" = "off"      # other repositories with a prefix
 ```
 
-Like SonarQube, `unc` honors `// NOSONAR`, and for JS/TS also `eslint-disable` directives and
-inline `/* eslint rule: "off" */` comments. Rules SonarJS only enables for some projects follow the
-same conditions: dependencies declared in `package.json` (React, Vue, Angular, AWS CDK, testing
-libraries...) and the ECMAScript version detected from `tsconfig.json` and the Node.js version. It skips
-bundles, minified files and generated Go code, and also analyzes the scripts embedded in `.vue` and
-`.html` files.
+`// NOSONAR`, `eslint-disable` comments and `[[ignore]]` entries suppress issues. The full
+reference is in [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
-## Results
+## Performance
 
-Measured on a 12-core laptop with the release build, cold cache, and every rule of the default
-profile enabled:
+Measured with a cold cache and the default rules (`--no-cache`):
 
 | Corpus | Files | Lines of code | Wall time | Peak memory |
 |---|---|---|---|---|
@@ -155,49 +163,50 @@ profile enabled:
 | Kubernetes (Go) | 9,724 | 2.23M | 3.2 s | 0.55 GB |
 | Prometheus (Go) | 998 | 345k | 0.5 s | 0.2 GB |
 
-With a warm cache (nothing changed), the JS/TS corpus takes 0.4 s.
+These numbers are from a 12-core laptop. The [`bench` workflow](.github/workflows/bench.yml)
+measures every change against its base on GitHub-hosted runners (Kubernetes, Prometheus, Grafana,
+Discourse, Excalidraw) and reports wall time, memory and issue-count changes per rule. With a
+warm cache and nothing changed, the JS/TS corpus takes 0.4 s.
 
-On a real monorepo (polybase: 7,300 JS/TS/Go files, 1.5M lines), `unc` takes 0.9–1.5 s. The
-project's own SonarQube pipeline takes 633 s in the scanner (695 s with server startup). With
-`--profile sonarqube-26.9` both report the same issues on the committed code.
+On a real 1.5M-line monorepo, the project's SonarQube scanner took 633 s and `unc` takes about a
+second. With `--profile sonarqube-26.9` both report the same issues.
 
-Parity with SonarJS on its own ruling corpus, comparing issues per rule at file/line granularity:
-471 rules compared, **99.9% precision, 97.5% recall**, 352 rules matching exactly. Most remaining
-misses are rules where Sonar uses the full TypeScript type checker or cross-file types. Our
-local inference stays silent there rather than guess.
+**Parity with SonarJS**, on its own ruling corpus, comparing issues per rule at file/line
+granularity:
 
-Rule coverage: 554 of the 555 active SonarJS rules (S7742 is missing because it needs the
-core-js-compat dataset), all 37 sonar-go rules, and 55 extra Go rules (`UG1001`–`UG1055`).
+- 471 rules compared.
+- **99.9% precision, 97.5% recall.**
+- 352 rules match exactly.
 
-## How it's fast
+Most misses are rules where Sonar uses the full TypeScript type checker. `unc` infers types
+locally and stays silent when it can't tell.
 
-- Native parsers: [oxc](https://oxc.rs) for JS/TS (parser, semantic model, control-flow graph) and
-  tree-sitter for Go. Sonar runs the TypeScript compiler in Node.js to get type information. We
-  use local type inference instead (literals, annotations, declarations, known APIs). It's precise
-  but stays silent when it can't tell.
-- Each file is parsed once into a reusable per-thread arena. Each rule subscribes to the node types
-  it cares about, and every file's node list is walked once.
-- Files are analyzed in parallel on all cores. Duplication detection is a parallel rolling hash
-  plus sort. Everything is cached by content hash.
+### How it's fast
 
-## Parity
+- **Native parsers:** [oxc](https://oxc.rs) for JS/TS, tree-sitter for Go, YAML and HCL, and
+  hand-written parsers for Dockerfiles and CSS. No TypeScript compiler, no JVM.
+- **One parse, one walk:** each file is parsed once into a per-thread arena. Rules subscribe to
+  the node types they need, and one walk over the nodes dispatches to all of them.
+- **Cheap prefilters:** secret detection is one Aho-Corasick pass, and only keyword hits are
+  checked with regexes. Taint analysis skips files with no possible source.
+- **Parallel and cached:** files are analyzed on all cores and cached by content hash. Cross-file
+  checks run from cached per-file summaries, so unchanged files are never parsed again.
 
-`tools/parity.py` runs `unc` over SonarJS's ruling corpus (~60 real-world projects) and compares
-issues with SonarJS's recorded expectations, per rule, at file/line granularity:
+## Documentation
+
+- [Configuration reference](docs/CONFIGURATION.md)
+- [Rule list](docs/RULES.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Writing JS/TS rules](docs/RULE_AUTHORING.md) · [Writing Go rules](docs/GO_RULE_AUTHORING.md)
+- [Contributing](CONTRIBUTING.md)
+
+`tools/parity.py` runs `unc` over SonarJS's ruling corpus and compares issues with SonarJS's
+recorded expectations:
 
 ```bash
 python3 tools/parity.py --unc target/release/unc --sonarjs <SonarJS checkout> --sources <jsts-test-sources>
 ```
 
-## Layout
+## License
 
-```
-crates/uc-core     rule catalog, issue/metric types, line index
-crates/uc-js       JS/TS frontend (oxc) and rules (src/rules/sNNNN.rs)
-crates/uc-go       Go frontend (tree-sitter) and rules (src/rules/sNNNN.rs, ugNNNN.rs)
-crates/uc-engine   discovery, cache, CPD, coverage, new code, measures, gate, reports
-crates/uc-cli      the `unc` binary
-catalog/           rule metadata (keys, types, severities, default profile, remediation)
-docs/              rule authoring guides
-tools/parity.py    parity harness against SonarJS's ruling expectations
-```
+MIT.

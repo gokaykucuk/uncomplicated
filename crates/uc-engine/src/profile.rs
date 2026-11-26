@@ -3,7 +3,7 @@
 
 use rustc_hash::FxHashSet;
 use serde::Deserialize;
-use uc_core::{Lang, RuleMeta};
+use uc_core::{Repo, RuleMeta};
 
 #[derive(Deserialize)]
 struct ProfileData {
@@ -24,7 +24,12 @@ pub struct Pinned {
 
 impl Pinned {
     pub fn contains(&self, m: &RuleMeta) -> bool {
-        if m.langs.contains(&Lang::Go) { self.go.contains(&m.key) } else { self.js.contains(&m.key) }
+        // Pinned profiles reproduce a SonarQube server exactly: only its JS/TS and Go rules.
+        match m.repo {
+            Repo::Js => self.js.contains(&m.key),
+            Repo::Go => self.go.contains(&m.key),
+            _ => false,
+        }
     }
 }
 

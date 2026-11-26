@@ -4,7 +4,7 @@
 use std::fmt::Write as _;
 
 use serde_json::{Value, json};
-use uc_core::{Catalog, FileIssue, IssueType, Lang, RuleMeta, Severity};
+use uc_core::{Catalog, FileIssue, IssueType, Repo, RuleMeta, Severity};
 
 use crate::gate::Status;
 use crate::measures::rating_letter;
@@ -54,9 +54,8 @@ pub fn items<'a>(a: &'a Analysis, filter: &Filter) -> Vec<Item<'a>> {
     let catalog = Catalog::get();
     let mut out = Vec::new();
     for f in &a.files {
-        let go = f.result.lang == Some(Lang::Go);
         for i in &f.result.issues {
-            let Some(meta) = rule_meta(catalog, &i.rule, go) else { continue };
+            let Some(meta) = rule_meta(catalog, i) else { continue };
             let is_new = a.new_code.as_ref().is_some_and(|n| n.is_new(&f.result.path, i.loc.line));
             if filter.new_only && a.new_code.is_some() && !is_new {
                 continue;
@@ -81,6 +80,11 @@ pub fn render(a: &Analysis, format: Format, filter: &Filter, color: bool) -> Str
         Format::Github => github(&items),
         Format::Sonar => serde_json::to_string_pretty(&sonar(&items)).unwrap(),
     }
+}
+
+/// Rule key as shown in text output: JS/TS and Go keys bare, others with their repository.
+fn display_key(m: &RuleMeta) -> String {
+    if matches!(m.repo, Repo::Js | Repo::Go) { m.key.clone() } else { rule_id(m) }
 }
 
 fn paint(color: bool, code: &str, s: &str) -> String {
@@ -115,7 +119,7 @@ fn text(a: &Analysis, items: &[Item<'_>], color: bool, list: bool) -> String {
                 it.issue.loc.line,
                 it.issue.loc.col + 1,
                 paint(color, sev_color(it.meta.severity), &format!("{:<8}", it.meta.severity.as_str())),
-                paint(color, "2", &format!("{:<6}", it.issue.rule)),
+                paint(color, "2", &format!("{:<6}", display_key(it.meta))),
                 it.issue.message,
                 if it.is_new { paint(color, "35", " [new]") } else { String::new() },
             );
@@ -128,15 +132,18 @@ fn text(a: &Analysis, items: &[Item<'_>], color: bool, list: bool) -> String {
     let g = |k: &str| m.get(k).copied().unwrap_or(0.0);
     let _ = writeln!(
         s,
-        "{} files ({} LOC) · {} JS/TS + {} Go rules · {} issues: {} bugs, {} vulnerabilities, {} code smells",
+        "{} files ({} LOC) · {} JS/TS + {} Go + {} other rules · {} issues: {} bugs, {} vulnerabilities, {} code smells, {} security hotspots{}",
         g("files"),
         g("ncloc"),
         a.js_rules,
         a.go_rules,
+        a.other_rules,
         items.len(),
         g("bugs"),
         g("vulnerabilities"),
         g("code_smells"),
+        g("security_hotspots"),
+        if a.baselined > 0 { format!(" ({} more in the baseline)", a.baselined) } else { String::new() },
     );
     let _ = writeln!(
         s,
@@ -212,7 +219,9 @@ fn text(a: &Analysis, items: &[Item<'_>], color: bool, list: bool) -> String {
 }
 
 fn fmt_rating(metric: &str) -> impl Fn(f64) -> String + '_ {
-    move |v| if metric.ends_with("rating") { rating_letter(v).to_string() } else { fmt_num((v * 10.0).round() / 10.0) }
+    move |v| {
+        if metric.ends_with("rating") { rating_letter(v).to_string() } else { fmt_num((v * 10.0).round() / 10.0) }
+    }
 }
 
 fn json_report(a: &Analysis, items: &[Item<'_>]) -> Value {
@@ -221,6 +230,7 @@ fn json_report(a: &Analysis, items: &[Item<'_>]) -> Value {
         .map(|it| {
             json!({
                 "rule": it.issue.rule,
+                "repo": it.meta.repo.as_str(),
                 "severity": it.meta.severity.as_str(),
                 "type": it.meta.kind.as_str(),
                 "file": it.path,
@@ -297,20 +307,22 @@ fn sarif_level(s: Severity) -> &'static str {
 
 fn sarif(items: &[Item<'_>]) -> Value {
     let mut rule_ids: Vec<(&str, &RuleMeta)> = items.iter().map(|i| (i.issue.rule.as_str(), i.meta)).collect();
-    rule_ids.sort_by_key(|(k, m)| (*k, m.langs.contains(&Lang::Go)));
-    rule_ids.dedup_by_key(|(k, m)| (*k, m.langs.contains(&Lang::Go)));
-    let rule_id = |m: &RuleMeta, k: &str| if m.langs.contains(&Lang::Go) { format!("go:{k}") } else { format!("js:{k}") };
+    rule_ids.sort_by_key(|(k, m)| (*k, m.repo));
+    rule_ids.dedup_by_key(|(k, m)| (*k, m.repo));
     let rules: Vec<Value> = rule_ids
         .iter()
         .map(|(k, m)| {
-            json!({
-                "id": rule_id(m, k),
+            let mut r = json!({
+                "id": rule_id(m),
                 "name": k,
                 "shortDescription": {"text": m.title},
-                "helpUri": format!("https://rules.sonarsource.com/{}/RSPEC-{}", if m.langs.contains(&Lang::Go) { "go" } else { "javascript" }, &k[1..]),
                 "defaultConfiguration": {"level": sarif_level(m.severity)},
                 "properties": {"tags": m.tags, "type": m.kind.as_str(), "severity": m.severity.as_str()},
-            })
+            });
+            if let Some(u) = m.repo.help_uri(k) {
+                r["helpUri"] = json!(u);
+            }
+            r
         })
         .collect();
     let results: Vec<Value> = items
@@ -318,7 +330,7 @@ fn sarif(items: &[Item<'_>]) -> Value {
         .map(|it| {
             let l = &it.issue.loc;
             json!({
-                "ruleId": rule_id(it.meta, &it.issue.rule),
+                "ruleId": rule_id(it.meta),
                 "level": sarif_level(it.meta.severity),
                 "message": {"text": it.issue.message},
                 "locations": [{"physicalLocation": {
@@ -343,6 +355,11 @@ fn sarif(items: &[Item<'_>]) -> Value {
     })
 }
 
+/// `repo:key`, e.g. `js:S1481`, `docker:DKR001`.
+pub fn rule_id(m: &RuleMeta) -> String {
+    format!("{}:{}", m.repo.as_str(), m.key)
+}
+
 fn fingerprint(it: &Item<'_>) -> String {
     let s = format!("{}|{}|{}", it.path, it.issue.rule, it.issue.message);
     format!("{:016x}", xxhash_rust::xxh3::xxh3_64(s.as_bytes()))
@@ -362,7 +379,7 @@ fn gitlab(items: &[Item<'_>]) -> Value {
             .map(|it| {
                 json!({
                     "description": it.issue.message,
-                    "check_name": it.issue.rule,
+                    "check_name": rule_id(it.meta),
                     "fingerprint": format!("{}:{}", fingerprint(it), it.issue.loc.line),
                     "severity": sev(it.meta.severity),
                     "categories": [match it.meta.kind {
@@ -406,7 +423,7 @@ fn sonar(items: &[Item<'_>]) -> Value {
             let l = &it.issue.loc;
             json!({
                 "engineId": "uncomplicated",
-                "ruleId": it.issue.rule,
+                "ruleId": if matches!(it.meta.repo, Repo::Js | Repo::Go) { it.issue.rule.clone() } else { rule_id(it.meta) },
                 "severity": it.meta.severity.as_str(),
                 "type": it.meta.kind.as_str(),
                 "effortMinutes": it.meta.effort.minutes(it.issue.gap),

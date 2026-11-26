@@ -94,3 +94,65 @@ impl Projects {
             .unwrap_or(0)
     }
 }
+
+/// Per-directory Go module context: the `go` directive of the nearest `go.mod`.
+pub struct GoProjects {
+    by_dir: FxHashMap<PathBuf, Option<(u32, u32)>>,
+}
+
+impl GoProjects {
+    pub fn new(root: &Path, files: impl Iterator<Item = PathBuf>) -> Self {
+        let mut p = GoProjects { by_dir: FxHashMap::default() };
+        let mut dirs: Vec<PathBuf> = files.filter_map(|f| f.parent().map(Path::to_path_buf)).collect();
+        dirs.sort();
+        dirs.dedup();
+        for d in dirs {
+            p.resolve(root, &d);
+        }
+        p
+    }
+
+    fn resolve(&mut self, root: &Path, dir: &Path) -> Option<(u32, u32)> {
+        if let Some(v) = self.by_dir.get(dir) {
+            return *v;
+        }
+        let v = match std::fs::read_to_string(dir.join("go.mod")) {
+            Ok(text) => parse_go_directive(&text),
+            Err(_) => match dir.parent() {
+                Some(parent) if dir != root && dir.starts_with(root) => self.resolve(root, parent),
+                _ => None,
+            },
+        };
+        self.by_dir.insert(dir.to_path_buf(), v);
+        v
+    }
+
+    pub fn version_for(&self, file: &Path) -> Option<(u32, u32)> {
+        file.parent().and_then(|d| self.by_dir.get(d).copied().flatten())
+    }
+
+    /// Hash of a file's module context (part of its cache key).
+    pub fn hash_for(&self, file: &Path) -> u64 {
+        self.version_for(file).map_or(0, |(a, b)| ((a as u64) << 32 | b as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15))
+    }
+}
+
+/// `go 1.22` / `go 1.22.3` → (1, 22).
+pub fn parse_go_directive(go_mod: &str) -> Option<(u32, u32)> {
+    let line = go_mod.lines().map(str::trim).find(|l| l.starts_with("go ") || l.starts_with("go\t"))?;
+    let v = line[2..].trim();
+    let mut parts = v.split('.');
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next().and_then(|m| m.parse().ok()).unwrap_or(0);
+    Some((major, minor))
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn go_directive() {
+        assert_eq!(super::parse_go_directive("module x\n\ngo 1.22.3\n"), Some((1, 22)));
+        assert_eq!(super::parse_go_directive("module x\ngo 1.16\n"), Some((1, 16)));
+        assert_eq!(super::parse_go_directive("module x\n"), None);
+    }
+}

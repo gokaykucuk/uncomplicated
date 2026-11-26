@@ -1698,7 +1698,7 @@ fn extract_node_assert<'b, 'a>(
 #[cfg(test)]
 pub fn check_deps(key: &str, file: &str, deps: &[&str], code: &str) {
     use uc_core::{Catalog, Params, Scope};
-    let meta = Catalog::get().rule(key, false).unwrap();
+    let meta = Catalog::get().rule(key, uc_core::Repo::Js).unwrap();
     let rules = crate::JsRules::new(|m| (m.key == key).then(Params::default));
     let mut project = crate::ProjectInfo::default();
     for d in deps {

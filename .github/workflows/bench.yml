@@ -1,0 +1,72 @@
+# Benchmarks a change against its base on GitHub-hosted runners: cold-cache wall time
+# (hyperfine), peak memory and issue counts per rule, on pinned open-source corpora.
+# Results go to the job summary and the `bench` artifact.
+name: bench
+
+on:
+  pull_request:
+    paths: ["crates/**", "catalog/**", "Cargo.toml", "Cargo.lock", "tools/bench-ci.py", "tools/bench-corpora.txt", ".github/workflows/bench.yml"]
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Ref to compare against
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bench-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bench:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            base -> target
+      - name: Resolve base
+        id: base
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || inputs.base || 'main' }}
+        run: |
+          git fetch --no-tags origin "$BASE" 2>/dev/null || true
+          sha=$(git rev-parse --verify "$BASE^{commit}" 2>/dev/null || git rev-parse "origin/$BASE")
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          git worktree add base "$sha"
+      - name: Build head and base
+        run: |
+          cargo build --profile fast --locked
+          cargo build --profile fast --locked --manifest-path base/Cargo.toml
+      - name: Install hyperfine
+        run: sudo apt-get update -q && sudo apt-get install -y -q hyperfine
+      - uses: actions/cache@v6
+        with:
+          path: corpora
+          key: bench-corpora-${{ hashFiles('tools/bench-corpora.txt') }}
+      - name: Fetch corpora
+        run: |
+          mkdir -p corpora
+          grep -v '^#' tools/bench-corpora.txt | while read -r name url ref; do
+            [ -z "$name" ] && continue
+            [ -d "corpora/$name" ] || git clone -q --depth 1 --branch "$ref" "$url" "corpora/$name"
+          done
+      - name: Benchmark
+        run: |
+          python3 tools/bench-ci.py --base base/target/fast/unc --head target/fast/unc \
+            --corpora corpora --corpora-list tools/bench-corpora.txt \
+            --base-label "base ${{ steps.base.outputs.sha }}" --head-label "head ${{ github.sha }}" \
+            --out bench >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: bench
+          path: bench/

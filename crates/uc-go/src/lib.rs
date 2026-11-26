@@ -11,6 +11,8 @@ pub mod kinds;
 pub mod metrics;
 pub mod prelude;
 pub mod scope;
+pub mod summary;
+pub mod taint;
 #[cfg(test)]
 pub mod test_util;
 
@@ -24,8 +26,9 @@ use rustc_hash::FxHashMap;
 use tree_sitter::Language;
 use uc_core::{Catalog, Params, RuleMeta};
 
-pub use analyze::{FileOptions, PHASES, analyze, profile_report};
+pub use analyze::{FileOptions, PHASES, analyze, analyze_with, profile_report};
 pub use ctx::{Ctx, FileInfo, Nd};
+pub use summary::name_hash;
 
 pub static LANGUAGE: LazyLock<Language> = LazyLock::new(|| tree_sitter_go::LANGUAGE.into());
 
@@ -72,7 +75,7 @@ impl GoRules {
         let catalog = Catalog::get();
         let mut rules = Vec::new();
         for (key, ctor) in rules::REGISTRY {
-            let Some(meta) = catalog.rule(key, true) else { continue };
+            let Some(meta) = catalog.rule(key, uc_core::Repo::Go) else { continue };
             if let Some(params) = select(meta) {
                 rules.push(LoadedRule { key, meta, rule: ctor(&params) });
             }

@@ -60,7 +60,7 @@ pub fn check(key: &str, file: &str, code: &str) {
 
 /// Like [`check`], with rule parameters.
 pub fn check_with(key: &str, file: &str, params: serde_json::Value, code: &str) {
-    let meta = Catalog::get().rule(key, false).unwrap_or_else(|| panic!("{key} not in catalog"));
+    let meta = Catalog::get().rule(key, uc_core::Repo::Js).unwrap_or_else(|| panic!("{key} not in catalog"));
     let params = Params(params.as_object().cloned().unwrap_or_default());
     let rules = JsRules::new(|m| (m.key == key).then(|| params.clone()));
     assert_eq!(rules.len(), 1, "{key} is not implemented");

@@ -84,3 +84,32 @@ location and message (spec: the `.html` description next to each rule's `.json` 
 checkout; read sonar-go's check for edge cases but write your own implementation). Narrowest
 `interests`, no per-node regex compilation, no quadratic scans. Every rule has tests with compliant
 and noncompliant code. Run with `cargo test -p uc-go rules::s1234`.
+
+## Package-level rules
+
+A Go package spans the files of a directory, so some checks can't be decided from one file.
+These run in `crates/uc-engine/src/gopkg.rs` after per-file analysis:
+
+- While analyzing a file, `crates/uc-go/src/summary.rs` records a `GoSummary` (cached with the
+  file's result): package name, package-level declarations (functions with whether they return an
+  `error`, types with the lock and package types they hold by value, vars, consts and their
+  `const (...)` group), the hashes (`uc_go::name_hash`) of every name the file references, discarded
+  call statements, by-value parameters of named types, `NOSONAR`/`//nolint` lines, and whether the
+  file is opaque (cgo, `//go:linkname`, `//export`). Keep it cheap: one pass, names hashed.
+- `gopkg::run` groups summaries by directory and package clause and reports onto the files'
+  results. Its issues are never cached (they depend on other files), and it filters `NOSONAR` and
+  `//nolint` itself. A directory with a file that failed to parse is skipped by the unused check,
+  and Go files of the directory that weren't analyzed (generated, excluded) are scanned as text
+  before a declaration is reported unused.
+- Cross-file rules are listed in `gopkg::IMPLEMENTED` and have catalog entries in
+  `catalog/go_extra.json` but no `rules/ugNNNN.rs` file (UG1056 unused declarations, UG1057
+  unchecked errors). `gopkg::EXTENDS` lists per-file rules the pass extends under their own key
+  (UG1018: locks held through types declared in other files); it must not report what the per-file
+  rule already reports.
+- Test them in `gopkg.rs` with several synthetic files (`uc_go::analyze` each, then `run`).
+
+Taint rules (UG1060–UG1065) share one intra-procedural analysis, `crates/uc-go/src/taint.rs`,
+computed once per file on first use (`taint::report(ctx, kind, message)`). Sinks that the
+syntactic rules UG1008 and UG1009 report too are dropped from UG1060/UG1061 when both are on.
+Rules that depend on the module's Go version read `ctx.file.go_version` (the `go` directive of
+the nearest `go.mod`, `None` when unknown) and are tested with `check_version`.

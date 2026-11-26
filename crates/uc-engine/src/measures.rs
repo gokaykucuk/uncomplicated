@@ -87,9 +87,10 @@ pub fn compute(
         let r = &f.result;
         let m = &r.metrics;
         let is_new = |l: u32| new.is_some_and(|n| n.is_new(&r.path, l));
-        let go = r.lang == Some(Lang::Go);
-
-        all.files += 1;
+        // Text files (secrets scanning only) aren't counted as analyzed source files.
+        if r.lang != Some(Lang::Text) {
+            all.files += 1;
+        }
         all.lines += m.lines as u64;
         all.ncloc += m.ncloc as u64;
         all.comment_lines += m.comment_lines as u64;
@@ -104,7 +105,7 @@ pub fn compute(
         }
 
         for issue in &r.issues {
-            let Some(meta) = rule_meta(catalog, &issue.rule, go) else { continue };
+            let Some(meta) = rule_meta(catalog, issue) else { continue };
             let effort = meta.effort.minutes(issue.gap) as u64;
             let targets: &mut [&mut Acc] =
                 if is_new(issue.loc.line) { &mut [&mut all, &mut nw] } else { &mut [&mut all] };

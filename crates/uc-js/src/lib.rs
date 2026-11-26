@@ -7,6 +7,7 @@ pub mod helpers;
 pub mod metrics;
 pub mod prelude;
 pub mod project;
+mod summary;
 #[cfg(test)]
 pub mod test_util;
 
@@ -58,7 +59,7 @@ impl JsRules {
         let catalog = Catalog::get();
         let mut rules = Vec::new();
         for (key, ctor) in rules::REGISTRY {
-            let Some(meta) = catalog.rule(key, false) else { continue };
+            let Some(meta) = catalog.rule(key, uc_core::Repo::Js) else { continue };
             if let Some(params) = select(meta) {
                 rules.push(LoadedRule { key, meta, rule: ctor(&params) });
             }

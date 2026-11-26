@@ -92,7 +92,8 @@ pub fn from_properties(p: &FxHashMap<String, String>) -> Config {
     cfg.coverage.lcov = list(p.get("sonar.javascript.lcov.reportPaths"));
     cfg.coverage.lcov.extend(list(p.get("sonar.typescript.lcov.reportPaths")));
     cfg.coverage.go = list(p.get("sonar.go.coverage.reportPaths"));
-    cfg.coverage.cobertura = list(p.get("sonar.coverageReportPaths"));
+    // Generic coverage XML (format detected from content, so Cobertura files listed here work too).
+    cfg.coverage.generic = list(p.get("sonar.coverageReportPaths"));
     cfg.coverage.exclusions = list(p.get("sonar.coverage.exclusions")).iter().map(|g| glob(g)).collect();
 
     // Issue exclusions: sonar.issue.ignore.multicriteria=e1,e2 with eN.ruleKey / eN.resourceKey.

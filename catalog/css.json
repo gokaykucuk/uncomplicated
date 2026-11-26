@@ -1,0 +1,434 @@
+[
+ {
+  "key": "S1116",
+  "title": "Extra semicolons should be removed",
+  "type": "CODE_SMELL",
+  "severity": "Minor",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "unused"
+  ],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "no-extra-semicolons"
+ },
+ {
+  "key": "S1128",
+  "title": "Unnecessary imports should be removed",
+  "type": "CODE_SMELL",
+  "severity": "Minor",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "unused"
+  ],
+  "scope": "Main",
+  "effort": {
+   "const": 2
+  },
+  "eslint": "no-duplicate-at-import-rules"
+ },
+ {
+  "key": "S4647",
+  "title": "Color definitions should be valid",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "color-no-invalid-hex"
+ },
+ {
+  "key": "S4648",
+  "title": "Font declarations should not contain duplicate names",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "font-family-no-duplicate-names"
+ },
+ {
+  "key": "S4649",
+  "title": "Font declarations should contain at least one generic font family",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "font-family-no-missing-generic-family-keyword"
+ },
+ {
+  "key": "S4650",
+  "title": "\"calc\" operands should be correctly spaced",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "function-calc-no-unspaced-operator"
+ },
+ {
+  "key": "S4651",
+  "title": "\"linear-gradient\" directions should be valid",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "function-linear-gradient-no-nonstandard-direction"
+ },
+ {
+  "key": "S4652",
+  "title": "Strings should not contain new lines",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "string-no-newline"
+ },
+ {
+  "key": "S4653",
+  "title": "Units should be valid",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "unit-no-unknown"
+ },
+ {
+  "key": "S4654",
+  "title": "Properties should be valid",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "property-no-unknown",
+  "params": {
+   "ignoreProperties": ""
+  }
+ },
+ {
+  "key": "S4655",
+  "title": "\"!important\" should not be used on \"keyframes\"",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "keyframe-declaration-no-important"
+ },
+ {
+  "key": "S4656",
+  "title": "Properties should not be duplicated",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "declaration-block-no-duplicate-properties",
+  "params": {
+   "ignoreFallbacks": "true"
+  }
+ },
+ {
+  "key": "S4657",
+  "title": "Shorthand properties that override related longhand properties should be avoided",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "declaration-block-no-shorthand-property-overrides"
+ },
+ {
+  "key": "S4658",
+  "title": "Empty blocks should be removed",
+  "type": "CODE_SMELL",
+  "severity": "Minor",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [
+   "suspicious"
+  ],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "block-no-empty"
+ },
+ {
+  "key": "S4659",
+  "title": "Pseudo-class selectors should be valid",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "selector-pseudo-class-no-unknown",
+  "params": {
+   "ignorePseudoClasses": ""
+  }
+ },
+ {
+  "key": "S4660",
+  "title": "Pseudo-element selectors should be valid",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "selector-pseudo-element-no-unknown",
+  "params": {
+   "ignorePseudoElements": ""
+  }
+ },
+ {
+  "key": "S4661",
+  "title": "Media features should be valid",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "media-feature-name-no-unknown"
+ },
+ {
+  "key": "S4662",
+  "title": "\"at-rules\" should be valid",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "at-rule-no-unknown",
+  "params": {
+   "ignoreAtRules": ""
+  }
+ },
+ {
+  "key": "S4663",
+  "title": "Comments should not be empty",
+  "type": "CODE_SMELL",
+  "severity": "Minor",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "comment-no-empty"
+ },
+ {
+  "key": "S4666",
+  "title": "Selectors should not be duplicated",
+  "type": "CODE_SMELL",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "no-duplicate-selectors"
+ },
+ {
+  "key": "S4667",
+  "title": "Stylesheets should not be empty",
+  "type": "CODE_SMELL",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "no-empty-source"
+ },
+ {
+  "key": "S4668",
+  "title": "Single line comment syntax should not be used",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "no-invalid-double-slash-comments"
+ },
+ {
+  "key": "S4670",
+  "title": "Selectors should be known",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "selector-type-no-unknown",
+  "params": {
+   "ignoreTypes": ""
+  }
+ },
+ {
+  "key": "S5362",
+  "title": "\"calc\" expressions should be valid",
+  "type": "BUG",
+  "severity": "Major",
+  "langs": [
+   "css"
+  ],
+  "sonar_way": true,
+  "deprecated": false,
+  "tags": [],
+  "scope": "Main",
+  "effort": {
+   "const": 1
+  },
+  "eslint": "function-calc-no-invalid"
+ }
+]

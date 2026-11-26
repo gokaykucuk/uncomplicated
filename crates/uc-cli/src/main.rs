@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand};
-use uc_core::{Catalog, Lang, Severity};
+use uc_core::{Catalog, Repo, Severity};
 use uc_engine::config::{Condition, Config, RuleSetting};
 use uc_engine::gate::Status;
 use uc_engine::report::{Filter, Format};
@@ -31,6 +31,27 @@ enum Cmd {
     Init {
         #[arg(default_value = ".")]
         dir: PathBuf,
+    },
+    /// Manage the vulnerability database used by `--deps`.
+    Deps {
+        #[command(subcommand)]
+        cmd: DepsCmd,
+    },
+}
+
+#[derive(Subcommand)]
+enum DepsCmd {
+    /// Download the OSV advisories (npm, Go) and build the local database.
+    Update {
+        /// Database to write (default: .uncomplicated/osv.bin).
+        #[arg(long)]
+        db: Option<PathBuf>,
+        /// Build from local OSV archives (all.zip files or directories of JSON) instead of downloading.
+        #[arg(long, value_name = "PATH")]
+        from: Vec<PathBuf>,
+        /// Ecosystems to download (default: npm,Go).
+        #[arg(long, value_delimiter = ',', default_value = "npm,Go")]
+        ecosystems: Vec<String>,
     },
 }
 
@@ -65,6 +86,22 @@ struct AnalyzeArgs {
     /// Cobertura XML report(s).
     #[arg(long, value_name = "FILE")]
     cobertura: Vec<String>,
+    /// Coverage report(s) of any supported format (LCOV, Go, Cobertura, SonarQube generic,
+    /// Clover, Istanbul JSON), detected from the content.
+    #[arg(long, value_name = "FILE")]
+    coverage: Vec<String>,
+    /// Drop issues recorded in this baseline file (see --write-baseline).
+    #[arg(long, value_name = "FILE")]
+    baseline: Option<String>,
+    /// Record every current issue in a baseline file, so later runs only report new ones.
+    #[arg(long, value_name = "FILE")]
+    write_baseline: Option<PathBuf>,
+    /// Report packages with known vulnerabilities (needs `unc deps update` first).
+    #[arg(long)]
+    deps: bool,
+    /// Disable hard-coded secret detection.
+    #[arg(long)]
+    no_secrets: bool,
     /// Rule profile: sonar-way (default) or all.
     #[arg(long)]
     profile: Option<String>,
@@ -105,8 +142,8 @@ struct AnalyzeArgs {
 
 #[derive(Args)]
 struct RulesArgs {
-    /// js or go.
-    #[arg(long)]
+    /// Only one repository: js, go, secrets, docker, kubernetes, actions, terraform, css, deps.
+    #[arg(long, alias = "repo")]
     lang: Option<String>,
     /// Show rules from the Sonar catalog that are not implemented yet.
     #[arg(long)]
@@ -120,7 +157,7 @@ struct RulesArgs {
 
 fn main() -> ExitCode {
     let mut args: Vec<String> = std::env::args().collect();
-    let known = ["analyze", "rules", "init", "help", "--help", "-h", "--version", "-V"];
+    let known = ["analyze", "rules", "init", "deps", "help", "--help", "-h", "--version", "-V"];
     if args.len() < 2 || !known.contains(&args[1].as_str()) {
         args.insert(1, "analyze".into());
     }
@@ -129,6 +166,7 @@ fn main() -> ExitCode {
         Cmd::Analyze(a) => analyze(*a),
         Cmd::Rules(r) => rules(r),
         Cmd::Init { dir } => init(dir),
+        Cmd::Deps { cmd: DepsCmd::Update { db, from, ecosystems } } => deps_update(db, from, ecosystems),
     };
     match res {
         Ok(code) => code,
@@ -158,6 +196,20 @@ fn analyze(a: AnalyzeArgs) -> Result<ExitCode, String> {
     cfg.coverage.lcov.extend(a.lcov.iter().cloned());
     cfg.coverage.go.extend(a.go_coverage.iter().cloned());
     cfg.coverage.cobertura.extend(a.cobertura.iter().cloned());
+    cfg.coverage.reports.extend(a.coverage.iter().cloned());
+    if a.baseline.is_some() {
+        cfg.analysis.baseline = a.baseline.clone();
+    }
+    if a.write_baseline.is_some() {
+        // The baseline records every issue, so don't filter by an older one.
+        cfg.analysis.baseline = None;
+    }
+    if a.deps {
+        cfg.deps.enabled = true;
+    }
+    if a.no_secrets {
+        cfg.secrets.enabled = false;
+    }
     if a.no_cpd {
         cfg.cpd.enabled = false;
     }
@@ -167,10 +219,12 @@ fn analyze(a: AnalyzeArgs) -> Result<ExitCode, String> {
     for o in &a.rule_overrides {
         let (k, v) = o.split_once('=').ok_or_else(|| format!("bad --rule {o:?}, expected KEY=on|off"))?;
         let setting = RuleSetting::Toggle(v.to_string());
-        match k.strip_prefix("go:") {
-            Some(k) => cfg.go_rules.insert(k.to_string(), setting),
-            None => cfg.rules.insert(k.trim_start_matches("js:").to_string(), setting),
-        };
+        if let Some((repo, key)) = k.split_once(':') {
+            Repo::parse(repo).ok_or_else(|| format!("bad --rule {o:?}: unknown repository {repo:?}"))?;
+            cfg.rules.insert(format!("{repo}:{key}"), setting);
+        } else {
+            cfg.rules.insert(k.to_string(), setting);
+        }
     }
     let paths: Vec<PathBuf> = if a.paths.len() == 1 && a.paths[0].canonicalize().ok().as_ref() == Some(&root) {
         Vec::new()
@@ -184,6 +238,10 @@ fn analyze(a: AnalyzeArgs) -> Result<ExitCode, String> {
 
     let analysis = uc_engine::run(uc_engine::Options { root, paths, config: cfg, cache, threads: a.threads })?;
 
+    if let Some(path) = &a.write_baseline {
+        let n = uc_engine::baseline::write(&analysis, path)?;
+        eprintln!("wrote {} ({n} issues)", path.display());
+    }
     let filter = Filter { new_only: a.new_only, min_severity };
     let color = match a.color.as_str() {
         "always" => true,
@@ -229,12 +287,15 @@ fn analyze(a: AnalyzeArgs) -> Result<ExitCode, String> {
 
 fn rules(r: RulesArgs) -> Result<ExitCode, String> {
     let catalog = Catalog::get();
-    let js: std::collections::HashSet<&str> = uc_engine::implemented_js().collect();
-    let go: std::collections::HashSet<&str> = uc_engine::implemented_go().collect();
+    let implemented: std::collections::HashSet<(Repo, &str)> =
+        Repo::ALL.iter().flat_map(|&repo| uc_engine::implemented(repo).into_iter().map(move |k| (repo, k))).collect();
+    let only = match r.lang.as_deref() {
+        Some(l) => Some(Repo::parse(l).ok_or_else(|| format!("unknown repository {l:?}"))?),
+        None => None,
+    };
     let mut rows = Vec::new();
     for m in &catalog.rules {
-        let is_go = m.langs.contains(&Lang::Go);
-        if r.lang.as_deref().is_some_and(|l| (l == "go") != is_go) {
+        if only.is_some_and(|o| o != m.repo) {
             continue;
         }
         if m.deprecated {
@@ -243,11 +304,11 @@ fn rules(r: RulesArgs) -> Result<ExitCode, String> {
         if r.profile.as_deref() == Some("sonar-way") && !m.sonar_way {
             continue;
         }
-        let implemented = if is_go { go.contains(m.key.as_str()) } else { js.contains(m.key.as_str()) };
+        let implemented = implemented.contains(&(m.repo, m.key.as_str()));
         if r.missing == implemented {
             continue;
         }
-        rows.push((if is_go { "go" } else { "js" }, m, implemented));
+        rows.push((m.repo.as_str(), m, implemented));
     }
     if r.json {
         let v: Vec<_> = rows
@@ -260,10 +321,31 @@ fn rules(r: RulesArgs) -> Result<ExitCode, String> {
         println!("{}", serde_json::to_string_pretty(&v).unwrap());
     } else {
         for (l, m, _) in &rows {
-            println!("{l}:{:<7} {:<8} {:<16} {}{}", m.key, m.severity.as_str(), m.kind.as_str(), m.title, if m.sonar_way { "" } else { "  (not in sonar-way)" });
+            let id = format!("{l}:{}", m.key);
+            println!("{id:<18} {:<8} {:<16} {}{}", m.severity.as_str(), m.kind.as_str(), m.title, if m.sonar_way { "" } else { "  (not in sonar-way)" });
         }
         eprintln!("{} rules", rows.len());
     }
+    Ok(ExitCode::SUCCESS)
+}
+
+fn deps_update(db: Option<PathBuf>, from: Vec<PathBuf>, ecosystems: Vec<String>) -> Result<ExitCode, String> {
+    let db = db.unwrap_or_else(|| PathBuf::from(".uncomplicated/osv.bin"));
+    let dir = db.parent().map_or_else(|| PathBuf::from("."), |d| d.to_path_buf());
+    let downloaded = from.is_empty();
+    let sources = if downloaded { uc_engine::deps::download(&ecosystems, &dir)? } else { from };
+    let t = std::time::Instant::now();
+    let (advisories, packages) = uc_engine::deps::build_db(&sources, &db)?;
+    if downloaded {
+        for s in &sources {
+            let _ = std::fs::remove_file(s);
+        }
+    }
+    eprintln!(
+        "wrote {} ({advisories} advisories for {packages} packages) in {:.1} s",
+        db.display(),
+        t.elapsed().as_secs_f64()
+    );
     Ok(ExitCode::SUCCESS)
 }
 
@@ -274,7 +356,7 @@ fn init(dir: PathBuf) -> Result<ExitCode, String> {
     }
     let gate: Vec<Condition> = uc_engine::gate::sonar_way();
     let mut s = String::from(
-        "# uncomplicated configuration. All keys are optional.\n\n[analysis]\n# profile = \"sonar-way\"   # or \"all\"\n# exclusions = [\"generated/**\"]\n# tests = [\"**/*.test.*\", \"**/*_test.go\"]\n\n[new_code]\n# reference = \"origin/main\"\n\n[coverage]\n# lcov = [\"coverage/lcov.info\"]\n# go = [\"coverage.out\"]\n\n[cpd]\n# min_tokens = 100\n# min_lines = 10\n\n[rules]\n# S3776 = { threshold = 20 }\n# S1135 = \"off\"\n\n[go_rules]\n# S1192 = \"off\"\n\n# Default quality gate (Sonar way):\n",
+        "# uncomplicated configuration. All keys are optional.\n# Reference: https://github.com/gokaykucuk/uncomplicated/blob/main/docs/CONFIGURATION.md\n\n[analysis]\n# profile = \"sonar-way\"   # or \"all\", \"none\", \"sonarqube-26.9\"\n# exclusions = [\"generated/**\"]\n# tests = [\"**/*.test.*\", \"**/*_test.go\"]\n# baseline = \".uncomplicated/baseline.json\"   # written by --write-baseline\n\n[new_code]\n# reference = \"origin/main\"\n\n[coverage]\n# reports = [\"coverage/lcov.info\", \"coverage.out\"]   # any supported format, detected\n\n[cpd]\n# min_tokens = 100\n# min_lines = 10\n\n[secrets]\n# enabled = true\n\n[deps]\n# enabled = true   # run `unc deps update` first\n\n[rules]\n# S3776 = { threshold = 20 }\n# S1135 = \"off\"\n# \"docker:DKR001\" = \"off\"\n\n[go_rules]\n# S1192 = \"off\"\n\n# Default quality gate (Sonar way):\n",
     );
     for c in gate {
         s.push_str(&format!("# [[gate.conditions]]\n# metric = \"{}\"\n# op = \"{}\"\n# threshold = {}\n", c.metric, c.op, c.threshold));

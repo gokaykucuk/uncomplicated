@@ -2,7 +2,7 @@
 
 use uc_core::{Catalog, Params, Scope};
 
-use crate::{FileOptions, GoRules, analyze};
+use crate::{FileOptions, GoRules, analyze_with};
 
 struct Expect {
     line: u32,
@@ -51,12 +51,22 @@ pub fn check(key: &str, code: &str) {
 }
 
 pub fn check_with(key: &str, params: serde_json::Value, code: &str) {
-    let meta = Catalog::get().rule(key, true).unwrap_or_else(|| panic!("{key} not in Go catalog"));
+    check_full(key, params, None, code);
+}
+
+/// Like `check`, for a module whose `go.mod` declares `go major.minor`.
+pub fn check_version(key: &str, version: (u32, u32), code: &str) {
+    check_full(key, serde_json::json!({}), Some(version), code);
+}
+
+fn check_full(key: &str, params: serde_json::Value, version: Option<(u32, u32)>, code: &str) {
+    let meta = Catalog::get().rule(key, uc_core::Repo::Go).unwrap_or_else(|| panic!("{key} not in Go catalog"));
     let params = Params(params.as_object().cloned().unwrap_or_default());
     let rules = GoRules::new(|m| (m.key == key).then(|| params.clone()));
     assert_eq!(rules.len(), 1, "{key} is not implemented");
     let is_test = meta.scope == Scope::Tests;
-    let res = analyze(if is_test { "x_test.go" } else { "x.go" }, code, is_test, &rules, &FileOptions { nosonar: false, cpd: false, metrics: false });
+    let opts = FileOptions { nosonar: false, cpd: false, metrics: false };
+    let res = analyze_with(if is_test { "x_test.go" } else { "x.go" }, code, is_test, &rules, &opts, version);
     if key != "S2260" {
         assert!(res.parse_error.is_none(), "parse error in test code: {:?}", res.parse_error);
     }

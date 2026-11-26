@@ -246,7 +246,7 @@ fn read_tsconfig_depth(path: &Path, depth: u8) -> Option<TsConfig> {
 }
 
 /// Removes `//` and `/* */` comments and trailing commas from JSONC.
-fn strip_jsonc(src: &str) -> String {
+pub fn strip_jsonc(src: &str) -> String {
     let b = src.as_bytes();
     let mut out = String::with_capacity(src.len());
     let mut i = 0;

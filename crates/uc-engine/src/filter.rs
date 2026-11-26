@@ -20,10 +20,10 @@ pub fn is_bundle(src: &str) -> bool {
 }
 
 pub fn is_minified(path: &str, src: &str) -> bool {
-    if path.ends_with(".min.js") || path.ends_with("-min.js") {
+    if path.ends_with(".min.js") || path.ends_with("-min.js") || path.ends_with(".min.css") {
         return true;
     }
-    if !path.ends_with(".js") {
+    if !path.ends_with(".js") && !path.ends_with(".css") {
         return false;
     }
     let mut lines = memchr::memchr_iter(b'\n', src.as_bytes()).count() + 1;
