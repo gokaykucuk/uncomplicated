@@ -1024,5 +1024,194 @@
     "effort": {
       "const": 5
     }
+  },
+  {
+    "key": "UG1056",
+    "title": "Unused unexported package-level declarations should be removed",
+    "type": "CODE_SMELL",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "unused"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1057",
+    "title": "Errors returned by functions should be handled",
+    "type": "BUG",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "error-handling"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1058",
+    "title": "Values assigned to local variables should be used",
+    "type": "CODE_SMELL",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "unused",
+      "suspicious"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1059",
+    "title": "Loop variables should not be captured by goroutines and deferred closures before Go 1.22",
+    "type": "BUG",
+    "severity": "Critical",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "concurrency"
+    ],
+    "scope": "All",
+    "effort": {
+      "const": 5
+    }
+  },
+  {
+    "key": "UG1060",
+    "title": "Database queries should not be vulnerable to injection attacks",
+    "type": "VULNERABILITY",
+    "severity": "Blocker",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "injection",
+      "sql"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 30
+    }
+  },
+  {
+    "key": "UG1061",
+    "title": "OS commands should not be vulnerable to command injection attacks",
+    "type": "VULNERABILITY",
+    "severity": "Blocker",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "injection"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 30
+    }
+  },
+  {
+    "key": "UG1062",
+    "title": "I/O function calls should not be vulnerable to path injection attacks",
+    "type": "VULNERABILITY",
+    "severity": "Critical",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "injection"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 30
+    }
+  },
+  {
+    "key": "UG1063",
+    "title": "HTTP request redirections should not be open to forging attacks",
+    "type": "VULNERABILITY",
+    "severity": "Major",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "injection"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 30
+    }
+  },
+  {
+    "key": "UG1064",
+    "title": "Server-side requests should not be vulnerable to forging attacks",
+    "type": "VULNERABILITY",
+    "severity": "Critical",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "injection"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 30
+    }
+  },
+  {
+    "key": "UG1065",
+    "title": "Endpoints should not be vulnerable to reflected cross-site scripting attacks",
+    "type": "VULNERABILITY",
+    "severity": "Critical",
+    "langs": [
+      "go"
+    ],
+    "sonar_way": true,
+    "deprecated": false,
+    "tags": [
+      "cwe",
+      "injection",
+      "xss"
+    ],
+    "scope": "Main",
+    "effort": {
+      "const": 30
+    }
   }
 ]

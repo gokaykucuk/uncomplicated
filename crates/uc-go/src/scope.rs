@@ -25,7 +25,14 @@ pub struct FunctionScopes<'t> {
 
 /// Builds scopes for a function-like node (declaration, method or literal).
 pub fn function_scopes<'t>(ctx: &Ctx<'t>, func: Node<'t>) -> FunctionScopes<'t> {
-    let mut b = Builder { ctx, out: FunctionScopes::default(), stack: vec![FxHashMap::default()] };
+    let mut b = Builder {
+        ctx,
+        out: FunctionScopes::default(),
+        stack: vec![Vec::new()],
+        bindings: FxHashMap::default(),
+        buf: Vec::new(),
+        cursor: func.walk(),
+    };
     if let Some(recv) = func.child_by_field_name("receiver") {
         b.params(recv);
     }
@@ -46,7 +53,13 @@ pub fn function_scopes<'t>(ctx: &Ctx<'t>, func: Node<'t>) -> FunctionScopes<'t> 
 struct Builder<'c, 't> {
     ctx: &'c Ctx<'t>,
     out: FunctionScopes<'t>,
-    stack: Vec<FxHashMap<&'t str, usize>>,
+    /// Names declared by each open scope (innermost last).
+    stack: Vec<Vec<&'t str>>,
+    /// Name → visible declarations (declaration index, scope depth), innermost last.
+    bindings: FxHashMap<&'t str, Vec<(usize, u32)>>,
+    /// Children of the nodes being walked (shared stack, so walking allocates nothing per node).
+    buf: Vec<Node<'t>>,
+    cursor: tree_sitter::TreeCursor<'t>,
 }
 
 impl<'t> Builder<'_, 't> {
@@ -59,11 +72,25 @@ impl<'t> Builder<'_, 't> {
         self.out.decls.push(Decl { ident, decl });
         self.out.refs.push(Vec::new());
         self.out.writes.push(Vec::new());
-        self.stack.last_mut().unwrap().insert(name, i);
+        let depth = self.stack.len() as u32;
+        let b = self.bindings.entry(name).or_default();
+        match b.last_mut() {
+            Some(last) if last.1 == depth => last.0 = i,
+            _ => {
+                b.push((i, depth));
+                self.stack.last_mut().unwrap().push(name);
+            }
+        }
     }
 
     fn lookup(&self, name: &str) -> Option<usize> {
-        self.stack.iter().rev().find_map(|s| s.get(name).copied())
+        self.bindings.get(name).and_then(|b| b.last()).map(|b| b.0)
+    }
+
+    /// True if `name` is declared in the innermost scope.
+    fn declared_here(&self, name: &str) -> bool {
+        let depth = self.stack.len() as u32;
+        self.bindings.get(name).and_then(|b| b.last()).is_some_and(|b| b.1 == depth)
     }
 
     fn params(&mut self, list: Node<'t>) {
@@ -79,11 +106,15 @@ impl<'t> Builder<'_, 't> {
     }
 
     fn push(&mut self) {
-        self.stack.push(FxHashMap::default());
+        self.stack.push(Vec::new());
     }
 
     fn pop(&mut self) {
-        self.stack.pop();
+        for name in self.stack.pop().unwrap_or_default() {
+            if let Some(b) = self.bindings.get_mut(name) {
+                b.pop();
+            }
+        }
     }
 
     fn reference(&mut self, ident: Node<'t>, write: bool) {
@@ -146,7 +177,7 @@ impl<'t> Builder<'_, 't> {
                         if id.kind() == "identifier" {
                             // Redeclaration in the same scope is an assignment.
                             let name = self.ctx.text(id);
-                            if self.stack.last().unwrap().contains_key(name) {
+                            if self.declared_here(name) {
                                 self.reference(id, true);
                             } else {
                                 self.declare(id, n);
@@ -260,10 +291,24 @@ impl<'t> Builder<'_, 't> {
     }
 
     fn children(&mut self, n: Node<'t>) {
-        let mut c = n.walk();
-        let kids: Vec<_> = n.named_children(&mut c).collect();
-        for k in kids {
+        let start = self.buf.len();
+        self.cursor.reset(n);
+        if self.cursor.goto_first_child() {
+            loop {
+                let k = self.cursor.node();
+                if k.is_named() {
+                    self.buf.push(k);
+                }
+                if !self.cursor.goto_next_sibling() {
+                    break;
+                }
+            }
+        }
+        let end = self.buf.len();
+        for i in start..end {
+            let k = self.buf[i];
             self.walk(k);
         }
+        self.buf.truncate(start);
     }
 }

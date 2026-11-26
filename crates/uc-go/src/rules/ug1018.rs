@@ -96,7 +96,7 @@ impl GoRule for Rule {
             let mut c = fields.walk();
             for fd in fields
                 .named_children(&mut c)
-                .filter(|f| f.kind() == "field_declaration")
+                .filter(|f| f.kind() == "field_declaration" && !crate::summary::embedded_pointer(*f))
             {
                 if let Some(t) = fd.child_by_field_name("type")
                     && let Some(l) = lock_type(ctx, t, sync_name, atomic_name)
@@ -154,6 +154,12 @@ type Counter struct {
 type Safe struct {
 	mu *sync.Mutex
 }
+
+type Embedded struct {
+	*sync.Mutex
+}
+
+func (e Embedded) Get() {}
 
 func (c Counter) Get() int { // Noncompliant {{Pass this "Counter" by pointer: it contains a "sync.Mutex" that must not be copied.}}
 	return c.n
