@@ -337,7 +337,7 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
             });
             if !secret_rules.is_empty() && f.lang != FileLang::Lock {
                 let lines = LineIndex::new(&src);
-                result.issues.extend(uc_secrets::scan(&f.rel, &src, &lines, &secret_rules));
+                result.issues.extend(uc_secrets::scan(&f.rel, &src, &lines, &secret_rules, f.is_test));
             }
             if cfg.analysis.nosonar {
                 drop_nosonar(&src, &mut result);
