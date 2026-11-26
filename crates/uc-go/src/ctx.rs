@@ -31,6 +31,8 @@ pub struct Ctx<'t> {
     pub comments: Vec<Node<'t>>,
     pub(crate) issues: RefCell<Vec<Issue>>,
     pub(crate) rule: Cell<&'static str>,
+    /// Taint findings of the file, computed by the first injection rule that asks.
+    pub(crate) taint: std::cell::OnceCell<Vec<crate::taint::Finding>>,
 }
 
 #[inline]
@@ -89,6 +91,7 @@ impl<'t> Ctx<'t> {
                         comments,
                         issues: RefCell::new(Vec::new()),
                         rule: Cell::new(""),
+                        taint: std::cell::OnceCell::new(),
                     };
                 }
                 stack.pop();

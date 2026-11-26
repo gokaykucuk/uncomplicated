@@ -11,6 +11,8 @@ pub mod kinds;
 pub mod metrics;
 pub mod prelude;
 pub mod scope;
+pub mod summary;
+pub mod taint;
 #[cfg(test)]
 pub mod test_util;
 
@@ -26,6 +28,7 @@ use uc_core::{Catalog, Params, RuleMeta};
 
 pub use analyze::{FileOptions, PHASES, analyze, analyze_with, profile_report};
 pub use ctx::{Ctx, FileInfo, Nd};
+pub use summary::name_hash;
 
 pub static LANGUAGE: LazyLock<Language> = LazyLock::new(|| tree_sitter_go::LANGUAGE.into());
 

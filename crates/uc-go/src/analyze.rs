@@ -180,9 +180,12 @@ pub fn analyze_with(
         Vec::new()
     };
     nosonar.sort_unstable();
+    nosonar.dedup();
+    result.summary = Some(uc_core::summary::Summary::Go(crate::summary::summarize(&ctx, nosonar.clone())));
     let mut issues = ctx.issues.into_inner();
     issues.sort_by_key(|i| (i.span.start, i.span.end, i.rule));
     issues.dedup_by(|a, b| !a.distinct && a.rule == b.rule && a.span == b.span && a.message == b.message);
+    crate::taint::drop_syntactic_duplicates(&mut issues);
     result.issues = issues
         .into_iter()
         .filter_map(|i| {

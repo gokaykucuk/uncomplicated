@@ -230,8 +230,9 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
     };
     let dep_rules = if cfg.deps.enabled { rule_set(Repo::Deps) } else { RuleSet::default() };
     // Cross-file rules run after per-file analysis (and are never cached).
-    let go_pkg_rules =
-        RuleSet::new(Repo::Go, gopkg::IMPLEMENTED, |m| rule_params(&go_overrides, &m.key, default_on(m)));
+    let go_pkg_rules = RuleSet::new(Repo::Go, &[gopkg::IMPLEMENTED, gopkg::EXTENDS].concat(), |m| {
+        rule_params(&go_overrides, &m.key, default_on(m))
+    });
     let js_graph_rules =
         RuleSet::new(Repo::Js, jsgraph::IMPLEMENTED, |m| rule_params(&js_overrides, &m.key, default_on(m)));
     let other_rules = secret_rules.len() + css_rules.len() + infra_rules.len() + dep_rules.len();
@@ -376,7 +377,7 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
         }
     }
     // Cross-file passes: their issues depend on other files, so they are never cached.
-    gopkg::run(&mut analyzed, &go_pkg_rules);
+    gopkg::run(&root, &mut analyzed, &go_pkg_rules);
     jsgraph::run(&root, &mut analyzed, &projects, &js_graph_rules);
     if !dep_rules.is_empty() {
         let db = cfg.deps.db.as_ref().map_or_else(|| root.join(".uncomplicated/osv.bin"), |p| root.join(p));
