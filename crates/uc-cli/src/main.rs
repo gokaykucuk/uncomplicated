@@ -32,6 +32,27 @@ enum Cmd {
         #[arg(default_value = ".")]
         dir: PathBuf,
     },
+    /// Manage the vulnerability database used by `--deps`.
+    Deps {
+        #[command(subcommand)]
+        cmd: DepsCmd,
+    },
+}
+
+#[derive(Subcommand)]
+enum DepsCmd {
+    /// Download the OSV advisories (npm, Go) and build the local database.
+    Update {
+        /// Database to write (default: .uncomplicated/osv.bin).
+        #[arg(long)]
+        db: Option<PathBuf>,
+        /// Build from local OSV archives (all.zip files or directories of JSON) instead of downloading.
+        #[arg(long, value_name = "PATH")]
+        from: Vec<PathBuf>,
+        /// Ecosystems to download (default: npm,Go).
+        #[arg(long, value_delimiter = ',', default_value = "npm,Go")]
+        ecosystems: Vec<String>,
+    },
 }
 
 #[derive(Args)]
@@ -136,7 +157,7 @@ struct RulesArgs {
 
 fn main() -> ExitCode {
     let mut args: Vec<String> = std::env::args().collect();
-    let known = ["analyze", "rules", "init", "help", "--help", "-h", "--version", "-V"];
+    let known = ["analyze", "rules", "init", "deps", "help", "--help", "-h", "--version", "-V"];
     if args.len() < 2 || !known.contains(&args[1].as_str()) {
         args.insert(1, "analyze".into());
     }
@@ -145,6 +166,7 @@ fn main() -> ExitCode {
         Cmd::Analyze(a) => analyze(*a),
         Cmd::Rules(r) => rules(r),
         Cmd::Init { dir } => init(dir),
+        Cmd::Deps { cmd: DepsCmd::Update { db, from, ecosystems } } => deps_update(db, from, ecosystems),
     };
     match res {
         Ok(code) => code,
@@ -304,6 +326,26 @@ fn rules(r: RulesArgs) -> Result<ExitCode, String> {
         }
         eprintln!("{} rules", rows.len());
     }
+    Ok(ExitCode::SUCCESS)
+}
+
+fn deps_update(db: Option<PathBuf>, from: Vec<PathBuf>, ecosystems: Vec<String>) -> Result<ExitCode, String> {
+    let db = db.unwrap_or_else(|| PathBuf::from(".uncomplicated/osv.bin"));
+    let dir = db.parent().map_or_else(|| PathBuf::from("."), |d| d.to_path_buf());
+    let downloaded = from.is_empty();
+    let sources = if downloaded { uc_engine::deps::download(&ecosystems, &dir)? } else { from };
+    let t = std::time::Instant::now();
+    let (advisories, packages) = uc_engine::deps::build_db(&sources, &db)?;
+    if downloaded {
+        for s in &sources {
+            let _ = std::fs::remove_file(s);
+        }
+    }
+    eprintln!(
+        "wrote {} ({advisories} advisories for {packages} packages) in {:.1} s",
+        db.display(),
+        t.elapsed().as_secs_f64()
+    );
     Ok(ExitCode::SUCCESS)
 }
 

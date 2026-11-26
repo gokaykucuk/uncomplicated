@@ -1,1 +1,6 @@
-[]
+[
+  {"key": "DEP001", "title": "Dependencies should not have known critical vulnerabilities", "type": "VULNERABILITY", "severity": "Critical", "langs": ["text"], "sonar_way": true, "deprecated": false, "tags": ["cwe", "owasp-a6", "dependency"], "scope": "All", "effort": {"const": 30}},
+  {"key": "DEP002", "title": "Dependencies should not have known high-severity vulnerabilities", "type": "VULNERABILITY", "severity": "Major", "langs": ["text"], "sonar_way": true, "deprecated": false, "tags": ["cwe", "owasp-a6", "dependency"], "scope": "All", "effort": {"const": 30}},
+  {"key": "DEP003", "title": "Dependencies should not have known moderate-severity vulnerabilities", "type": "VULNERABILITY", "severity": "Minor", "langs": ["text"], "sonar_way": true, "deprecated": false, "tags": ["cwe", "owasp-a6", "dependency"], "scope": "All", "effort": {"const": 15}},
+  {"key": "DEP004", "title": "Dependencies should not have known low-severity vulnerabilities", "type": "VULNERABILITY", "severity": "Info", "langs": ["text"], "sonar_way": true, "deprecated": false, "tags": ["cwe", "owasp-a6", "dependency"], "scope": "All", "effort": {"const": 15}}
+]

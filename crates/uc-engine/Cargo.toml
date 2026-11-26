@@ -22,3 +22,4 @@ xxhash-rust.workspace = true
 bitcode.workspace = true
 memchr.workspace = true
 regex.workspace = true
+zip = { version = "9.8.2", default-features = false, features = ["deflate-flate2-zlib-rs"] }
