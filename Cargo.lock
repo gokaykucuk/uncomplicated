@@ -1392,6 +1392,7 @@ dependencies = [
  "memchr",
  "regex",
  "rustc-hash",
+ "serde_json",
  "tree-sitter",
  "tree-sitter-hcl",
  "tree-sitter-yaml",

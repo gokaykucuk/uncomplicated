@@ -12,3 +12,4 @@ memchr.workspace = true
 tree-sitter.workspace = true
 tree-sitter-yaml = "0.7.2"
 tree-sitter-hcl = "1.1.0"
+serde_json.workspace = true
