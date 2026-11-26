@@ -5,6 +5,7 @@
 
 pub mod ast;
 pub mod cognitive;
+pub mod taint;
 pub mod types;
 pub mod vue;
 
