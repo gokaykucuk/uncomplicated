@@ -356,7 +356,7 @@ fn init(dir: PathBuf) -> Result<ExitCode, String> {
     }
     let gate: Vec<Condition> = uc_engine::gate::sonar_way();
     let mut s = String::from(
-        "# uncomplicated configuration. All keys are optional.\n\n[analysis]\n# profile = \"sonar-way\"   # or \"all\"\n# exclusions = [\"generated/**\"]\n# tests = [\"**/*.test.*\", \"**/*_test.go\"]\n\n[new_code]\n# reference = \"origin/main\"\n\n[coverage]\n# lcov = [\"coverage/lcov.info\"]\n# go = [\"coverage.out\"]\n\n[cpd]\n# min_tokens = 100\n# min_lines = 10\n\n[rules]\n# S3776 = { threshold = 20 }\n# S1135 = \"off\"\n\n[go_rules]\n# S1192 = \"off\"\n\n# Default quality gate (Sonar way):\n",
+        "# uncomplicated configuration. All keys are optional.\n# Reference: https://github.com/gokaykucuk/uncomplicated/blob/main/docs/CONFIGURATION.md\n\n[analysis]\n# profile = \"sonar-way\"   # or \"all\", \"none\", \"sonarqube-26.9\"\n# exclusions = [\"generated/**\"]\n# tests = [\"**/*.test.*\", \"**/*_test.go\"]\n# baseline = \".uncomplicated/baseline.json\"   # written by --write-baseline\n\n[new_code]\n# reference = \"origin/main\"\n\n[coverage]\n# reports = [\"coverage/lcov.info\", \"coverage.out\"]   # any supported format, detected\n\n[cpd]\n# min_tokens = 100\n# min_lines = 10\n\n[secrets]\n# enabled = true\n\n[deps]\n# enabled = true   # run `unc deps update` first\n\n[rules]\n# S3776 = { threshold = 20 }\n# S1135 = \"off\"\n# \"docker:DKR001\" = \"off\"\n\n[go_rules]\n# S1192 = \"off\"\n\n# Default quality gate (Sonar way):\n",
     );
     for c in gate {
         s.push_str(&format!("# [[gate.conditions]]\n# metric = \"{}\"\n# op = \"{}\"\n# threshold = {}\n", c.metric, c.op, c.threshold));
