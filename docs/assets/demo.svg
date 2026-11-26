@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1132" height="387" viewBox="0 0 1132 387" role="img" aria-label="unc output on a sample project">
+<rect width="100%" height="100%" rx="10" fill="#1e2128"/>
+<circle cx="20" cy="20" r="6" fill="#ff5f57"/><circle cx="40" cy="20" r="6" fill="#febc2e"/><circle cx="60" cy="20" r="6" fill="#28c840"/>
+<g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="#d7dae0" xml:space="preserve">
+<text style="white-space:pre" x="20" y="57.3"><tspan fill="#7bd88f">$</tspan><tspan> unc</tspan></text>
+<text style="white-space:pre" x="20" y="76.3"></text>
+<text style="white-space:pre" x="20" y="95.3"><tspan font-weight="bold" text-decoration="underline">.github/workflows/ci.yml</tspan></text>
+<text style="white-space:pre" x="20" y="114.3"><tspan>      7:31  </tspan><tspan fill="#ff6b6b" font-weight="bold">CRITICAL</tspan><tspan> </tspan><tspan fill="#7f8794">actions:GHA001</tspan><tspan> Pass this untrusted value through an environment variable instead of expanding it into the shell script.</tspan></text>
+<text style="white-space:pre" x="20" y="133.3"></text>
+<text style="white-space:pre" x="20" y="152.3"><tspan font-weight="bold" text-decoration="underline">Dockerfile</tspan></text>
+<text style="white-space:pre" x="20" y="171.3"><tspan>      1:6   </tspan><tspan fill="#f2c14e">MAJOR   </tspan><tspan> </tspan><tspan fill="#7f8794">docker:DKR001</tspan><tspan> Use a specific version tag for this image instead of &quot;latest&quot;.</tspan></text>
+<text style="white-space:pre" x="20" y="190.3"><tspan>      1:6   </tspan><tspan fill="#f2c14e">MAJOR   </tspan><tspan> </tspan><tspan fill="#7f8794">docker:DKR002</tspan><tspan> Make sure running the container as root is necessary; the final stage sets no non-root USER.</tspan></text>
+<text style="white-space:pre" x="20" y="209.3"><tspan>      3:1   </tspan><tspan fill="#5ccfe6">MINOR   </tspan><tspan> </tspan><tspan fill="#7f8794">docker:DKR008</tspan><tspan> Use the JSON exec form for CMD, so the process receives signals directly.</tspan></text>
+<text style="white-space:pre" x="20" y="228.3"></text>
+<text style="white-space:pre" x="20" y="247.3"><tspan font-weight="bold" text-decoration="underline">src/api/users.ts</tspan></text>
+<text style="white-space:pre" x="20" y="266.3"><tspan>      4:7   </tspan><tspan fill="#5ccfe6">MINOR   </tspan><tspan> </tspan><tspan fill="#7f8794">S5689 </tspan><tspan> This framework implicitly discloses version information by default. Make sure it is safe here.</tspan></text>
+<text style="white-space:pre" x="20" y="285.3"><tspan>      8:33  </tspan><tspan fill="#ff6b6b" font-weight="bold">BLOCKER </tspan><tspan> </tspan><tspan fill="#7f8794">UJ1001</tspan><tspan> Change this code to not construct SQL queries directly from user-controlled data.</tspan></text>
+<text style="white-space:pre" x="20" y="304.3"></text>
+<text style="white-space:pre" x="20" y="323.3"><tspan>4 files (21 LOC) · 467 JS/TS + 73 Go + 88 other rules · 6 issues: 0 bugs, 3 vulnerabilities, 2 code smells, 1 security hotspots</tspan></text>
+<text style="white-space:pre" x="20" y="342.3"><tspan>Reliability A · Security E · Maintainability A (debt 0.2h, ratio 1.6%) · Duplication 0.0% · Complexity 1 / cognitive 0</tspan></text>
+<text style="white-space:pre" x="20" y="361.3"><tspan>Quality gate: </tspan><tspan fill="#ff6b6b" font-weight="bold">FAILED</tspan><tspan> — new_security_rating = E (must be ≤ A)</tspan></text>
+</g></svg>
