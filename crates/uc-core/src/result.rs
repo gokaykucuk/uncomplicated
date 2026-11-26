@@ -19,4 +19,7 @@ pub struct FileResult {
     pub metrics: FileMetrics,
     pub cpd: Vec<CpdToken>,
     pub parse_error: Option<String>,
+    /// What cross-file analysis needs from this file (cached with the result).
+    #[serde(default)]
+    pub summary: Option<crate::summary::Summary>,
 }

@@ -51,7 +51,7 @@ pub fn check(key: &str, code: &str) {
 }
 
 pub fn check_with(key: &str, params: serde_json::Value, code: &str) {
-    let meta = Catalog::get().rule(key, true).unwrap_or_else(|| panic!("{key} not in Go catalog"));
+    let meta = Catalog::get().rule(key, uc_core::Repo::Go).unwrap_or_else(|| panic!("{key} not in Go catalog"));
     let params = Params(params.as_object().cloned().unwrap_or_default());
     let rules = GoRules::new(|m| (m.key == key).then(|| params.clone()));
     assert_eq!(rules.len(), 1, "{key} is not implemented");

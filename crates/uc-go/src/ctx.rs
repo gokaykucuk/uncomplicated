@@ -11,6 +11,8 @@ pub type Nd<'t> = Node<'t>;
 pub struct FileInfo<'s> {
     pub path: &'s str,
     pub is_test: bool,
+    /// `go` directive of the nearest `go.mod` (major, minor); `None` when unknown.
+    pub go_version: Option<(u32, u32)>,
 }
 
 /// Everything a Go rule can look at while analyzing one file.

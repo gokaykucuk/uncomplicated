@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand};
-use uc_core::{Catalog, Lang, Severity};
+use uc_core::{Catalog, Repo, Severity};
 use uc_engine::config::{Condition, Config, RuleSetting};
 use uc_engine::gate::Status;
 use uc_engine::report::{Filter, Format};
@@ -65,6 +65,22 @@ struct AnalyzeArgs {
     /// Cobertura XML report(s).
     #[arg(long, value_name = "FILE")]
     cobertura: Vec<String>,
+    /// Coverage report(s) of any supported format (LCOV, Go, Cobertura, SonarQube generic,
+    /// Clover, Istanbul JSON), detected from the content.
+    #[arg(long, value_name = "FILE")]
+    coverage: Vec<String>,
+    /// Drop issues recorded in this baseline file (see --write-baseline).
+    #[arg(long, value_name = "FILE")]
+    baseline: Option<String>,
+    /// Record every current issue in a baseline file, so later runs only report new ones.
+    #[arg(long, value_name = "FILE")]
+    write_baseline: Option<PathBuf>,
+    /// Report packages with known vulnerabilities (needs `unc deps update` first).
+    #[arg(long)]
+    deps: bool,
+    /// Disable hard-coded secret detection.
+    #[arg(long)]
+    no_secrets: bool,
     /// Rule profile: sonar-way (default) or all.
     #[arg(long)]
     profile: Option<String>,
@@ -105,8 +121,8 @@ struct AnalyzeArgs {
 
 #[derive(Args)]
 struct RulesArgs {
-    /// js or go.
-    #[arg(long)]
+    /// Only one repository: js, go, secrets, docker, kubernetes, actions, terraform, css, deps.
+    #[arg(long, alias = "repo")]
     lang: Option<String>,
     /// Show rules from the Sonar catalog that are not implemented yet.
     #[arg(long)]
@@ -158,6 +174,20 @@ fn analyze(a: AnalyzeArgs) -> Result<ExitCode, String> {
     cfg.coverage.lcov.extend(a.lcov.iter().cloned());
     cfg.coverage.go.extend(a.go_coverage.iter().cloned());
     cfg.coverage.cobertura.extend(a.cobertura.iter().cloned());
+    cfg.coverage.reports.extend(a.coverage.iter().cloned());
+    if a.baseline.is_some() {
+        cfg.analysis.baseline = a.baseline.clone();
+    }
+    if a.write_baseline.is_some() {
+        // The baseline records every issue, so don't filter by an older one.
+        cfg.analysis.baseline = None;
+    }
+    if a.deps {
+        cfg.deps.enabled = true;
+    }
+    if a.no_secrets {
+        cfg.secrets.enabled = false;
+    }
     if a.no_cpd {
         cfg.cpd.enabled = false;
     }
@@ -167,10 +197,12 @@ fn analyze(a: AnalyzeArgs) -> Result<ExitCode, String> {
     for o in &a.rule_overrides {
         let (k, v) = o.split_once('=').ok_or_else(|| format!("bad --rule {o:?}, expected KEY=on|off"))?;
         let setting = RuleSetting::Toggle(v.to_string());
-        match k.strip_prefix("go:") {
-            Some(k) => cfg.go_rules.insert(k.to_string(), setting),
-            None => cfg.rules.insert(k.trim_start_matches("js:").to_string(), setting),
-        };
+        if let Some((repo, key)) = k.split_once(':') {
+            Repo::parse(repo).ok_or_else(|| format!("bad --rule {o:?}: unknown repository {repo:?}"))?;
+            cfg.rules.insert(format!("{repo}:{key}"), setting);
+        } else {
+            cfg.rules.insert(k.to_string(), setting);
+        }
     }
     let paths: Vec<PathBuf> = if a.paths.len() == 1 && a.paths[0].canonicalize().ok().as_ref() == Some(&root) {
         Vec::new()
@@ -184,6 +216,10 @@ fn analyze(a: AnalyzeArgs) -> Result<ExitCode, String> {
 
     let analysis = uc_engine::run(uc_engine::Options { root, paths, config: cfg, cache, threads: a.threads })?;
 
+    if let Some(path) = &a.write_baseline {
+        let n = uc_engine::baseline::write(&analysis, path)?;
+        eprintln!("wrote {} ({n} issues)", path.display());
+    }
     let filter = Filter { new_only: a.new_only, min_severity };
     let color = match a.color.as_str() {
         "always" => true,
@@ -229,12 +265,15 @@ fn analyze(a: AnalyzeArgs) -> Result<ExitCode, String> {
 
 fn rules(r: RulesArgs) -> Result<ExitCode, String> {
     let catalog = Catalog::get();
-    let js: std::collections::HashSet<&str> = uc_engine::implemented_js().collect();
-    let go: std::collections::HashSet<&str> = uc_engine::implemented_go().collect();
+    let implemented: std::collections::HashSet<(Repo, &str)> =
+        Repo::ALL.iter().flat_map(|&repo| uc_engine::implemented(repo).into_iter().map(move |k| (repo, k))).collect();
+    let only = match r.lang.as_deref() {
+        Some(l) => Some(Repo::parse(l).ok_or_else(|| format!("unknown repository {l:?}"))?),
+        None => None,
+    };
     let mut rows = Vec::new();
     for m in &catalog.rules {
-        let is_go = m.langs.contains(&Lang::Go);
-        if r.lang.as_deref().is_some_and(|l| (l == "go") != is_go) {
+        if only.is_some_and(|o| o != m.repo) {
             continue;
         }
         if m.deprecated {
@@ -243,11 +282,11 @@ fn rules(r: RulesArgs) -> Result<ExitCode, String> {
         if r.profile.as_deref() == Some("sonar-way") && !m.sonar_way {
             continue;
         }
-        let implemented = if is_go { go.contains(m.key.as_str()) } else { js.contains(m.key.as_str()) };
+        let implemented = implemented.contains(&(m.repo, m.key.as_str()));
         if r.missing == implemented {
             continue;
         }
-        rows.push((if is_go { "go" } else { "js" }, m, implemented));
+        rows.push((m.repo.as_str(), m, implemented));
     }
     if r.json {
         let v: Vec<_> = rows
@@ -260,7 +299,8 @@ fn rules(r: RulesArgs) -> Result<ExitCode, String> {
         println!("{}", serde_json::to_string_pretty(&v).unwrap());
     } else {
         for (l, m, _) in &rows {
-            println!("{l}:{:<7} {:<8} {:<16} {}{}", m.key, m.severity.as_str(), m.kind.as_str(), m.title, if m.sonar_way { "" } else { "  (not in sonar-way)" });
+            let id = format!("{l}:{}", m.key);
+            println!("{id:<18} {:<8} {:<16} {}{}", m.severity.as_str(), m.kind.as_str(), m.title, if m.sonar_way { "" } else { "  (not in sonar-way)" });
         }
         eprintln!("{} rules", rows.len());
     }

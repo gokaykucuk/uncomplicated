@@ -76,8 +76,20 @@ pub fn profile_report() -> Vec<(&'static str, u64)> {
     v
 }
 
-/// Analyzes one Go file.
+/// Analyzes one Go file of a module with an unknown Go version.
 pub fn analyze(path: &str, src: &str, is_test: bool, rules: &GoRules, opts: &FileOptions) -> FileResult {
+    analyze_with(path, src, is_test, rules, opts, None)
+}
+
+/// Analyzes one Go file; `go_version` is the `go` directive of its `go.mod`.
+pub fn analyze_with(
+    path: &str,
+    src: &str,
+    is_test: bool,
+    rules: &GoRules,
+    opts: &FileOptions,
+    go_version: Option<(u32, u32)>,
+) -> FileResult {
     let mut result = FileResult { path: path.to_string(), lang: Some(Lang::Go), is_test, ..FileResult::default() };
     let lines = LineIndex::new(src);
     let t = std::time::Instant::now();
@@ -88,7 +100,7 @@ pub fn analyze(path: &str, src: &str, is_test: bool, rules: &GoRules, opts: &Fil
     };
     let t = phase(0, t);
     let root = tree.root_node();
-    let ctx = Ctx::new(src, root, FileInfo { path, is_test }, &lines);
+    let ctx = Ctx::new(src, root, FileInfo { path, is_test, go_version }, &lines);
     let t = phase(1, t);
 
     if root.has_error() {
@@ -99,6 +111,7 @@ pub fn analyze(path: &str, src: &str, is_test: bool, rules: &GoRules, opts: &Fil
         if let Some(r) = rules.rules.iter().find(|r| r.key == "S2260") {
             let off = lines.line_start(line as u32);
             result.issues.push(FileIssue {
+                repo: uc_core::Repo::Go,
                 rule: r.key.to_string(),
                 message: "A parsing error occurred in this file.".into(),
                 loc: lines.location(Span::new(off, off)),
@@ -178,6 +191,7 @@ pub fn analyze(path: &str, src: &str, is_test: bool, rules: &GoRules, opts: &Fil
                 return None;
             }
             Some(FileIssue {
+                repo: uc_core::Repo::Go,
                 rule: i.rule.to_string(),
                 message: i.message,
                 loc,

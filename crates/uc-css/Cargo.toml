@@ -1,0 +1,11 @@
+[package]
+name = "uc-css"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+uc-core.workspace = true
+rustc-hash.workspace = true
+regex.workspace = true
+memchr.workspace = true

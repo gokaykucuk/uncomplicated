@@ -48,9 +48,33 @@ pub struct Config {
     pub coverage: Coverage,
     pub new_code: NewCode,
     pub gate: Gate,
+    /// Hard-coded secret detection (all text files).
+    pub secrets: Secrets,
+    /// Vulnerable dependency detection from lockfiles (needs `unc deps update`).
+    pub deps: Deps,
     /// Issues to drop: rule key (optionally `javascript:`/`typescript:`/`go:` prefixed, `*` for
     /// any) in files matching the globs (like `sonar.issue.ignore.multicriteria`).
     pub ignore: Vec<IssueIgnore>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Secrets {
+    pub enabled: bool,
+}
+
+impl Default for Secrets {
+    fn default() -> Self {
+        Self { enabled: true }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(default, deny_unknown_fields)]
+pub struct Deps {
+    pub enabled: bool,
+    /// Advisory database written by `unc deps update` (default: `.uncomplicated/osv.bin`).
+    pub db: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -82,6 +106,8 @@ pub struct Analysis {
     pub respect_gitignore: bool,
     /// Skip concatenated bundles (`/*! ... */ !function(...)` prologue), like SonarJS.
     pub detect_bundles: bool,
+    /// Baseline of accepted issues (written by `--write-baseline`): matching issues are dropped.
+    pub baseline: Option<String>,
 }
 
 impl Default for Analysis {
@@ -97,6 +123,7 @@ impl Default for Analysis {
             max_file_size: 1000 * 1024,
             respect_gitignore: true,
             detect_bundles: true,
+            baseline: None,
         }
     }
 }
@@ -132,6 +159,14 @@ pub struct Coverage {
     pub go: Vec<String>,
     /// Cobertura XML reports.
     pub cobertura: Vec<String>,
+    /// SonarQube generic coverage XML (`sonar.coverageReportPaths`).
+    pub generic: Vec<String>,
+    /// Istanbul `coverage-final.json` reports.
+    pub istanbul: Vec<String>,
+    /// Clover XML reports.
+    pub clover: Vec<String>,
+    /// Reports of any supported format, detected from their content.
+    pub reports: Vec<String>,
     pub exclusions: Vec<String>,
 }
 
@@ -184,6 +219,32 @@ impl Config {
         toml::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))
     }
 
+    pub fn secrets_enabled(&self) -> bool {
+        self.secrets.enabled
+    }
+
+    /// Rule overrides for `repo`: `[rules]` keys with a `repo:` prefix (no prefix means JS/TS),
+    /// plus `[go_rules]` for Go. (`[ts_rules]` is layered on top of JS overrides by the caller.)
+    pub fn overrides(&self, repo: uc_core::Repo) -> FxHashMap<String, RuleSetting> {
+        let mut out = FxHashMap::default();
+        for (k, v) in &self.rules {
+            let (r, key) = match k.split_once(':') {
+                Some((p, key)) => match uc_core::Repo::parse(p) {
+                    Some(r) => (r, key),
+                    None => continue,
+                },
+                None => (uc_core::Repo::Js, k.as_str()),
+            };
+            if r == repo {
+                out.insert(key.to_string(), v.clone());
+            }
+        }
+        if repo == uc_core::Repo::Go {
+            out.extend(self.go_rules.clone());
+        }
+        out
+    }
+
     pub fn exclusions(&self) -> Vec<String> {
         let mut v: Vec<String> = if self.analysis.replace_default_exclusions {
             Vec::new()
@@ -203,7 +264,13 @@ impl Config {
 
     /// Stable hash of everything that affects per-file results (for the cache key).
     pub fn analysis_hash(&self) -> u64 {
-        let mut s = format!("{}|{}|{:?}", self.analysis.profile, self.analysis.nosonar, self.test_globs());
+        let mut s = format!(
+            "{}|{}|{:?}|{}",
+            self.analysis.profile,
+            self.analysis.nosonar,
+            self.test_globs(),
+            self.secrets.enabled
+        );
         let mut keys: Vec<_> = self.rules.iter().map(|(k, v)| format!("{k}={v:?}")).collect();
         keys.extend(self.go_rules.iter().map(|(k, v)| format!("go:{k}={v:?}")));
         keys.extend(self.ts_rules.iter().map(|(k, v)| format!("ts:{k}={v:?}")));

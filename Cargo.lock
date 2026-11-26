@@ -1199,10 +1199,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "tree-sitter-hcl"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a7b2cc3d7121553b84309fab9d11b3ff3d420403eef9ae50f9fd1cd9d9cf012"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
 name = "tree-sitter-language"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0af592be68c579aa78a16846bd19422978c3c52e438523d45ff5d1bff1f9d4a"
+
+[[package]]
+name = "tree-sitter-yaml"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53c223db85f05e34794f065454843b0668ebc15d240ada63e2b5939f43ce7c97"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
 
 [[package]]
 name = "uc-cli"
@@ -1226,6 +1246,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "uc-css"
+version = "0.1.1"
+dependencies = [
+ "memchr",
+ "regex",
+ "rustc-hash",
+ "uc-core",
+]
+
+[[package]]
 name = "uc-engine"
 version = "0.1.1"
 dependencies = [
@@ -1240,8 +1270,11 @@ dependencies = [
  "serde_json",
  "toml",
  "uc-core",
+ "uc-css",
  "uc-go",
+ "uc-infra",
  "uc-js",
+ "uc-secrets",
  "xxhash-rust",
 ]
 
@@ -1257,6 +1290,19 @@ dependencies = [
  "tree-sitter-go",
  "uc-core",
  "xxhash-rust",
+]
+
+[[package]]
+name = "uc-infra"
+version = "0.1.1"
+dependencies = [
+ "memchr",
+ "regex",
+ "rustc-hash",
+ "tree-sitter",
+ "tree-sitter-hcl",
+ "tree-sitter-yaml",
+ "uc-core",
 ]
 
 [[package]]
@@ -1279,6 +1325,17 @@ dependencies = [
  "serde_json",
  "uc-core",
  "xxhash-rust",
+]
+
+[[package]]
+name = "uc-secrets"
+version = "0.1.1"
+dependencies = [
+ "aho-corasick",
+ "memchr",
+ "regex",
+ "rustc-hash",
+ "uc-core",
 ]
 
 [[package]]

@@ -242,7 +242,7 @@ fn analyze_in(
         let off = d.labels.first().map_or(0, |l| l.offset());
         if rules.rules.iter().any(|r| r.key == "S2260") {
             let loc = lines.location(uc_core::Span::new(off, off));
-            result.issues.push(FileIssue { rule: "S2260".into(), message: format!("Parse error: {msg}"), loc, secondary: Vec::new(), gap: None });
+            result.issues.push(FileIssue { repo: uc_core::Repo::Js, rule: "S2260".into(), message: format!("Parse error: {msg}"), loc, secondary: Vec::new(), gap: None });
         }
         return result;
     }
@@ -287,6 +287,7 @@ fn analyze_in(
                 return None;
             }
             Some(FileIssue {
+                repo: uc_core::Repo::Js,
                 rule: i.rule.to_string(),
                 message: i.message,
                 loc,

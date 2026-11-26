@@ -58,7 +58,7 @@ impl JsRules {
         let catalog = Catalog::get();
         let mut rules = Vec::new();
         for (key, ctor) in rules::REGISTRY {
-            let Some(meta) = catalog.rule(key, false) else { continue };
+            let Some(meta) = catalog.rule(key, uc_core::Repo::Js) else { continue };
             if let Some(params) = select(meta) {
                 rules.push(LoadedRule { key, meta, rule: ctor(&params) });
             }

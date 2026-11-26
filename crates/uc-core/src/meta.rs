@@ -66,6 +66,18 @@ pub enum Lang {
     Ts,
     #[serde(rename = "go")]
     Go,
+    #[serde(rename = "css")]
+    Css,
+    #[serde(rename = "docker")]
+    Docker,
+    /// Kubernetes manifests and GitHub Actions workflows.
+    #[serde(rename = "yaml")]
+    Yaml,
+    #[serde(rename = "terraform")]
+    Terraform,
+    /// Any other text file: scanned for secrets only.
+    #[serde(rename = "text")]
+    Text,
 }
 
 impl Lang {
@@ -74,7 +86,93 @@ impl Lang {
             Self::Js => "js",
             Self::Ts => "ts",
             Self::Go => "go",
+            Self::Css => "css",
+            Self::Docker => "docker",
+            Self::Yaml => "yaml",
+            Self::Terraform => "terraform",
+            Self::Text => "text",
         }
+    }
+}
+
+/// A rule repository. Rule keys are unique within a repository (`S4663` exists for Go and CSS).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum Repo {
+    /// JavaScript and TypeScript (SonarJS keys plus `UJ*`).
+    #[default]
+    Js,
+    /// Go (sonar-go keys plus `UG*`).
+    Go,
+    /// Hard-coded secrets in any file (`SEC*`).
+    Secrets,
+    /// Dockerfiles (`DKR*`).
+    Docker,
+    /// Kubernetes manifests (`K8S*`).
+    Kubernetes,
+    /// GitHub Actions workflows (`GHA*`).
+    Actions,
+    /// Terraform (`TF*`).
+    Terraform,
+    /// CSS, SCSS and Less (SonarQube CSS keys).
+    Css,
+    /// Vulnerable dependencies from lockfiles (`DEP*`).
+    Deps,
+}
+
+impl Repo {
+    pub const ALL: [Repo; 9] = [
+        Repo::Js,
+        Repo::Go,
+        Repo::Secrets,
+        Repo::Docker,
+        Repo::Kubernetes,
+        Repo::Actions,
+        Repo::Terraform,
+        Repo::Css,
+        Repo::Deps,
+    ];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Js => "js",
+            Self::Go => "go",
+            Self::Secrets => "secrets",
+            Self::Docker => "docker",
+            Self::Kubernetes => "kubernetes",
+            Self::Actions => "actions",
+            Self::Terraform => "terraform",
+            Self::Css => "css",
+            Self::Deps => "deps",
+        }
+    }
+
+    /// Parses a repository prefix (`go`, `docker`...); `javascript`/`typescript` mean `js`.
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "js" | "javascript" | "typescript" | "ts" => Self::Js,
+            "go" => Self::Go,
+            "secrets" => Self::Secrets,
+            "docker" => Self::Docker,
+            "kubernetes" | "k8s" => Self::Kubernetes,
+            "actions" | "githubactions" => Self::Actions,
+            "terraform" | "tf" => Self::Terraform,
+            "css" => Self::Css,
+            "deps" => Self::Deps,
+            _ => return None,
+        })
+    }
+
+    /// Rule documentation URL, for rules that have one upstream.
+    pub fn help_uri(self, key: &str) -> Option<String> {
+        let num = key.strip_prefix('S').filter(|n| n.chars().all(|c| c.is_ascii_digit()))?;
+        let lang = match self {
+            Self::Js => "javascript",
+            Self::Go => "go",
+            Self::Css => "css",
+            _ => return None,
+        };
+        Some(format!("https://rules.sonarsource.com/{lang}/RSPEC-{num}"))
     }
 }
 
@@ -108,6 +206,9 @@ impl Effort {
 #[derive(Debug, Clone, Deserialize)]
 pub struct RuleMeta {
     pub key: String,
+    /// Set from the catalog file the rule comes from.
+    #[serde(default)]
+    pub repo: Repo,
     pub title: String,
     #[serde(rename = "type")]
     pub kind: IssueType,
@@ -166,25 +267,37 @@ impl RuleMeta {
 /// The full rule catalog, embedded at compile time.
 pub struct Catalog {
     pub rules: Vec<RuleMeta>,
-    by_key: FxHashMap<(String, bool), usize>,
+    by_key: FxHashMap<(String, Repo), usize>,
 }
 
+/// Catalog files, by repository.
+const FILES: &[(Repo, &str)] = &[
+    (Repo::Js, include_str!("../../../catalog/js.json")),
+    (Repo::Js, include_str!("../../../catalog/js_extra.json")),
+    (Repo::Go, include_str!("../../../catalog/go.json")),
+    (Repo::Go, include_str!("../../../catalog/go_extra.json")),
+    (Repo::Secrets, include_str!("../../../catalog/secrets.json")),
+    (Repo::Docker, include_str!("../../../catalog/docker.json")),
+    (Repo::Kubernetes, include_str!("../../../catalog/kubernetes.json")),
+    (Repo::Actions, include_str!("../../../catalog/actions.json")),
+    (Repo::Terraform, include_str!("../../../catalog/terraform.json")),
+    (Repo::Css, include_str!("../../../catalog/css.json")),
+    (Repo::Deps, include_str!("../../../catalog/deps.json")),
+];
+
 static CATALOG: LazyLock<Catalog> = LazyLock::new(|| {
-    let mut rules: Vec<RuleMeta> =
-        serde_json::from_str(include_str!("../../../catalog/js.json")).expect("js catalog");
-    let mut extra: Vec<RuleMeta> =
-        serde_json::from_str(include_str!("../../../catalog/js_extra.json")).expect("js extra catalog");
-    rules.append(&mut extra);
-    let js_len = rules.len();
-    let mut go: Vec<RuleMeta> =
-        serde_json::from_str(include_str!("../../../catalog/go.json")).expect("go catalog");
-    let mut go_extra: Vec<RuleMeta> =
-        serde_json::from_str(include_str!("../../../catalog/go_extra.json")).expect("go extra catalog");
-    go.append(&mut go_extra);
-    rules.append(&mut go);
+    let mut rules: Vec<RuleMeta> = Vec::new();
+    for (repo, text) in FILES {
+        let mut part: Vec<RuleMeta> =
+            serde_json::from_str(text).unwrap_or_else(|e| panic!("{} catalog: {e}", repo.as_str()));
+        for r in &mut part {
+            r.repo = *repo;
+        }
+        rules.append(&mut part);
+    }
     let mut by_key = FxHashMap::default();
     for (i, r) in rules.iter().enumerate() {
-        by_key.insert((r.key.clone(), i >= js_len), i);
+        by_key.insert((r.key.clone(), r.repo), i);
     }
     Catalog { rules, by_key }
 });
@@ -194,16 +307,20 @@ impl Catalog {
         &CATALOG
     }
 
-    /// Rule metadata by key; `go` selects the Go repository (keys overlap between languages).
-    pub fn rule(&self, key: &str, go: bool) -> Option<&RuleMeta> {
-        self.by_key.get(&(key.to_string(), go)).map(|&i| &self.rules[i])
+    /// Rule metadata by repository and key.
+    pub fn rule(&self, key: &str, repo: Repo) -> Option<&RuleMeta> {
+        self.by_key.get(&(key.to_string(), repo)).map(|&i| &self.rules[i])
+    }
+
+    pub fn repo(&self, repo: Repo) -> impl Iterator<Item = &RuleMeta> {
+        self.rules.iter().filter(move |r| r.repo == repo)
     }
 
     pub fn js(&self) -> impl Iterator<Item = &RuleMeta> {
-        self.rules.iter().filter(|r| !r.langs.contains(&Lang::Go))
+        self.repo(Repo::Js)
     }
 
     pub fn go(&self) -> impl Iterator<Item = &RuleMeta> {
-        self.rules.iter().filter(|r| r.langs.contains(&Lang::Go))
+        self.repo(Repo::Go)
     }
 }

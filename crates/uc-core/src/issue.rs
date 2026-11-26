@@ -62,9 +62,19 @@ pub struct SecondaryLoc {
 /// An issue resolved to line/column positions; this is what gets cached and reported.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileIssue {
+    /// Repository of `rule`.
+    #[serde(default)]
+    pub repo: crate::Repo,
     pub rule: String,
     pub message: String,
     pub loc: Location,
     pub secondary: Vec<SecondaryLoc>,
     pub gap: Option<f32>,
+}
+
+impl FileIssue {
+    /// An issue without secondary locations.
+    pub fn new(repo: crate::Repo, rule: &str, loc: Location, message: impl Into<String>) -> Self {
+        Self { repo, rule: rule.to_string(), message: message.into(), loc, secondary: Vec::new(), gap: None }
+    }
 }
