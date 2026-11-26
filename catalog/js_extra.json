@@ -1,1 +1,6 @@
-[]
+[
+  {"key": "UJ1050", "title": "Relative imports should resolve to an existing module", "type": "BUG", "severity": "Major", "langs": ["js", "ts"], "sonar_way": true, "deprecated": false, "tags": ["module-graph"], "scope": "All", "effort": {"const": 5}, "eslint": "no-unresolved"},
+  {"key": "UJ1051", "title": "Imported names should be exported by the imported module", "type": "BUG", "severity": "Major", "langs": ["js", "ts"], "sonar_way": true, "deprecated": false, "tags": ["module-graph"], "scope": "All", "effort": {"const": 5}, "eslint": "named", "eslint_aliases": ["default"]},
+  {"key": "UJ1052", "title": "Modules should not import each other in a cycle", "type": "CODE_SMELL", "severity": "Major", "langs": ["js", "ts"], "sonar_way": true, "deprecated": false, "tags": ["module-graph", "architecture"], "scope": "Main", "effort": {"const": 30}, "eslint": "no-cycle"},
+  {"key": "UJ1053", "title": "Exports should be used by other modules", "type": "CODE_SMELL", "severity": "Minor", "langs": ["js", "ts"], "sonar_way": false, "deprecated": false, "tags": ["module-graph", "unused"], "scope": "Main", "effort": {"const": 5}, "eslint": "no-unused-modules"}
+]
