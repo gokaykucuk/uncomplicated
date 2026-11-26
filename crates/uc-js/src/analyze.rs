@@ -121,6 +121,23 @@ fn merge_results(mut a: FileResult, b: FileResult) -> FileResult {
     cpd.sort_by_key(|t| t.line);
     a.cpd = cpd;
     a.parse_error = a.parse_error.or(b.parse_error);
+    a.summary = match (a.summary.take(), b.summary) {
+        (Some(uc_core::summary::Summary::Js(mut x)), Some(uc_core::summary::Summary::Js(y))) => {
+            let offset = x.imports.len() as u32;
+            x.imports.extend(y.imports);
+            x.exports.extend(y.exports.into_iter().map(|mut e| {
+                if let Some((i, _)) = &mut e.source {
+                    *i += offset;
+                }
+                e
+            }));
+            x.commonjs |= y.commonjs;
+            x.esm |= y.esm;
+            x.augments.extend(y.augments);
+            Some(uc_core::summary::Summary::Js(x))
+        }
+        (x, y) => x.or(y),
+    };
     a
 }
 
@@ -264,6 +281,10 @@ fn analyze_in(
     };
 
     run_rules(&ctx, rules, lang, is_test);
+    // Vue templates use imported bindings the script doesn't reference: keep every import.
+    let elide_types = st.is_typescript() && !path.ends_with(".vue");
+    let summary = crate::summary::extract(program, &semantic, &ret.module_record, src, &lines, elide_types);
+    result.summary = Some(uc_core::summary::Summary::Js(summary));
 
     if opts.metrics {
         result.metrics = metrics::compute(&ctx);
@@ -275,6 +296,9 @@ fn analyze_in(
     }
 
     let sup = if opts.nosonar { Suppressions::new(&ctx) } else { Suppressions::default() };
+    if let Some(uc_core::summary::Summary::Js(s)) = &mut result.summary {
+        graph_suppressions(s, &ctx, &sup);
+    }
     let mut issues = ctx.issues.into_inner();
     issues.sort_by_key(|i| (i.span.start, i.span.end, i.rule));
     issues.dedup_by(|a, b| !a.distinct && a.rule == b.rule && a.span == b.span && a.message == b.message);
@@ -297,6 +321,52 @@ fn analyze_in(
         })
         .collect();
     result
+}
+
+/// Records which cross-file (module graph) rules are suppressed at each import and export: the
+/// engine reports those issues after per-file analysis, so it can't apply the comments itself.
+/// `@ts-expect-error` / `@ts-ignore` before an import also silence the resolution rules.
+fn graph_suppressions(s: &mut uc_core::summary::JsSummary, ctx: &Ctx<'_, '_>, sup: &Suppressions) {
+    const IMPORT_RULES: [&str; 3] = ["UJ1050", "UJ1051", "UJ1052"];
+    let ts_lines: Vec<u32> = if memchr::memmem::find(ctx.src.as_bytes(), b"@ts-").is_some() {
+        ctx.comments()
+            .iter()
+            .filter(|c| {
+                let t = ctx.comment_text(c);
+                t.contains("@ts-ignore") || t.contains("@ts-expect-error")
+            })
+            .map(|c| ctx.line(c.span.end) + 1)
+            .collect()
+    } else {
+        Vec::new()
+    };
+    if ts_lines.is_empty() && sup.is_empty() {
+        return;
+    }
+    let catalog = uc_core::Catalog::get();
+    let off = |key: &str, line: u32| {
+        sup.suppressed(key, catalog.rule(key, uc_core::Repo::Js), ctx.lines.line_start(line), line)
+    };
+    for im in &mut s.imports {
+        let lines: Vec<u32> = std::iter::once(im.loc.line).chain(im.names.iter().map(|n| n.loc.line)).collect();
+        for key in IMPORT_RULES {
+            if lines.iter().any(|&l| off(key, l)) {
+                im.suppressed.push(key.to_string());
+            }
+        }
+        if lines.iter().any(|l| ts_lines.contains(l)) {
+            for key in &IMPORT_RULES[..2] {
+                if !im.suppressed.iter().any(|k| k == key) {
+                    im.suppressed.push(key.to_string());
+                }
+            }
+        }
+    }
+    for e in &mut s.exports {
+        if off("UJ1053", e.loc.line) {
+            e.suppressed.push("UJ1053".to_string());
+        }
+    }
 }
 
 /// `UNC_PROFILE=1` accumulates per-rule time (nanoseconds) and prints it at exit.
@@ -479,6 +549,10 @@ impl Suppressions {
         }
         s.nosonar.sort_unstable();
         s
+    }
+
+    fn is_empty(&self) -> bool {
+        self.nosonar.is_empty() && self.ranges.is_empty() && self.lines.is_empty()
     }
 
     fn matches(rules: &Option<Vec<String>>, key: &str, meta: Option<&uc_core::RuleMeta>) -> bool {

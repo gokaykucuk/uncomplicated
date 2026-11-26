@@ -7,6 +7,7 @@ pub mod helpers;
 pub mod metrics;
 pub mod prelude;
 pub mod project;
+mod summary;
 #[cfg(test)]
 pub mod test_util;
 
