@@ -386,6 +386,10 @@ pub fn run(opts: Options) -> Result<Analysis, String> {
             Err(e) => warnings.push(format!("dependency scan: {e}")),
         }
     }
+    // Cross-file and per-file issues interleave: report them in line order.
+    for f in &mut analyzed {
+        f.result.issues.sort_by_key(|i| (i.loc.line, i.loc.col));
+    }
     // Ignores and the baseline are applied after caching (cached results don't depend on them).
     apply_ignores(cfg, &mut analyzed)?;
     let baselined = match &cfg.analysis.baseline {

@@ -47,6 +47,7 @@ exclusions = []
 
 [secrets]
 enabled = true
+other_languages = false          # also scan .py, .rb, .java, .rs... source files (slower on polyglot repos)
 
 [deps]
 enabled = false                  # needs `unc deps update` first
@@ -55,7 +56,7 @@ db = ".uncomplicated/osv.bin"
 [rules]                          # JS/TS rules, or any repository with a prefix
 S3776 = { threshold = 20 }       # parameters (implies on)
 S1135 = "off"
-UJ1052 = "on"                    # enable a rule that is off by default
+UJ1053 = "on"                    # enable a rule that is off by default (unused exports)
 "docker:DKR005" = "off"          # other repositories: repo:key
 "secrets:SEC014" = "off"
 
@@ -97,7 +98,7 @@ Rule keys are unique within a repository. `unc rules` lists them; `--lang <repo>
 |---|---|---|---|
 | JavaScript / TypeScript | `js` (or `javascript`, `typescript`) | SonarJS `S*`, extra `UJ*` | `.js .jsx .mjs .cjs .ts .tsx .mts .cts .vue .html` |
 | Go | `go` | sonar-go `S*`, extra `UG*` | `.go` |
-| Secrets | `secrets` | `SEC*` | every analyzed file, plus `.env*`, `.npmrc`, config and script files |
+| Secrets | `secrets` | `SEC*` | every analyzed file, plus `.env*`, `.npmrc`, config, script and key files (other languages' source with `other_languages`) |
 | Dockerfile | `docker` | `DKR*` | `Dockerfile`, `Dockerfile.*`, `*.dockerfile`, `Containerfile` |
 | Kubernetes | `kubernetes` | `K8S*` | `.yml`/`.yaml` files containing Kubernetes objects |
 | GitHub Actions | `actions` | `GHA*` | `.github/workflows/*.yml` |

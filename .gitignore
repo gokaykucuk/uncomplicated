@@ -1,3 +1,4 @@
 target/
 .uncomplicated/
 .claude/worktrees/
+tools/__pycache__/

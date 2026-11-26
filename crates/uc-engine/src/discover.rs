@@ -31,45 +31,18 @@ impl FileLang {
 /// Lockfiles read by dependency scanning.
 pub const LOCKFILES: &[&str] = &["package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "pnpm-lock.yaml", "go.mod"];
 
-/// Extensions of text files scanned for secrets (besides every analyzed language).
+/// Extensions of configuration, script and key files scanned for secrets (besides every analyzed
+/// language).
 const TEXT_EXTS: &[&str] = &[
-    "env",
-    "properties",
-    "json",
-    "toml",
-    "ini",
-    "cfg",
-    "conf",
-    "config",
-    "xml",
-    "sh",
-    "bash",
-    "zsh",
-    "ps1",
-    "py",
-    "rb",
-    "php",
-    "java",
-    "kt",
-    "kts",
-    "scala",
-    "cs",
-    "swift",
-    "rs",
-    "c",
-    "cc",
-    "cpp",
-    "h",
-    "hpp",
-    "sql",
-    "gradle",
-    "pem",
-    "key",
-    "p8",
-    "tpl",
-    "j2",
+    "env", "properties", "json", "toml", "ini", "cfg", "conf", "config", "xml", "sh", "bash", "zsh", "ps1", "pem",
+    "key", "p8", "tpl", "j2", "txt",
+];
+
+/// Source files of languages `unc` doesn't analyze: scanned for secrets only with
+/// `[secrets] other_languages = true` (reading them all costs more than the scan itself).
+pub const SOURCE_EXTS: &[&str] = &[
+    "py", "rb", "php", "java", "kt", "kts", "scala", "cs", "swift", "rs", "c", "cc", "cpp", "h", "hpp", "sql", "gradle",
     "erb",
-    "txt",
 ];
 
 /// File names (or prefixes, for `.env.*`) of text files scanned for secrets.
@@ -140,7 +113,10 @@ pub fn lang_of(path: &str) -> Option<FileLang> {
     }
     if TEXT_NAMES.contains(&lower.as_str())
         || lower.starts_with(".env.")
-        || ext.is_some_and(|e| TEXT_EXTS.contains(&e.to_ascii_lowercase().as_str()))
+        || ext.is_some_and(|e| {
+            let e = e.to_ascii_lowercase();
+            TEXT_EXTS.contains(&e.as_str()) || SOURCE_EXTS.contains(&e.as_str())
+        })
     {
         return Some(FileLang::Text);
     }
@@ -153,7 +129,7 @@ pub fn discover(root: &Path, paths: &[PathBuf], cfg: &Config) -> Result<Vec<Sour
     let tests = globset(&cfg.test_globs())?;
     let incl = if cfg.analysis.inclusions.is_empty() { None } else { Some(globset(&cfg.analysis.inclusions)?) };
     let max = cfg.analysis.max_file_size;
-    let (secrets, deps) = (cfg.secrets_enabled(), cfg.deps.enabled);
+    let (secrets, deps, other_sources) = (cfg.secrets_enabled(), cfg.deps.enabled, cfg.secrets.other_languages);
 
     let starts: Vec<PathBuf> = if paths.is_empty() { vec![root.to_path_buf()] } else { paths.to_vec() };
     let mut builder = WalkBuilder::new(&starts[0]);
@@ -199,6 +175,12 @@ pub fn discover(root: &Path, paths: &[PathBuf], cfg: &Config) -> Result<Vec<Sour
             }
             match lang {
                 FileLang::Text if !secrets => return WalkState::Continue,
+                FileLang::Text
+                    if !other_sources
+                        && name.rsplit_once('.').is_some_and(|(_, e)| SOURCE_EXTS.contains(&e.to_ascii_lowercase().as_str())) =>
+                {
+                    return WalkState::Continue;
+                }
                 FileLang::Lock if !deps || name == "go.sum" => return WalkState::Continue,
                 _ => {}
             }

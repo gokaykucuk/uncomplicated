@@ -6,18 +6,23 @@ dependencies, with SonarQube's rules, metrics and quality gate. There's no serve
 to run, and a 1.6M-line monorepo takes about a second.
 
 ```console
-$ unc --new-code origin/main --coverage coverage/lcov.info
+$ unc
+
+.github/workflows/ci.yml
+      7:31  CRITICAL actions:GHA001 Pass this untrusted value through an environment variable instead of expanding it into the shell script.
+
+Dockerfile
+      1:6   MAJOR    docker:DKR001 Use a specific version tag for this image instead of "latest".
+      1:6   MAJOR    docker:DKR002 Make sure running the container as root is necessary; the final stage sets no non-root USER.
+      3:1   MINOR    docker:DKR008 Use the JSON exec form for CMD, so the process receives signals directly.
 
 src/api/users.ts
-     42:18  BLOCKER  UJ1001 Change this code to not construct SQL queries directly from user-controlled data.
-     57:3   MAJOR    S3776  Refactor this function to reduce its Cognitive Complexity from 22 to the 15 allowed.
-.github/workflows/ci.yml
-     18:14  CRITICAL actions:GHA001 Don't use untrusted input "github.event.pull_request.title" directly in a run script.
+      4:7   MINOR    S5689  This framework implicitly discloses version information by default. Make sure it is safe here.
+      8:33  BLOCKER  UJ1001 Change this code to not construct SQL queries directly from user-controlled data.
 
-8,415 files (1,601,811 LOC) · 1,141 rules · 3 issues: 0 bugs, 1 vulnerability, 2 code smells
-Reliability A · Security E · Maintainability A · Duplication 0.8% · Coverage 84.2%
+4 files (21 LOC) · 467 JS/TS + 73 Go + 88 other rules · 6 issues: 0 bugs, 3 vulnerabilities, 2 code smells, 1 security hotspots
+Reliability A · Security E · Maintainability A (debt 0.2h, ratio 1.6%) · Duplication 0.0% · Complexity 1 / cognitive 0
 Quality gate: FAILED — new_security_rating = E (must be ≤ A)
-Analyzed 70 MB in 1,260 ms
 ```
 
 ## What it checks
@@ -26,7 +31,7 @@ Analyzed 70 MB in 1,260 ms
 |---|---|---|
 | **JavaScript / TypeScript** | 554 SonarJS + 13 | Every active SonarJS rule but one, with the same keys, messages and locations. React, Vue, Angular, Node.js, tests and accessibility. Taint analysis for SQL, command and path injection, XSS, open redirects, SSRF, NoSQL and code injection. Module graph: unresolved imports, missing exports, import cycles, unused exports. |
 | **Go** | 37 sonar-go + 65 | All sonar-go rules, plus checks modeled on go vet, staticcheck, errcheck, ineffassign and gosec. Package-level checks: unused declarations, ignored errors, locks copied by value. Taint analysis for HTTP handlers (net/http, gin, echo, chi, gorilla, fiber). Loop-variable capture before Go 1.22. |
-| **Secrets** | 21 | Cloud and SaaS tokens (AWS, GitHub, GitLab, Slack, Stripe, Google, OpenAI, Anthropic, npm…), private keys, credentials in connection URLs, secrets in `.env` and config files. Every file is scanned, not only source code. |
+| **Secrets** | 21 | Cloud and SaaS tokens (AWS, GitHub, GitLab, Slack, Stripe, Google, OpenAI, Anthropic, npm…), private keys, credentials in connection URLs, secrets in `.env` and config files. Config, script and key files are scanned too, not only source code. |
 | **Dockerfile** | 15 | Unpinned base images, running as root, `curl \| sh`, secrets in `ENV`/`ARG`, apt/apk hygiene, misplaced `CMD`/`ENTRYPOINT`. |
 | **Kubernetes** | 11 | Privileged containers, host namespaces and paths, dangerous capabilities, missing memory limits, `:latest` images, literal secrets in `env`. |
 | **GitHub Actions** | 8 | Script injection from untrusted event data, `pull_request_target` checkouts that run PR code, `write-all` permissions, echoed secrets, deprecated workflow commands, outdated core actions. |

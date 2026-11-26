@@ -61,11 +61,13 @@ pub struct Config {
 #[serde(default, deny_unknown_fields)]
 pub struct Secrets {
     pub enabled: bool,
+    /// Also scan source files of languages `unc` doesn't analyze (Python, Ruby, Java...).
+    pub other_languages: bool,
 }
 
 impl Default for Secrets {
     fn default() -> Self {
-        Self { enabled: true }
+        Self { enabled: true, other_languages: false }
     }
 }
 
